@@ -170,7 +170,7 @@ autodetect_cpus
 autodetect_posix_shell
 
 # shellcheck disable=SC1091
-. "$DKMLDIR/vendor/dkml-component-ocamlcompiler/src/reproducible-compile-ocaml-functions.sh"
+. "$DKMLDIR/vendor/dkml-compiler/src/reproducible-compile-ocaml-functions.sh"
 
 if [ -n "$HOSTABISCRIPT" ]; then
     case "$HOSTABISCRIPT" in
