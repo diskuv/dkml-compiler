@@ -4,8 +4,8 @@ version: "4.12.1-1"
 synopsis: "Add findlib toolchains for any DKML cross-compilers"
 authors: ["Diskuv, Inc. <opensource+diskuv-ocaml@support.diskuv.com>"]
 license: "Apache-2.0"
-homepage: "https://github.com/diskuv/dkml-component-ocamlcompiler"
-bug-reports: "https://github.com/diskuv/dkml-component-ocamlcompiler/issues"
+homepage: "https://github.com/diskuv/dkml-compiler"
+bug-reports: "https://github.com/diskuv/dkml-compiler/issues"
 depends: [
   "ocamlfind"           {>= "1.9.1"}
   "ocaml-system"        {= "4.12.1"} |
