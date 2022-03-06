@@ -23,8 +23,8 @@ Install with something like: opam switch create ocaml-4.12.1 '--formula="dkml-ba
 maintainer: ["opensource+diskuv-ocaml@support.diskuv.com"]
 authors: ["Diskuv, Inc. <opensource+diskuv-ocaml@support.diskuv.com>"]
 license: "Apache-2.0"
-homepage: "https://github.com/diskuv/dkml-component-ocamlcompiler"
-bug-reports: "https://github.com/diskuv/dkml-install-api/issues"
+homepage: "https://github.com/diskuv/dkml-compiler"
+bug-reports: "https://github.com/diskuv/dkml-compiler/issues"
 depends: [
   "ocaml" {= "4.12.1" & post}
 
@@ -36,27 +36,23 @@ depopts: [
   "dkml-option-32bit"
 ]
 build-env: [
-  # The runtime-common can be less or equal to DKML_VER
-  [DKML_RUNTIME_COMMON_VER = "0.4.0-prerel3"]
   [DKML_VER = "0.4.0"]
 ]
 conflict-class: "ocaml-core-compiler"
 flags: [ compiler avoid-version hidden-version ]
 build: [
   # Create a DKMLDIR. Its structure mimics a git submodule setup.
-  # nit: We probably could use Opam's "extra-files" if we could control where the .tar.gz was extracted to.
   #   <dkmldir>/.dkmlroot
   ["install" "-d" "dkmldir"]
-  ["dash" "-c" "printf 'dkml_root_version=%s\\n' \"$DKML_VER\" > dkmldir/.dkmlroot"]
+  ["sh" "-c" "printf 'dkml_root_version=%s\\n' \"$DKML_VER\" > dkmldir/.dkmlroot"]
 
   #   <dkmldir>/vendor/dkml-runtime-common/
   ["install" "-d" "dkmldir/vendor/dkml-runtime-common"]
-  ["dash" "-eufxc" "curl -L -o dkml-runtime-common.tar.gz https://github.com/diskuv/dkml-runtime-common/archive/refs/tags/v$DKML_RUNTIME_COMMON_VER.tar.gz"]
-  ["tar" "xCfz" "dkmldir/vendor/dkml-runtime-common" "dkml-runtime-common.tar.gz" "--strip-components=1"]
+  ["tar" "xCfz" "dkmldir/vendor/dkml-runtime-common" "dl/dkml-runtime-common.tar.gz" "--strip-components=1"]
 
   #   <dkmldir>/vendor/dkml-compiler/
   ["install" "-d" "dkmldir/vendor/dkml-compiler/src"]
-  ["dash" "-eufc" "tar cCf src/ - . | tar xCf dkmldir/vendor/dkml-compiler/src/ -"]
+  ["sh" "-eufc" "tar cCf src/ - . | tar xCf dkmldir/vendor/dkml-compiler/src/ -"]
 
   # Run reproducible-compile-ocaml-1-setup.sh
   [
@@ -88,7 +84,7 @@ build: [
 
   # Run reproducible-compile-ocaml-2-build_host-noargs.sh
   [
-    "dash" "-eufc"
+    "sh" "-eufc"
     """
     cd '%{prefix}%'
     share/dkml/repro/100-compile-ocaml/vendor/dkml-compiler/src/reproducible-compile-ocaml-2-build_host-noargs.sh
@@ -97,14 +93,18 @@ build: [
 
   # Run reproducible-compile-ocaml-3-build_cross-noargs.sh (typically a no-op unless we are cross-compiling)
   [
-    "dash" "-eufc"
+    "sh" "-eufc"
     """
     cd '%{prefix}%'
     share/dkml/repro/100-compile-ocaml/vendor/dkml-compiler/src/reproducible-compile-ocaml-3-build_cross-noargs.sh
     """
   ]
-
-  # TODO: For macOS and Android we should adjust findlib.conf so that there is a "darwin_arm64" (etc.) toolchain. That way
-  # `dune -x` can make use of the cross-compiler.
 ]
 dev-repo: "git+https://github.com/diskuv/dkml-component-ocamlcompiler.git"
+extra-source "dl/dkml-runtime-common.tar.gz" {
+  # dkml-runtime-common can be less or equal to DKML_VER
+  src: "https://github.com/diskuv/dkml-runtime-common/archive/refs/tags/v0.4.0-prerel12.tar.gz"
+  checksum: [
+    "sha256=751406f8d82c6afb12a1ff4f84c9298d4d045c52a7aa2652a8a89124ce1985ea"
+  ]
+}
