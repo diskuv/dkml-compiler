@@ -6,6 +6,7 @@
 # Should ask Opam if they can add `dkml-base-compiler` to `ocaml`
 # and `ocaml-config`.
 opam-version: "2.0"
+name: "dkml-base-compiler"
 version: "4.12.1-1"
 synopsis: "OCaml cross-compiler and libraries from the DKML distribution that works with at least Win32 and macOS"
 description:
