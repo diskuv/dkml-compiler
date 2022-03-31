@@ -62,6 +62,7 @@ usage() {
     printf "%s\n" "   -a TARGETABIS: Optional. See reproducible-compile-ocaml-1-setup.sh"
     printf "%s\n" "   -e DKMLHOSTABI: Uses the Diskuv OCaml compiler detector find a host ABI compiler"
     printf "%s\n" "   -f HOSTSRC_SUBDIR: Use HOSTSRC_SUBDIR subdirectory of -t DIR to place the source code of the host ABI"
+    printf "%s\n" "   -p HOST_SUBDIR: Use HOST_SUBDIR subdirectory of -t DIR to place the host ABI"
     printf "%s\n" "   -g CROSS_SUBDIR: Use CROSS_SUBDIR subdirectory of -t DIR to place target ABIs"
     printf "%s\n" "   -i OCAMLCARGS: Optional. Extra arguments passed to ocamlc like -g to save debugging"
     printf "%s\n" "   -j OCAMLOPTARGS: Optional. Extra arguments passed to ocamlopt like -g to save debugging"
@@ -79,8 +80,9 @@ DKMLHOSTABI=
 OCAMLCARGS=
 OCAMLOPTARGS=
 HOSTSRC_SUBDIR=
+HOST_SUBDIR=
 CROSS_SUBDIR=
-while getopts ":d:t:a:n:e:f:g:i:j:h" opt; do
+while getopts ":d:t:a:n:e:f:p:g:i:j:h" opt; do
   case ${opt} in
   h)
     usage
@@ -108,6 +110,7 @@ while getopts ":d:t:a:n:e:f:g:i:j:h" opt; do
     DKMLHOSTABI="$OPTARG"
     ;;
   f ) HOSTSRC_SUBDIR=$OPTARG ;;
+  p ) HOST_SUBDIR=$OPTARG ;;
   g ) CROSS_SUBDIR=$OPTARG ;;
   i)
     OCAMLCARGS="$OPTARG"

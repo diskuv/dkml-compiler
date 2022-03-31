@@ -37,6 +37,7 @@ set -euf
 # and also because it sets MSVS_* variables to empty if it thinks the environment is correct (but we
 # _always_ want MSVS_* set since OCaml ./configure script branches on MSVS_* being non-empty).
 OPT_MSVS_PREFERENCE='VS16.*;VS15.*;VS14.0' # KEEP IN SYNC with 2-build.sh
+HOST_SUBDIR=.
 HOSTSRC_SUBDIR=src/ocaml
 CROSS_SUBDIR=opt/mlcross
 
@@ -168,6 +169,7 @@ usage() {
         printf "%s\n" "   -r Only build ocamlrun, Stdlib and the other libraries. Cannot be used with -a TARGETABIS"
         printf "%s\n" "   -f HOSTSRC_SUBDIR: Optional. Use HOSTSRC_SUBDIR subdirectory of -t DIR to place the source code of the host ABI."
         printf "%s\n" "      Defaults to $HOSTSRC_SUBDIR"
+        printf "%s\n" "   -p HOST_SUBDIR: Optional. Use HOST_SUBDIR subdirectory of -t DIR to place the host ABI. Defaults to $HOST_SUBDIR"
         printf "%s\n" "   -g CROSS_SUBDIR: Optional. Use CROSS_SUBDIR subdirectory of -t DIR to place target ABIs. Defaults to $CROSS_SUBDIR"
         printf "%s\n" "   -o TEMPLATE_DIR: Optional. Instead of fetching source code for HOSTSRC_SUBDIR and CROSS_SUBDIR from git and patching"
         printf "%s\n" "      CROSS_SUBDIR for cross-compilation, the source code is copied from TEMPLATE_DIR/HOSTSRC_SUBDIR and"
@@ -189,7 +191,7 @@ TARGETABIS=
 MSVS_PREFERENCE="$OPT_MSVS_PREFERENCE"
 RUNTIMEONLY=OFF
 TEMPLATEDIR=
-while getopts ":d:v:u:t:a:b:e:i:j:k:m:n:rf:g:o:h" opt; do
+while getopts ":d:v:u:t:a:b:e:i:j:k:m:n:rf:p:g:o:h" opt; do
     case ${opt} in
         h )
             usage
@@ -233,6 +235,7 @@ while getopts ":d:v:u:t:a:b:e:i:j:k:m:n:rf:g:o:h" opt; do
             DKMLHOSTABI="$OPTARG"
         ;;
         f ) HOSTSRC_SUBDIR=$OPTARG ;;
+        p ) HOST_SUBDIR=$OPTARG ;;
         g ) CROSS_SUBDIR=$OPTARG ;;
         i )
             SETUP_ARGS+=( -i "$OPTARG" )
@@ -329,26 +332,26 @@ case $HOSTSRC_SUBDIR in
         exit 107
     fi
 esac
-case $CROSS_SUBDIR in
+case $HOST_SUBDIR in
 /* | ?:*) # /a/b/c or C:\Windows
     if [ -x /usr/bin/cygpath ]; then
-        CROSS_SUBDIR_MIXED=$(/usr/bin/cygpath -m "$CROSS_SUBDIR")
+        HOST_SUBDIR_MIXED=$(/usr/bin/cygpath -m "$HOST_SUBDIR")
     else
-        CROSS_SUBDIR_MIXED="$CROSS_SUBDIR"
+        HOST_SUBDIR_MIXED="$HOST_SUBDIR"
     fi
-    if [ "${CROSS_SUBDIR##"$TARGETDIR_UNIX/"}" != "$CROSS_SUBDIR" ]; then
-        CROSS_SUBDIR="${CROSS_SUBDIR##"$TARGETDIR_UNIX/"}"
-    elif [ "${CROSS_SUBDIR_MIXED##"$TARGETDIR_MIXED/"}" != "$CROSS_SUBDIR_MIXED" ]; then
-        CROSS_SUBDIR="${CROSS_SUBDIR_MIXED##"$TARGETDIR_MIXED/"}"
+    if [ "${HOST_SUBDIR##"$TARGETDIR_UNIX/"}" != "$HOST_SUBDIR" ]; then
+        HOST_SUBDIR="${HOST_SUBDIR##"$TARGETDIR_UNIX/"}"
+    elif [ "${HOST_SUBDIR_MIXED##"$TARGETDIR_MIXED/"}" != "$HOST_SUBDIR_MIXED" ]; then
+        HOST_SUBDIR="${HOST_SUBDIR_MIXED##"$TARGETDIR_MIXED/"}"
     else
-        printf "FATAL: Could not resolve CROSS_SUBDIR=%s as a subdirectory of %s\n" "$CROSS_SUBDIR" "$TARGETDIR_UNIX" >&2
+        printf "FATAL: Could not resolve HOST_SUBDIR=%s as a subdirectory of %s\n" "$HOST_SUBDIR" "$TARGETDIR_UNIX" >&2
         exit 107
     fi
 esac
 
-SETUP_ARGS+=( -f "$HOSTSRC_SUBDIR" -g "$CROSS_SUBDIR" )
-BUILD_HOST_ARGS+=( -f "$HOSTSRC_SUBDIR" )
-BUILD_CROSS_ARGS+=( -f "$HOSTSRC_SUBDIR" -g "$CROSS_SUBDIR" )
+SETUP_ARGS+=( -p "$HOST_SUBDIR" -f "$HOSTSRC_SUBDIR" -g "$CROSS_SUBDIR" )
+BUILD_HOST_ARGS+=( -p "$HOST_SUBDIR" -f "$HOSTSRC_SUBDIR" )
+BUILD_CROSS_ARGS+=( -p "$HOST_SUBDIR" -f "$HOSTSRC_SUBDIR" -g "$CROSS_SUBDIR" )
 
 # To be portable whether we build scripts in a container or not, we
 # change the directory to always be in the DKMLDIR (just like a container

@@ -56,6 +56,7 @@ usage() {
         printf "%s\n" "   -b PREF: Required and used only for the MSVC compiler. See reproducible-compile-ocaml-1-setup.sh"
         printf "%s\n" "   -e DKMLHOSTABI: Uses the Diskuv OCaml compiler detector find a host ABI compiler"
         printf "%s\n" "   -f HOSTSRC_SUBDIR: Use HOSTSRC_SUBDIR subdirectory of -t DIR to place the source code of the host ABI"
+        printf "%s\n" "   -p HOST_SUBDIR: Optional. Use HOST_SUBDIR subdirectory of -t DIR to place the host ABI. Defaults to $HOST_SUBDIR"
         printf "%s\n" "   -i OCAMLCARGS: Optional. Extra arguments passed to ocamlc like -g to save debugging"
         printf "%s\n" "   -j OCAMLOPTARGS: Optional. Extra arguments passed to ocamlopt like -g to save debugging"
         printf "%s\n" "   -k HOSTABISCRIPT: Optional. See reproducible-compile-ocaml-1-setup.sh"
@@ -75,8 +76,9 @@ OCAMLOPTARGS=
 HOSTABISCRIPT=
 RUNTIMEONLY=OFF
 HOSTSRC_SUBDIR=
+HOST_SUBDIR=
 export MSVS_PREFERENCE=
-while getopts ":d:t:b:e:m:i:j:k:rf:h" opt; do
+while getopts ":d:t:b:e:m:i:j:k:rf:p:h" opt; do
     case ${opt} in
         h )
             usage
@@ -101,6 +103,7 @@ while getopts ":d:t:b:e:m:i:j:k:rf:h" opt; do
             DKMLHOSTABI="$OPTARG"
         ;;
         f ) HOSTSRC_SUBDIR=$OPTARG ;;
+        p ) HOST_SUBDIR=$OPTARG ;;
         m )
             CONFIGUREARGS="$OPTARG"
         ;;
@@ -149,6 +152,7 @@ disambiguate_filesystem_paths
 
 # Bootstrapping vars
 TARGETDIR_UNIX=$(cd "$TARGETDIR" && pwd) # better than cygpath: handles TARGETDIR=. without trailing slash, and works on Unix/Windows
+OCAMLHOST_UNIX="$TARGETDIR_UNIX/$HOST_SUBDIR"
 if [ -x /usr/bin/cygpath ]; then
     OCAMLSRC_UNIX=$(/usr/bin/cygpath -au "$TARGETDIR_UNIX/$HOSTSRC_SUBDIR")
     OCAMLSRC_HOST=$(/usr/bin/cygpath -aw "$TARGETDIR_UNIX/$HOSTSRC_SUBDIR")
@@ -203,7 +207,7 @@ DKML_FEATUREFLAG_CMAKE_PLATFORM=ON DKML_TARGET_ABI="$DKMLHOSTABI" DKML_COMPILE_S
 if [ "$RUNTIMEONLY" = ON ]; then
     CONFIGUREARGS="$CONFIGUREARGS --disable-native-compiler --disable-stdlib-manpages"
 fi
-log_trace ocaml_configure "$TARGETDIR_UNIX" "$DKMLHOSTABI" "$HOSTABISCRIPT" "$CONFIGUREARGS"
+log_trace ocaml_configure "$OCAMLHOST_UNIX" "$DKMLHOSTABI" "$HOSTABISCRIPT" "$CONFIGUREARGS"
 
 # fix readonly perms we'll set later (if we've re-used the files because
 # of a cache)
@@ -219,7 +223,7 @@ fi
 log_trace ocaml_make "$DKMLHOSTABI"     coldstart
 log_trace ocaml_make "$DKMLHOSTABI"     coreall            # Also produces ./ocaml
 if [ "$RUNTIMEONLY" = ON ]; then
-    log_trace install -d "$TARGETDIR_UNIX/bin" "$TARGETDIR_UNIX/lib/ocaml"
+    log_trace install -d "$OCAMLHOST_UNIX/bin" "$OCAMLHOST_UNIX/lib/ocaml"
     log_trace ocaml_make "$DKMLHOSTABI" -C runtime install
     log_trace ocaml_make "$DKMLHOSTABI" -C stdlib install
     log_trace ocaml_make "$DKMLHOSTABI" otherlibraries    
@@ -235,7 +239,7 @@ log_trace ocaml_make "$DKMLHOSTABI" opt-core
 log_trace ocaml_make "$DKMLHOSTABI" ocamlc.opt
 #   Generated ./ocamlc for some reason has a shebang reference to the bin/ocamlrun install
 #   location. So install the runtime.
-log_trace install -d "$TARGETDIR_UNIX/bin" "$TARGETDIR_UNIX/lib/ocaml"
+log_trace install -d "$OCAMLHOST_UNIX/bin" "$OCAMLHOST_UNIX/lib/ocaml"
 log_trace ocaml_make "$DKMLHOSTABI"     -C runtime install
 log_trace ocaml_make "$DKMLHOSTABI"     ocamlopt.opt       # Can use ./ocamlc (depends on exact sequence above; doesn't now though)
 
@@ -386,9 +390,9 @@ log_trace make_host -final              install
 
 # Test executables that they were properly linked
 if [ "${OCAML_BYTECODE_ONLY:-OFF}" = OFF ] && [ "$OCAML_CONFIGURE_NEEDS_MAKE_FLEXDLL" = ON ]; then
-    log_trace "$TARGETDIR_UNIX"/bin/flexlink.exe --help >&2
+    log_trace "$OCAMLHOST_UNIX"/bin/flexlink.exe --help >&2
 fi
-log_trace "$TARGETDIR_UNIX"/bin/ocamlc -config >&2
-log_trace "$TARGETDIR_UNIX"/bin/ocamlopt -config >&2
-log_trace "$TARGETDIR_UNIX"/bin/ocamlc.opt -config >&2
-log_trace "$TARGETDIR_UNIX"/bin/ocamlopt.opt -config >&2
+log_trace "$OCAMLHOST_UNIX"/bin/ocamlc -config >&2
+log_trace "$OCAMLHOST_UNIX"/bin/ocamlopt -config >&2
+log_trace "$OCAMLHOST_UNIX"/bin/ocamlc.opt -config >&2
+log_trace "$OCAMLHOST_UNIX"/bin/ocamlopt.opt -config >&2
