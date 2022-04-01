@@ -222,8 +222,8 @@ if [ "$OCAML_CONFIGURE_NEEDS_MAKE_FLEXDLL" = ON ]; then
 fi
 log_trace ocaml_make "$DKMLHOSTABI"     coldstart
 log_trace ocaml_make "$DKMLHOSTABI"     coreall            # Also produces ./ocaml
+log_trace install -d "$OCAMLHOST_UNIX/bin" "$OCAMLHOST_UNIX/lib/ocaml" "$OCAMLHOST_UNIX/lib/ocaml/stublibs"
 if [ "$RUNTIMEONLY" = ON ]; then
-    log_trace install -d "$OCAMLHOST_UNIX/bin" "$OCAMLHOST_UNIX/lib/ocaml"
     log_trace ocaml_make "$DKMLHOSTABI" -C runtime install
     log_trace ocaml_make "$DKMLHOSTABI" -C stdlib install
     log_trace ocaml_make "$DKMLHOSTABI" otherlibraries    
@@ -239,7 +239,6 @@ log_trace ocaml_make "$DKMLHOSTABI" opt-core
 log_trace ocaml_make "$DKMLHOSTABI" ocamlc.opt
 #   Generated ./ocamlc for some reason has a shebang reference to the bin/ocamlrun install
 #   location. So install the runtime.
-log_trace install -d "$OCAMLHOST_UNIX/bin" "$OCAMLHOST_UNIX/lib/ocaml"
 log_trace ocaml_make "$DKMLHOSTABI"     -C runtime install
 log_trace ocaml_make "$DKMLHOSTABI"     ocamlopt.opt       # Can use ./ocamlc (depends on exact sequence above; doesn't now though)
 
