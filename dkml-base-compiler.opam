@@ -104,8 +104,8 @@ build: [
 dev-repo: "git+https://github.com/diskuv/dkml-component-ocamlcompiler.git"
 extra-source "dl/dkml-runtime-common.tar.gz" {
   # dkml-runtime-common can be less or equal to DKML_VER
-  src: "https://github.com/diskuv/dkml-runtime-common/archive/refs/tags/v0.4.0-prerel18.tar.gz"
+  src: "https://github.com/diskuv/dkml-runtime-common/archive/refs/tags/v0.4.0-prerel19.tar.gz"
   checksum: [
-    "sha256=2167848caaf5a5933001d2b9ec32413476dd2b80ae351454d8ab71da18e16ec1"
+    "sha256=f819b48fc4379b80f917fdbcb88b06b5123c12b8ae4190667defc4cc4b5d03fe"
   ]
 }
