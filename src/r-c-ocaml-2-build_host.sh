@@ -27,7 +27,7 @@
 #   build files.
 #
 ######################################
-# reproducible-compile-ocaml-2-build_host.sh -d DKMLDIR -t TARGETDIR
+# r-c-ocaml-2-build_host.sh -d DKMLDIR -t TARGETDIR
 #
 # Purpose:
 # 1. Build an OCaml environment including an OCaml native compiler that generates machine code for the
@@ -44,22 +44,22 @@ set -euf
 usage() {
     {
         printf "%s\n" "Usage:"
-        printf "%s\n" "    reproducible-compile-ocaml-2-build_host.sh"
+        printf "%s\n" "    r-c-ocaml-2-build_host.sh"
         printf "%s\n" "        -h             Display this help message."
         printf "%s\n" "        -d DIR -t DIR  Compile OCaml."
         printf "\n"
-        printf "%s\n" "See 'reproducible-compile-ocaml-1-setup.sh -h' for more comprehensive docs."
+        printf "%s\n" "See 'r-c-ocaml-1-setup.sh -h' for more comprehensive docs."
         printf "\n"
         printf "%s\n" "Options"
         printf "%s\n" "   -d DIR: DKML directory containing a .dkmlroot file"
         printf "%s\n" "   -t DIR: Target directory for the reproducible directory tree"
-        printf "%s\n" "   -b PREF: Required and used only for the MSVC compiler. See reproducible-compile-ocaml-1-setup.sh"
+        printf "%s\n" "   -b PREF: Required and used only for the MSVC compiler. See r-c-ocaml-1-setup.sh"
         printf "%s\n" "   -e DKMLHOSTABI: Uses the Diskuv OCaml compiler detector find a host ABI compiler"
         printf "%s\n" "   -f HOSTSRC_SUBDIR: Use HOSTSRC_SUBDIR subdirectory of -t DIR to place the source code of the host ABI"
         printf "%s\n" "   -p HOST_SUBDIR: Optional. Use HOST_SUBDIR subdirectory of -t DIR to place the host ABI. Defaults to $HOST_SUBDIR"
         printf "%s\n" "   -i OCAMLCARGS: Optional. Extra arguments passed to ocamlc like -g to save debugging"
         printf "%s\n" "   -j OCAMLOPTARGS: Optional. Extra arguments passed to ocamlopt like -g to save debugging"
-        printf "%s\n" "   -k HOSTABISCRIPT: Optional. See reproducible-compile-ocaml-1-setup.sh"
+        printf "%s\n" "   -k HOSTABISCRIPT: Optional. See r-c-ocaml-1-setup.sh"
         printf "%s\n" "   -m CONFIGUREARGS: Optional. Extra arguments passed to OCaml's ./configure. --with-flexdll"
         printf "%s\n" "      and --host will have already been set appropriately, but you can override the --host heuristic by adding it"
         printf "%s\n" "      to -m CONFIGUREARGS"
@@ -167,14 +167,14 @@ export OCAMLSRC_MIXED
 
 # ------------------
 
-# Prereqs for reproducible-compile-ocaml-functions.sh
+# Prereqs for r-c-ocaml-functions.sh
 autodetect_system_binaries
 autodetect_system_path
 autodetect_cpus
 autodetect_posix_shell
 
 # shellcheck disable=SC1091
-. "$DKMLDIR/vendor/dkml-compiler/src/reproducible-compile-ocaml-functions.sh"
+. "$DKMLDIR/vendor/dkml-compiler/src/r-c-ocaml-functions.sh"
 
 if [ -n "$HOSTABISCRIPT" ]; then
     case "$HOSTABISCRIPT" in

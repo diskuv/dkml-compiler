@@ -55,10 +55,10 @@ build: [
   ["install" "-d" "dkmldir/vendor/dkml-compiler/src"]
   ["sh" "-eufc" "tar cCf src/ - . | tar xCf dkmldir/vendor/dkml-compiler/src/ -"]
 
-  # Run reproducible-compile-ocaml-1-setup.sh
+  # Run r-c-ocaml-1-setup.sh
   [
     "env" "TOPDIR=dkmldir/vendor/dkml-runtime-common/all/emptytop"
-      "dkmldir/vendor/dkml-compiler/src/reproducible-compile-ocaml-1-setup.sh"
+      "dkmldir/vendor/dkml-compiler/src/r-c-ocaml-1-setup.sh"
       "-d" "dkmldir"
       "-t" "%{prefix}%"
       "-f" "%{_:build}%/src-ocaml"
@@ -83,21 +83,21 @@ build: [
       "-k" "vendor/dkml-compiler/src/standard-compiler-env-to-ocaml-configure-env.sh"
   ]
 
-  # Run reproducible-compile-ocaml-2-build_host-noargs.sh
+  # Run r-c-ocaml-2-build_host-noargs.sh
   [
     "sh" "-eufc"
     """
     cd '%{prefix}%'
-    share/dkml/repro/100co/vendor/dkml-compiler/src/reproducible-compile-ocaml-2-build_host-noargs.sh
+    share/dkml/repro/100co/vendor/dkml-compiler/src/r-c-ocaml-2-build_host-noargs.sh
     """
   ]
 
-  # Run reproducible-compile-ocaml-3-build_cross-noargs.sh (typically a no-op unless we are cross-compiling)
+  # Run r-c-ocaml-3-build_cross-noargs.sh (typically a no-op unless we are cross-compiling)
   [
     "sh" "-eufc"
     """
     cd '%{prefix}%'
-    share/dkml/repro/100co/vendor/dkml-compiler/src/reproducible-compile-ocaml-3-build_cross-noargs.sh
+    share/dkml/repro/100co/vendor/dkml-compiler/src/r-c-ocaml-3-build_cross-noargs.sh
     """
   ]
 ]

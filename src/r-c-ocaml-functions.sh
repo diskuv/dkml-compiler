@@ -21,7 +21,7 @@
 #   build files.
 #
 ######################################
-# reproducible-compile-ocaml-functions.sh
+# r-c-ocaml-functions.sh
 #
 # Purpose:
 # 1. Provide common functions to be sourced in the reproducible step scripts.

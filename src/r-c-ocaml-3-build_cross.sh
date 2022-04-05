@@ -27,7 +27,7 @@
 #   build files.
 #
 ######################################
-# reproducible-compile-ocaml-3-build_cross.sh -d DKMLDIR -t TARGETDIR
+# r-c-ocaml-3-build_cross.sh -d DKMLDIR -t TARGETDIR
 #
 # Purpose:
 # 1. Optional layer on top of a host OCaml environment a cross-compiling OCaml environment using techniques pioneered by
@@ -48,18 +48,18 @@ set -euf
 usage() {
   {
     printf "%s\n" "Usage:"
-    printf "%s\n" "    reproducible-compile-ocaml-3-build_cross.sh"
+    printf "%s\n" "    r-c-ocaml-3-build_cross.sh"
     printf "%s\n" "        -h             Display this help message."
     printf "%s\n" "        -d DIR -t DIR  Compile OCaml."
     printf "\n"
-    printf "%s\n" "See 'reproducible-compile-ocaml-1-setup.sh -h' for more comprehensive docs."
+    printf "%s\n" "See 'r-c-ocaml-1-setup.sh -h' for more comprehensive docs."
     printf "\n"
     printf "%s\n" "If not '-a TARGETABIS' is specified, this script does nothing"
     printf "\n"
     printf "%s\n" "Options"
     printf "%s\n" "   -d DIR: DKML directory containing a .dkmlroot file"
     printf "%s\n" "   -t DIR: Target directory for the reproducible directory tree"
-    printf "%s\n" "   -a TARGETABIS: Optional. See reproducible-compile-ocaml-1-setup.sh"
+    printf "%s\n" "   -a TARGETABIS: Optional. See r-c-ocaml-1-setup.sh"
     printf "%s\n" "   -e DKMLHOSTABI: Uses the Diskuv OCaml compiler detector find a host ABI compiler"
     printf "%s\n" "   -f HOSTSRC_SUBDIR: Use HOSTSRC_SUBDIR subdirectory of -t DIR to place the source code of the host ABI"
     printf "%s\n" "   -p HOST_SUBDIR: Use HOST_SUBDIR subdirectory of -t DIR to place the host ABI"
@@ -166,14 +166,14 @@ fi
 # after discussion from authors at https://discuss.ocaml.org/t/cross-compiling-implementations-how-they-work/8686 .
 # Portable shell linting (shellcheck) fixes applied.
 
-# Prereqs for reproducible-compile-ocaml-functions.sh
+# Prereqs for r-c-ocaml-functions.sh
 autodetect_system_binaries
 autodetect_system_path
 autodetect_cpus
 autodetect_posix_shell
 
 # shellcheck disable=SC1091
-. "$DKMLDIR/vendor/dkml-compiler/src/reproducible-compile-ocaml-functions.sh"
+. "$DKMLDIR/vendor/dkml-compiler/src/r-c-ocaml-functions.sh"
 
 ## Parameters
 

@@ -21,7 +21,7 @@
 #   build files.
 #
 ######################################
-# reproducible-compile-ocaml-1-setup.sh -d DKMLDIR -t TARGETDIR \
+# r-c-ocaml-1-setup.sh -d DKMLDIR -t TARGETDIR \
 #      -v COMMIT [-a TARGETABIS]
 #
 # Sets up the source code for a reproducible compilation of OCaml
@@ -44,7 +44,7 @@ CROSS_SUBDIR=opt/mlcross
 usage() {
     {
         printf "%s\n" "Usage:"
-        printf "%s\n" "    reproducible-compile-ocaml-1-setup.sh"
+        printf "%s\n" "    r-c-ocaml-1-setup.sh"
         printf "%s\n" "        -h                       Display this help message."
         printf "%s\n" "        -d DIR -t DIR -v COMMIT  Setup compilation of OCaml."
         printf "\n"
@@ -388,24 +388,24 @@ find_ocaml_crosscompile_patch() {
     shift
     case "$find_ocaml_crosscompile_patch_VER" in
     4.11.*)
-        OCAMLPATCHFILE=reproducible-compile-ocaml-cross_4_11.patch
+        OCAMLPATCHFILE=r-c-ocaml-cross_4_11.patch
         OCAMLPATCHEXTRA= # TODO
         ;;
     4.12.*)
-        OCAMLPATCHFILE=reproducible-compile-ocaml-cross_4_12.patch
-        OCAMLPATCHEXTRA=reproducible-compile-ocaml-cross_4_12_extra.patch
+        OCAMLPATCHFILE=r-c-ocaml-cross_4_12.patch
+        OCAMLPATCHEXTRA=r-c-ocaml-cross_4_12_extra.patch
         ;;
     4.13.*)
         # shellcheck disable=SC2034
-        OCAMLPATCHFILE=reproducible-compile-ocaml-cross_4_13.patch
+        OCAMLPATCHFILE=r-c-ocaml-cross_4_13.patch
         # shellcheck disable=SC2034
         OCAMLPATCHEXTRA= # TODO
         ;;
     5.00.*)
         # shellcheck disable=SC2034
-        OCAMLPATCHFILE=reproducible-compile-ocaml-cross_5_00.patch
+        OCAMLPATCHFILE=r-c-ocaml-cross_5_00.patch
         # shellcheck disable=SC2034
-        OCAMLPATCHEXTRA=reproducible-compile-ocaml-cross_5_00_extra.patch
+        OCAMLPATCHEXTRA=r-c-ocaml-cross_5_00_extra.patch
         ;;
     *)
         echo "FATAL: There is no cross-compiling patch file yet for OCaml $find_ocaml_crosscompile_patch_VER" >&2
@@ -578,7 +578,7 @@ if [ -n "$TARGETABIS" ]; then
                 apply_ocaml_crosscompile_patch "$OCAMLPATCHEXTRA" "$TARGETDIR_UNIX/$CROSS_SUBDIR/$_targetabi/$HOSTSRC_SUBDIR"
             fi
             # git patch src/ocaml/flexdll
-            apply_ocaml_crosscompile_patch "reproducible-compile-ocaml-cross_flexdll_0_39.patch" "$TARGETDIR_UNIX/$CROSS_SUBDIR/$_targetabi/$HOSTSRC_SUBDIR/flexdll"
+            apply_ocaml_crosscompile_patch "r-c-ocaml-cross_flexdll_0_39.patch" "$TARGETDIR_UNIX/$CROSS_SUBDIR/$_targetabi/$HOSTSRC_SUBDIR/flexdll"
         done < "$WORK"/tabi
     fi
 fi
@@ -599,16 +599,16 @@ fi
 # shellcheck disable=SC2016
 COMMON_ARGS=(-d "$SHARE_REPRODUCIBLE_BUILD_RELPATH/$BOOTSTRAPNAME")
 install_reproducible_common
-install_reproducible_readme           vendor/dkml-compiler/src/reproducible-compile-ocaml-README.md
-install_reproducible_file             vendor/dkml-compiler/src/reproducible-compile-ocaml-check_linker.sh
-install_reproducible_file             vendor/dkml-compiler/src/reproducible-compile-ocaml-functions.sh
-install_reproducible_file             vendor/dkml-compiler/src/reproducible-compile-ocaml-cross_4_11.patch
-install_reproducible_file             vendor/dkml-compiler/src/reproducible-compile-ocaml-cross_4_12.patch
-install_reproducible_file             vendor/dkml-compiler/src/reproducible-compile-ocaml-cross_4_12_extra.patch
-install_reproducible_file             vendor/dkml-compiler/src/reproducible-compile-ocaml-cross_4_13.patch
-install_reproducible_file             vendor/dkml-compiler/src/reproducible-compile-ocaml-cross_5_00.patch
-install_reproducible_file             vendor/dkml-compiler/src/reproducible-compile-ocaml-cross_5_00_extra.patch
-install_reproducible_file             vendor/dkml-compiler/src/reproducible-compile-ocaml-cross_flexdll_0_39.patch
+install_reproducible_readme           vendor/dkml-compiler/src/r-c-ocaml-README.md
+install_reproducible_file             vendor/dkml-compiler/src/r-c-ocaml-check_linker.sh
+install_reproducible_file             vendor/dkml-compiler/src/r-c-ocaml-functions.sh
+install_reproducible_file             vendor/dkml-compiler/src/r-c-ocaml-cross_4_11.patch
+install_reproducible_file             vendor/dkml-compiler/src/r-c-ocaml-cross_4_12.patch
+install_reproducible_file             vendor/dkml-compiler/src/r-c-ocaml-cross_4_12_extra.patch
+install_reproducible_file             vendor/dkml-compiler/src/r-c-ocaml-cross_4_13.patch
+install_reproducible_file             vendor/dkml-compiler/src/r-c-ocaml-cross_5_00.patch
+install_reproducible_file             vendor/dkml-compiler/src/r-c-ocaml-cross_5_00_extra.patch
+install_reproducible_file             vendor/dkml-compiler/src/r-c-ocaml-cross_flexdll_0_39.patch
 install_reproducible_file             vendor/dkml-compiler/src/standard-compiler-env-to-ocaml-configure-env.sh
 if [ -n "$TARGETABIS" ]; then
     _accumulator=
@@ -621,18 +621,18 @@ if [ -n "$TARGETABIS" ]; then
 
         # Since we want the ABI scripts to be reproducible, we install them in a reproducible place and set
         # the reproducible arguments (-a) to point to that reproducible place.
-        _script="vendor/dkml-compiler/src/reproducible-compile-ocaml-targetabi-$_targetabi.sh"
+        _script="vendor/dkml-compiler/src/r-c-ocaml-targetabi-$_targetabi.sh"
         if [ -n "$_accumulator" ]; then
             _accumulator="$_accumulator;$_targetabi=$_script"
         else
             _accumulator="$_targetabi=$_script"
         fi
-        install_reproducible_generated_file "$_abiscript" vendor/dkml-compiler/src/reproducible-compile-ocaml-targetabi-"$_targetabi".sh
+        install_reproducible_generated_file "$_abiscript" vendor/dkml-compiler/src/r-c-ocaml-targetabi-"$_targetabi".sh
     done < "$WORK"/tabi
     SETUP_ARGS+=( -a "$_accumulator" )
     BUILD_CROSS_ARGS+=( -a "$_accumulator" )
 fi
-install_reproducible_system_packages  vendor/dkml-compiler/src/reproducible-compile-ocaml-0-system.sh
-install_reproducible_script_with_args vendor/dkml-compiler/src/reproducible-compile-ocaml-1-setup.sh "${COMMON_ARGS[@]}" "${SETUP_ARGS[@]}"
-install_reproducible_script_with_args vendor/dkml-compiler/src/reproducible-compile-ocaml-2-build_host.sh "${COMMON_ARGS[@]}" "${BUILD_HOST_ARGS[@]}"
-install_reproducible_script_with_args vendor/dkml-compiler/src/reproducible-compile-ocaml-3-build_cross.sh "${COMMON_ARGS[@]}" "${BUILD_CROSS_ARGS[@]}"
+install_reproducible_system_packages  vendor/dkml-compiler/src/r-c-ocaml-0-system.sh
+install_reproducible_script_with_args vendor/dkml-compiler/src/r-c-ocaml-1-setup.sh "${COMMON_ARGS[@]}" "${SETUP_ARGS[@]}"
+install_reproducible_script_with_args vendor/dkml-compiler/src/r-c-ocaml-2-build_host.sh "${COMMON_ARGS[@]}" "${BUILD_HOST_ARGS[@]}"
+install_reproducible_script_with_args vendor/dkml-compiler/src/r-c-ocaml-3-build_cross.sh "${COMMON_ARGS[@]}" "${BUILD_CROSS_ARGS[@]}"
