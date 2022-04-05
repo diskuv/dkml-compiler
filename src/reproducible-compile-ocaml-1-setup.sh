@@ -586,8 +586,9 @@ fi
 # ---------------------------
 # Finish
 
-# Copy self into share/dkml-bootstrap/100-compile-ocaml
-export BOOTSTRAPNAME=100-compile-ocaml
+# Copy self into share/dkml-bootstrap/100co (short form of 100co
+# so Windows and macOS paths are short)
+export BOOTSTRAPNAME=100co
 export DEPLOYDIR_UNIX="$TARGETDIR_UNIX"
 DESTDIR=$TARGETDIR_UNIX/$SHARE_REPRODUCIBLE_BUILD_RELPATH/$BOOTSTRAPNAME
 THISDIR=$(pwd)
