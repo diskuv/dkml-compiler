@@ -351,7 +351,7 @@ esac
 
 SETUP_ARGS+=( -p "$HOST_SUBDIR" -f "$HOSTSRC_SUBDIR" -g "$CROSS_SUBDIR" )
 BUILD_HOST_ARGS+=( -p "$HOST_SUBDIR" -f "$HOSTSRC_SUBDIR" )
-BUILD_CROSS_ARGS+=( -p "$HOST_SUBDIR" -f "$HOSTSRC_SUBDIR" -g "$CROSS_SUBDIR" )
+BUILD_CROSS_ARGS+=( -f "$HOSTSRC_SUBDIR" -g "$CROSS_SUBDIR" )
 
 # To be portable whether we build scripts in a container or not, we
 # change the directory to always be in the DKMLDIR (just like a container
