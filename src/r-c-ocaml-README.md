@@ -26,5 +26,8 @@ fi
 @@BOOTSTRAPDIR_UNIX@@vendor/dkml-compiler/src/r-c-ocaml-1-setup-noargs.sh
 
 # Build and install OCaml
-@@BOOTSTRAPDIR_UNIX@@vendor/dkml-compiler/src/r-c-ocaml-2-build-noargs.sh
+@@BOOTSTRAPDIR_UNIX@@vendor/dkml-compiler/src/r-c-ocaml-2-build_host-noargs.sh
+
+# Build and install any OCaml cross-compilers
+@@BOOTSTRAPDIR_UNIX@@vendor/dkml-compiler/src/r-c-ocaml-3-build_cross-noargs.sh
 ```
