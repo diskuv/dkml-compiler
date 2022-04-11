@@ -111,8 +111,8 @@ usage() {
         printf "%s\n" "Options"
         printf "%s\n" "   -d DIR: DKML directory containing a .dkmlroot file"
         printf "%s\n" "   -t DIR: Target directory for the reproducible directory tree"
-        printf "%s\n" "   -v COMMIT: Git commit or tag for https://github.com/ocaml/ocaml. Strongly prefer a commit id for much stronger"
-        printf "%s\n" "      reproducibility guarantees"
+        printf "%s\n" "   -v COMMIT_OR_DIR: Git commit or tag or directory for https://github.com/ocaml/ocaml. Strongly prefer a commit id"
+        printf "%s\n" "      instead of a git tag for for much stronger reproducibility guarantees"
         printf "%s\n" "   -u COMMIT: (Deprecated). Git commit or tag for https://github.com/ocaml/ocaml for the host ABI. Defaults to -v COMMIT"
         printf "%s\n" "   -a TARGETABIS: Optional. A named list of self-contained Posix shell script that can be sourced to set the"
         printf "%s\n" "      compiler environment variables for the target ABI. If not specified then the OCaml environment"
@@ -184,7 +184,7 @@ BUILD_CROSS_ARGS=()
 
 DKMLDIR=
 DKMLHOSTABI=${DKML_HOST_ABI:-}
-GIT_COMMITID_OR_TAG=
+GIT_COMMITID_TAG_OR_DIR=
 TARGETDIR=
 TARGETABIS=
 MSVS_PREFERENCE="$OPT_MSVS_PREFERENCE"
@@ -210,8 +210,8 @@ while getopts ":d:v:u:t:a:b:e:i:j:k:m:n:rf:p:g:o:h" opt; do
             DKMLDIR="$DKMLDIR_1/$DKMLDIR_2"
         ;;
         v )
-            GIT_COMMITID_OR_TAG="$OPTARG"
-            SETUP_ARGS+=( -v "$GIT_COMMITID_OR_TAG" )
+            GIT_COMMITID_TAG_OR_DIR="$OPTARG"
+            SETUP_ARGS+=( -v "$GIT_COMMITID_TAG_OR_DIR" )
         ;;
         u )
             printf "WARNING: r-c-ocaml-1-setup.sh -u COMMIT is deprecated. Use -v option instead\n" >&2
@@ -275,7 +275,7 @@ while getopts ":d:v:u:t:a:b:e:i:j:k:m:n:rf:p:g:o:h" opt; do
 done
 shift $((OPTIND -1))
 
-if [ -z "$DKMLDIR" ] || [ -z "$GIT_COMMITID_OR_TAG" ] || [ -z "$TARGETDIR" ]; then
+if [ -z "$DKMLDIR" ] || [ -z "$GIT_COMMITID_TAG_OR_DIR" ] || [ -z "$TARGETDIR" ]; then
     printf "%s\n" "Missing required options" >&2
     usage
     exit 1
@@ -343,6 +343,17 @@ case $HOST_SUBDIR in
         exit 107
     fi
 esac
+
+if [ -d "$GIT_COMMITID_TAG_OR_DIR" ]; then
+    if [ -x /usr/bin/cygpath ]; then
+        GIT_COMMITID_TAG_OR_DIR=$(/usr/bin/cygpath -am "$GIT_COMMITID_TAG_OR_DIR")
+    else
+        # absolute directory
+        buildhost_pathize "$GIT_COMMITID_TAG_OR_DIR"
+        # shellcheck disable=SC2154
+        GIT_COMMITID_TAG_OR_DIR="$buildhost_pathize_RETVAL"
+    fi
+fi
 
 SETUP_ARGS+=( -p "$HOST_SUBDIR" -f "$HOSTSRC_SUBDIR" -g "$CROSS_SUBDIR" )
 BUILD_HOST_ARGS+=( -p "$HOST_SUBDIR" -f "$HOSTSRC_SUBDIR" )
@@ -455,7 +466,7 @@ clean_ocaml_install() {
 }
 
 get_ocaml_source() {
-    get_ocaml_source_COMMIT=$1
+    get_ocaml_source_COMMIT_TAG_OR_DIR=$1
     shift
     get_ocaml_source_SRCUNIX="$1"
     shift
@@ -464,58 +475,92 @@ get_ocaml_source() {
     get_ocaml_source_TARGETPLATFORM="$1"
     shift
 
-    if [ ! -e "$get_ocaml_source_SRCUNIX/Makefile" ] || [ ! -e "$get_ocaml_source_SRCUNIX/.git" ]; then
-        log_trace rm -rf "$get_ocaml_source_SRCUNIX" # clean any partial downloads
-        # do NOT --recurse-submodules because we don't want submodules (ex. flexdll/) that are in HEAD but
-        # are not in $get_ocaml_source_COMMIT
-        log_trace install -d "$get_ocaml_source_SRCUNIX"
-        #   Instead of git clone we use git fetch --depth 1 so we do a shallow clone of the commit
-        log_trace git -C "$get_ocaml_source_SRCMIXED" -c init.defaultBranch=master init
-        log_trace git -C "$get_ocaml_source_SRCMIXED" remote add origin https://github.com/ocaml/ocaml
-        log_trace git -C "$get_ocaml_source_SRCMIXED" fetch --depth 1 origin "$get_ocaml_source_COMMIT"
-        log_trace git -C "$get_ocaml_source_SRCMIXED" reset --hard FETCH_HEAD
-    else
-        # Git fetch can be very expensive after a shallow clone; we skip advancing the repository
-        # if the expected tag/commit is a commit and the actual git commit is the expected git commit
-        git_head=$(log_trace git -C "$get_ocaml_source_SRCMIXED" rev-parse HEAD)
-        if [ ! "$git_head" = "$get_ocaml_source_COMMIT" ]; then
-            # allow tag to move (for development and for emergency fixes), if the user chose a tag rather than a commit
-            if git -C "$get_ocaml_source_SRCMIXED" tag -l "$get_ocaml_source_COMMIT" | awk 'BEGIN{nonempty=0} NF>0{nonempty+=1} END{exit nonempty==0}'; then git -C "$get_ocaml_source_SRCMIXED" tag -d "$get_ocaml_source_COMMIT"; fi
-            log_trace git -C "$get_ocaml_source_SRCMIXED" fetch --tags
-            log_trace git -C "$get_ocaml_source_SRCMIXED" -c advice.detachedHead=false checkout "$get_ocaml_source_COMMIT"
+    # Get the unpatched ocaml/ocaml source code ...
+
+    if [ -d "$get_ocaml_source_COMMIT_TAG_OR_DIR" ]; then
+        # If there is a directory of the source code, use that
+
+        if [ ! -e "$get_ocaml_source_SRCUNIX/Makefile" ]; then
+            log_trace install -d "$get_ocaml_source_SRCUNIX"
+            log_trace rm -rf "$get_ocaml_source_SRCUNIX" # clean any partial downloads
+            log_trace cp -rp "$get_ocaml_source_COMMIT_TAG_OR_DIR" "$get_ocaml_source_SRCUNIX"
+
+            # Make it git patchable if it is not a git repository already
+
+            if [ ! -e "$get_ocaml_source_SRCUNIX/.git" ]; then
+                log_trace git -C "$get_ocaml_source_SRCMIXED" init
+                log_trace git -C "$get_ocaml_source_SRCMIXED" config user.email "nobody+autocommitter@diskuv.ocaml.org"
+                log_trace git -C "$get_ocaml_source_SRCMIXED" config user.name  "Auto Committer"
+                log_trace git -C "$get_ocaml_source_SRCMIXED" add -A
+                log_trace git -C "$get_ocaml_source_SRCMIXED" commit -m "Commit from source tree"
+            fi
+
+            if [ -e "$get_ocaml_source_SRCUNIX"/flexdll ] && [ ! -e "$get_ocaml_source_SRCUNIX"/flexdll/.git ]; then
+                log_trace git -C "$get_ocaml_source_SRCMIXED/flexdll" init
+                log_trace git -C "$get_ocaml_source_SRCMIXED/flexdll" config user.email "nobody+autocommitter@diskuv.ocaml.org"
+                log_trace git -C "$get_ocaml_source_SRCMIXED/flexdll" config user.name  "Auto Committer"
+                log_trace git -C "$get_ocaml_source_SRCMIXED/flexdll" add -A
+                log_trace git -C "$get_ocaml_source_SRCMIXED/flexdll" commit -m "Commit from source tree"
+            fi
         fi
+    else
+        # Otherwise do git checkout / git fetch ...
+
+        get_ocaml_source_COMMIT=$get_ocaml_source_COMMIT_TAG_OR_DIR
+
+        if [ ! -e "$get_ocaml_source_SRCUNIX/Makefile" ] || [ ! -e "$get_ocaml_source_SRCUNIX/.git" ]; then
+            log_trace rm -rf "$get_ocaml_source_SRCUNIX" # clean any partial downloads
+            # do NOT --recurse-submodules because we don't want submodules (ex. flexdll/) that are in HEAD but
+            # are not in $get_ocaml_source_COMMIT
+            log_trace install -d "$get_ocaml_source_SRCUNIX"
+            #   Instead of git clone we use git fetch --depth 1 so we do a shallow clone of the commit
+            log_trace git -C "$get_ocaml_source_SRCMIXED" -c init.defaultBranch=master init
+            log_trace git -C "$get_ocaml_source_SRCMIXED" remote add origin https://github.com/ocaml/ocaml
+            log_trace git -C "$get_ocaml_source_SRCMIXED" fetch --depth 1 origin "$get_ocaml_source_COMMIT"
+            log_trace git -C "$get_ocaml_source_SRCMIXED" reset --hard FETCH_HEAD
+        else
+            # Git fetch can be very expensive after a shallow clone; we skip advancing the repository
+            # if the expected tag/commit is a commit and the actual git commit is the expected git commit
+            git_head=$(log_trace git -C "$get_ocaml_source_SRCMIXED" rev-parse HEAD)
+            if [ ! "$git_head" = "$get_ocaml_source_COMMIT" ]; then
+                # allow tag to move (for development and for emergency fixes), if the user chose a tag rather than a commit
+                if git -C "$get_ocaml_source_SRCMIXED" tag -l "$get_ocaml_source_COMMIT" | awk 'BEGIN{nonempty=0} NF>0{nonempty+=1} END{exit nonempty==0}'; then git -C "$get_ocaml_source_SRCMIXED" tag -d "$get_ocaml_source_COMMIT"; fi
+                log_trace git -C "$get_ocaml_source_SRCMIXED" fetch --tags
+                log_trace git -C "$get_ocaml_source_SRCMIXED" -c advice.detachedHead=false checkout "$get_ocaml_source_COMMIT"
+            fi
+        fi
+        log_trace git -C "$get_ocaml_source_SRCMIXED" submodule update --init --recursive
+
+        # Remove any chmods we did in the previous build
+        log_trace "$DKMLSYS_CHMOD" -R u+w "$get_ocaml_source_SRCMIXED"
+
+        # OCaml compilation is _not_ idempotent. Example:
+        #     config.status: creating Makefile.build_config
+        #     config.status: creating Makefile.config
+        #     config.status: creating tools/eventlog_metadata
+        #     config.status: creating runtime/caml/m.h
+        #     config.status: runtime/caml/m.h is unchanged
+        #     config.status: creating runtime/caml/s.h
+        #     config.status: runtime/caml/s.h is unchanged
+        #     config.status: executing libtool commands
+        #
+        #     + env --unset=LIB --unset=INCLUDE --unset=PATH --unset=Lib --unset=Include --unset=Path PATH=/c/Program Files (x86)/Microsoft Visual Studio/2019/Community/Common7/IDE/Extensions/Microsoft/IntelliCode/CLI:/c/Program Files (x86)/Microsoft Visual Studio/2019/Community/VC/Tools/MSVC/14.26.28801/bin/HostX64/x64:/c/Program Files (x86)/Microsoft Visual Studio/2019/Community/Common7/IDE/VC/VCPackages:/c/Program Files (x86)/Microsoft Visual Studio/2019/Community/Common7/IDE/CommonExtensions/Microsoft/TestWindow:/c/Program Files (x86)/Microsoft Visual Studio/2019/Community/Common7/IDE/CommonExtensions/Microsoft/TeamFoundation/Team Explorer:/c/Program Files (x86)/Microsoft Visual Studio/2019/Community/MSBuild/Current/bin/Roslyn:/c/Program Files (x86)/Microsoft Visual Studio/2019/Community/Team Tools/Performance Tools/x64:/c/Program Files (x86)/Microsoft Visual Studio/2019/Community/Team Tools/Performance Tools:/c/Program Files (x86)/Microsoft Visual Studio/Shared/Common/VSPerfCollectionTools/vs2019/x64:/c/Program Files (x86)/Microsoft Visual Studio/Shared/Common/VSPerfCollectionTools/vs2019/:/c/Program Files (x86)/Microsoft Visual Studio/2019/Community/Common7/Tools/devinit:/c/Program Files (x86)/Windows Kits/10/bin/10.0.18362.0/x64:/c/Program Files (x86)/Windows Kits/10/bin/x64:/c/Program Files (x86)/Microsoft Visual Studio/2019/Community/MSBuild/Current/Bin:/c/Windows/Microsoft.NET/Framework64/v4.0.30319:/c/Program Files (x86)/Microsoft Visual Studio/2019/Community/Common7/IDE/:/c/Program Files (x86)/Microsoft Visual Studio/2019/Community/Common7/Tools/:/c/Program Files (x86)/Microsoft Visual Studio/2019/Community/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/bin:/c/Program Files (x86)/Microsoft Visual Studio/2019/Community/Common7/IDE/CommonExtensions/Microsoft/CMake/Ninja:/z/source/.../windows_x86_64/Debug/dksdk/ocaml/bin:/c/Users/beckf/AppData/Local/Programs/DiskuvOCaml/1/bin:/c/Program Files/Git/cmd:/usr/bin:/c/Windows/System32:/c/Windows:/c/Windows/System32/Wbem:/c/Windows/System32/WindowsPowerShell/v1.0:/c/Windows/System32/OpenSSH LIB=C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Tools\MSVC\14.26.28801\lib\x64;C:\Program Files (x86)\Windows Kits\10\lib\10.0.18362.0\ucrt\x64;C:\Program Files (x86)\Windows Kits\10\lib\10.0.18362.0\um\x64;C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Tools\MSVC\14.26.28801\lib\x64;;C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Tools\MSVC\14.26.28801\atlmfc\lib\x64;;C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Auxiliary\VS\lib\x64;;C:\Program Files (x86)\Windows Kits\10\lib\10.0.18362.0\ucrt\x64;;;C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Auxiliary\VS\UnitTest\lib;C:\Program Files (x86)\Windows Kits\10\lib\10.0.18362.0\um\x64;lib\um\x64;;C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Tools\MSVC\14.26.28801\lib\x64;;C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Tools\MSVC\14.26.28801\atlmfc\lib\x64;;C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Auxiliary\VS\lib\x64;;C:\Program Files (x86)\Windows Kits\10\lib\10.0.18362.0\ucrt\x64;;;C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Auxiliary\VS\UnitTest\lib;C:\Program Files (x86)\Windows Kits\10\lib\10.0.18362.0\um\x64;lib\um\x64; INCLUDE=C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Tools\MSVC\14.26.28801\include;C:\Program Files (x86)\Windows Kits\10\include\10.0.18362.0\ucrt;C:\Program Files (x86)\Windows Kits\10\include\10.0.18362.0\shared;C:\Program Files (x86)\Windows Kits\10\include\10.0.18362.0\um;C:\Program Files (x86)\Windows Kits\10\include\10.0.18362.0\winrt;C:\Program Files (x86)\Windows Kits\10\include\10.0.18362.0\cppwinrt;C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Tools\MSVC\14.26.28801\include;;C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Tools\MSVC\14.26.28801\atlmfc\include;;C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Auxiliary\VS\include;;C:\Program Files (x86)\Windows Kits\10\Include\10.0.18362.0\ucrt;;;C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Auxiliary\VS\UnitTest\include;C:\Program Files (x86)\Windows Kits\10\Include\10.0.18362.0\um;C:\Program Files (x86)\Windows Kits\10\Include\10.0.18362.0\shared;C:\Program Files (x86)\Windows Kits\10\Include\10.0.18362.0\winrt;C:\Program Files (x86)\Windows Kits\10\Include\10.0.18362.0\cppwinrt;Include\um;;C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Tools\MSVC\14.26.28801\include;;C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Tools\MSVC\14.26.28801\atlmfc\include;;C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Auxiliary\VS\include;;C:\Program Files (x86)\Windows Kits\10\Include\10.0.18362.0\ucrt;;;C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Auxiliary\VS\UnitTest\include;C:\Program Files (x86)\Windows Kits\10\Include\10.0.18362.0\um;C:\Program Files (x86)\Windows Kits\10\Include\10.0.18362.0\shared;C:\Program Files (x86)\Windows Kits\10\Include\10.0.18362.0\winrt;C:\Program Files (x86)\Windows Kits\10\Include\10.0.18362.0\cppwinrt;Include\um; make flexdll
+        #     make -C runtime BOOTSTRAPPING_FLEXLINK=yes ocamlrun.exe
+        #     make[1]: Entering directory '/z/source/.../windows_x86_64/Debug/dksdk/ocaml/src/ocaml/runtime'
+        #     cl -c -nologo -O2 -Gy- -MD    -D_CRT_SECURE_NO_DEPRECATE -DCAML_NAME_SPACE -DUNICODE -D_UNICODE -DWINDOWS_UNICODE=1 -DBOOTSTRAPPING_FLEXLINK -I"Z:\source\...\windows_x86_64\Debug\dksdk\ocaml\bin" -DCAMLDLLIMPORT= -DOCAML_STDLIB_DIR='L"Z:/source/.../windows_x86_64/Debug/dksdk/ocaml/lib/ocaml"'  -Fodynlink.b.obj dynlink.c
+        #     dynlink.c
+        #     link -lib -nologo -machine:AMD64  /out:libcamlrun.lib  interp.b.obj misc.b.obj stacks.b.obj fix_code.b.obj startup_aux.b.obj startup_byt.b.obj freelist.b.obj major_gc.b.obj minor_gc.b.obj memory.b.obj alloc.b.obj roots_byt.b.obj globroots.b.obj fail_byt.b.obj signals.b.obj signals_byt.b.obj printexc.b.obj backtrace_byt.b.obj backtrace.b.obj compare.b.obj ints.b.obj eventlog.b.obj floats.b.obj str.b.obj array.b.obj io.b.obj extern.b.obj intern.b.obj hash.b.obj sys.b.obj meta.b.obj parsing.b.obj gc_ctrl.b.obj md5.b.obj obj.b.obj lexing.b.obj callback.b.obj debugger.b.obj weak.b.obj compact.b.obj finalise.b.obj custom.b.obj dynlink.b.obj afl.b.obj win32.b.obj bigarray.b.obj main.b.obj memprof.b.obj domain.b.obj skiplist.b.obj codefrag.b.obj
+        #     cl -nologo -O2 -Gy- -MD    -Feocamlrun.exe prims.obj libcamlrun.lib advapi32.lib ws2_32.lib version.lib  /link /subsystem:console /ENTRY:wmainCRTStartup && (test ! -f ocamlrun.exe.manifest || mt -nologo -outputresource:ocamlrun.exe -manifest ocamlrun.exe.manifest && rm -f ocamlrun.exe.manifest)
+        #     libcamlrun.lib(win32.b.obj) : error LNK2019: unresolved external symbol flexdll_wdlopen referenced in function caml_dlopen
+        #     libcamlrun.lib(win32.b.obj) : error LNK2019: unresolved external symbol flexdll_dlsym referenced in function caml_dlsym
+        #     libcamlrun.lib(win32.b.obj) : error LNK2019: unresolved external symbol flexdll_dlclose referenced in function caml_dlclose
+        #     libcamlrun.lib(win32.b.obj) : error LNK2019: unresolved external symbol flexdll_dlerror referenced in function caml_dlerror
+        #     libcamlrun.lib(win32.b.obj) : error LNK2019: unresolved external symbol flexdll_dump_exports referenced in function caml_dlopen
+        #     ocamlrun.exe : fatal error LNK1120: 5 unresolved externals
+        # So clean directory every build
+        log_trace git -C "$get_ocaml_source_SRCMIXED" clean -d -x -f
+        log_trace git -C "$get_ocaml_source_SRCMIXED" submodule foreach --recursive "git clean -d -x -f -"
     fi
-    log_trace git -C "$get_ocaml_source_SRCMIXED" submodule update --init --recursive
-
-    # Remove any chmods we did in the previous build
-    log_trace "$DKMLSYS_CHMOD" -R u+w "$get_ocaml_source_SRCMIXED"
-
-    # OCaml compilation is _not_ idempotent. Example:
-    #     config.status: creating Makefile.build_config
-    #     config.status: creating Makefile.config
-    #     config.status: creating tools/eventlog_metadata
-    #     config.status: creating runtime/caml/m.h
-    #     config.status: runtime/caml/m.h is unchanged
-    #     config.status: creating runtime/caml/s.h
-    #     config.status: runtime/caml/s.h is unchanged
-    #     config.status: executing libtool commands
-    #
-    #     + env --unset=LIB --unset=INCLUDE --unset=PATH --unset=Lib --unset=Include --unset=Path PATH=/c/Program Files (x86)/Microsoft Visual Studio/2019/Community/Common7/IDE/Extensions/Microsoft/IntelliCode/CLI:/c/Program Files (x86)/Microsoft Visual Studio/2019/Community/VC/Tools/MSVC/14.26.28801/bin/HostX64/x64:/c/Program Files (x86)/Microsoft Visual Studio/2019/Community/Common7/IDE/VC/VCPackages:/c/Program Files (x86)/Microsoft Visual Studio/2019/Community/Common7/IDE/CommonExtensions/Microsoft/TestWindow:/c/Program Files (x86)/Microsoft Visual Studio/2019/Community/Common7/IDE/CommonExtensions/Microsoft/TeamFoundation/Team Explorer:/c/Program Files (x86)/Microsoft Visual Studio/2019/Community/MSBuild/Current/bin/Roslyn:/c/Program Files (x86)/Microsoft Visual Studio/2019/Community/Team Tools/Performance Tools/x64:/c/Program Files (x86)/Microsoft Visual Studio/2019/Community/Team Tools/Performance Tools:/c/Program Files (x86)/Microsoft Visual Studio/Shared/Common/VSPerfCollectionTools/vs2019/x64:/c/Program Files (x86)/Microsoft Visual Studio/Shared/Common/VSPerfCollectionTools/vs2019/:/c/Program Files (x86)/Microsoft Visual Studio/2019/Community/Common7/Tools/devinit:/c/Program Files (x86)/Windows Kits/10/bin/10.0.18362.0/x64:/c/Program Files (x86)/Windows Kits/10/bin/x64:/c/Program Files (x86)/Microsoft Visual Studio/2019/Community/MSBuild/Current/Bin:/c/Windows/Microsoft.NET/Framework64/v4.0.30319:/c/Program Files (x86)/Microsoft Visual Studio/2019/Community/Common7/IDE/:/c/Program Files (x86)/Microsoft Visual Studio/2019/Community/Common7/Tools/:/c/Program Files (x86)/Microsoft Visual Studio/2019/Community/Common7/IDE/CommonExtensions/Microsoft/CMake/CMake/bin:/c/Program Files (x86)/Microsoft Visual Studio/2019/Community/Common7/IDE/CommonExtensions/Microsoft/CMake/Ninja:/z/source/.../windows_x86_64/Debug/dksdk/ocaml/bin:/c/Users/beckf/AppData/Local/Programs/DiskuvOCaml/1/bin:/c/Program Files/Git/cmd:/usr/bin:/c/Windows/System32:/c/Windows:/c/Windows/System32/Wbem:/c/Windows/System32/WindowsPowerShell/v1.0:/c/Windows/System32/OpenSSH LIB=C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Tools\MSVC\14.26.28801\lib\x64;C:\Program Files (x86)\Windows Kits\10\lib\10.0.18362.0\ucrt\x64;C:\Program Files (x86)\Windows Kits\10\lib\10.0.18362.0\um\x64;C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Tools\MSVC\14.26.28801\lib\x64;;C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Tools\MSVC\14.26.28801\atlmfc\lib\x64;;C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Auxiliary\VS\lib\x64;;C:\Program Files (x86)\Windows Kits\10\lib\10.0.18362.0\ucrt\x64;;;C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Auxiliary\VS\UnitTest\lib;C:\Program Files (x86)\Windows Kits\10\lib\10.0.18362.0\um\x64;lib\um\x64;;C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Tools\MSVC\14.26.28801\lib\x64;;C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Tools\MSVC\14.26.28801\atlmfc\lib\x64;;C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Auxiliary\VS\lib\x64;;C:\Program Files (x86)\Windows Kits\10\lib\10.0.18362.0\ucrt\x64;;;C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Auxiliary\VS\UnitTest\lib;C:\Program Files (x86)\Windows Kits\10\lib\10.0.18362.0\um\x64;lib\um\x64; INCLUDE=C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Tools\MSVC\14.26.28801\include;C:\Program Files (x86)\Windows Kits\10\include\10.0.18362.0\ucrt;C:\Program Files (x86)\Windows Kits\10\include\10.0.18362.0\shared;C:\Program Files (x86)\Windows Kits\10\include\10.0.18362.0\um;C:\Program Files (x86)\Windows Kits\10\include\10.0.18362.0\winrt;C:\Program Files (x86)\Windows Kits\10\include\10.0.18362.0\cppwinrt;C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Tools\MSVC\14.26.28801\include;;C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Tools\MSVC\14.26.28801\atlmfc\include;;C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Auxiliary\VS\include;;C:\Program Files (x86)\Windows Kits\10\Include\10.0.18362.0\ucrt;;;C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Auxiliary\VS\UnitTest\include;C:\Program Files (x86)\Windows Kits\10\Include\10.0.18362.0\um;C:\Program Files (x86)\Windows Kits\10\Include\10.0.18362.0\shared;C:\Program Files (x86)\Windows Kits\10\Include\10.0.18362.0\winrt;C:\Program Files (x86)\Windows Kits\10\Include\10.0.18362.0\cppwinrt;Include\um;;C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Tools\MSVC\14.26.28801\include;;C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Tools\MSVC\14.26.28801\atlmfc\include;;C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Auxiliary\VS\include;;C:\Program Files (x86)\Windows Kits\10\Include\10.0.18362.0\ucrt;;;C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Auxiliary\VS\UnitTest\include;C:\Program Files (x86)\Windows Kits\10\Include\10.0.18362.0\um;C:\Program Files (x86)\Windows Kits\10\Include\10.0.18362.0\shared;C:\Program Files (x86)\Windows Kits\10\Include\10.0.18362.0\winrt;C:\Program Files (x86)\Windows Kits\10\Include\10.0.18362.0\cppwinrt;Include\um; make flexdll
-    #     make -C runtime BOOTSTRAPPING_FLEXLINK=yes ocamlrun.exe
-    #     make[1]: Entering directory '/z/source/.../windows_x86_64/Debug/dksdk/ocaml/src/ocaml/runtime'
-    #     cl -c -nologo -O2 -Gy- -MD    -D_CRT_SECURE_NO_DEPRECATE -DCAML_NAME_SPACE -DUNICODE -D_UNICODE -DWINDOWS_UNICODE=1 -DBOOTSTRAPPING_FLEXLINK -I"Z:\source\...\windows_x86_64\Debug\dksdk\ocaml\bin" -DCAMLDLLIMPORT= -DOCAML_STDLIB_DIR='L"Z:/source/.../windows_x86_64/Debug/dksdk/ocaml/lib/ocaml"'  -Fodynlink.b.obj dynlink.c
-    #     dynlink.c
-    #     link -lib -nologo -machine:AMD64  /out:libcamlrun.lib  interp.b.obj misc.b.obj stacks.b.obj fix_code.b.obj startup_aux.b.obj startup_byt.b.obj freelist.b.obj major_gc.b.obj minor_gc.b.obj memory.b.obj alloc.b.obj roots_byt.b.obj globroots.b.obj fail_byt.b.obj signals.b.obj signals_byt.b.obj printexc.b.obj backtrace_byt.b.obj backtrace.b.obj compare.b.obj ints.b.obj eventlog.b.obj floats.b.obj str.b.obj array.b.obj io.b.obj extern.b.obj intern.b.obj hash.b.obj sys.b.obj meta.b.obj parsing.b.obj gc_ctrl.b.obj md5.b.obj obj.b.obj lexing.b.obj callback.b.obj debugger.b.obj weak.b.obj compact.b.obj finalise.b.obj custom.b.obj dynlink.b.obj afl.b.obj win32.b.obj bigarray.b.obj main.b.obj memprof.b.obj domain.b.obj skiplist.b.obj codefrag.b.obj
-    #     cl -nologo -O2 -Gy- -MD    -Feocamlrun.exe prims.obj libcamlrun.lib advapi32.lib ws2_32.lib version.lib  /link /subsystem:console /ENTRY:wmainCRTStartup && (test ! -f ocamlrun.exe.manifest || mt -nologo -outputresource:ocamlrun.exe -manifest ocamlrun.exe.manifest && rm -f ocamlrun.exe.manifest)
-    #     libcamlrun.lib(win32.b.obj) : error LNK2019: unresolved external symbol flexdll_wdlopen referenced in function caml_dlopen
-    #     libcamlrun.lib(win32.b.obj) : error LNK2019: unresolved external symbol flexdll_dlsym referenced in function caml_dlsym
-    #     libcamlrun.lib(win32.b.obj) : error LNK2019: unresolved external symbol flexdll_dlclose referenced in function caml_dlclose
-    #     libcamlrun.lib(win32.b.obj) : error LNK2019: unresolved external symbol flexdll_dlerror referenced in function caml_dlerror
-    #     libcamlrun.lib(win32.b.obj) : error LNK2019: unresolved external symbol flexdll_dump_exports referenced in function caml_dlopen
-    #     ocamlrun.exe : fatal error LNK1120: 5 unresolved externals
-    # So clean directory every build
-    log_trace git -C "$get_ocaml_source_SRCMIXED" clean -d -x -f
-    log_trace git -C "$get_ocaml_source_SRCMIXED" submodule foreach --recursive "git clean -d -x -f -"
 
     # Install a synthetic msvs-detect
     if [ ! -e "$get_ocaml_source_SRCUNIX"/msvs-detect ]; then
@@ -528,7 +573,7 @@ get_ocaml_source() {
     fi
 
     # Windows needs flexdll, although 4.13.x+ has a "--with-flexdll" option which relies on the `flexdll` git submodule
-    if [ ! -e "$get_ocaml_source_SRCUNIX"/flexdll ]; then
+    if [ ! -e "$get_ocaml_source_SRCUNIX"/flexdll/Makefile ]; then
         log_trace downloadfile https://github.com/alainfrisch/flexdll/archive/0.39.tar.gz "$get_ocaml_source_SRCUNIX/flexdll.tar.gz" 51a6ef2e67ff475c33a76b3dc86401a0f286c9a3339ee8145053ea02d2fb5974
     fi
 }
@@ -539,10 +584,11 @@ get_ocaml_source() {
 
 clean_ocaml_install "$TARGETDIR_UNIX"
 if [ -n "$TEMPLATEDIR" ]; then
+    install -d "$OCAMLSRC_UNIX"
     rm -rf "$OCAMLSRC_UNIX"
     cp -rp "$TEMPLATEDIR/$HOSTSRC_SUBDIR" "$OCAMLSRC_UNIX"
 else
-    get_ocaml_source "$GIT_COMMITID_OR_TAG" "$OCAMLSRC_UNIX" "$OCAMLSRC_MIXED" "$BUILDHOST_ARCH"
+    get_ocaml_source "$GIT_COMMITID_TAG_OR_DIR" "$OCAMLSRC_UNIX" "$OCAMLSRC_MIXED" "$BUILDHOST_ARCH"
 fi
 
 # Find but do not apply the cross-compiling patches to the host ABI
@@ -551,6 +597,7 @@ find_ocaml_crosscompile_patch "$_OCAMLVER"
 
 if [ -n "$TARGETABIS" ]; then
     if [ -n "$TEMPLATEDIR" ]; then
+        install -d "$TARGETDIR_UNIX/$CROSS_SUBDIR"
         rm -rf "${TARGETDIR_UNIX:?}/$CROSS_SUBDIR"
         cp -rp "$TEMPLATEDIR/$CROSS_SUBDIR" "$TARGETDIR_UNIX/$CROSS_SUBDIR"
     else
@@ -566,7 +613,7 @@ if [ -n "$TARGETABIS" ]; then
             # clean install
             clean_ocaml_install "$TARGETDIR_UNIX/$CROSS_SUBDIR/$_targetabi"
             # git clone
-            get_ocaml_source "$GIT_COMMITID_OR_TAG" "$TARGETDIR_UNIX/$CROSS_SUBDIR/$_targetabi/$HOSTSRC_SUBDIR" "$TARGETDIR_MIXED/$CROSS_SUBDIR/$_targetabi/$HOSTSRC_SUBDIR" "$_targetabi"
+            get_ocaml_source "$GIT_COMMITID_TAG_OR_DIR" "$TARGETDIR_UNIX/$CROSS_SUBDIR/$_targetabi/$HOSTSRC_SUBDIR" "$TARGETDIR_MIXED/$CROSS_SUBDIR/$_targetabi/$HOSTSRC_SUBDIR" "$_targetabi"
             # git patch src/ocaml
             apply_ocaml_crosscompile_patch "$OCAMLPATCHFILE"  "$TARGETDIR_UNIX/$CROSS_SUBDIR/$_targetabi/$HOSTSRC_SUBDIR"
             if [ -n "$OCAMLPATCHEXTRA" ]; then
