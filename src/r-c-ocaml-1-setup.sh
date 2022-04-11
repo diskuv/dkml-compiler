@@ -113,7 +113,7 @@ usage() {
         printf "%s\n" "   -t DIR: Target directory for the reproducible directory tree"
         printf "%s\n" "   -v COMMIT: Git commit or tag for https://github.com/ocaml/ocaml. Strongly prefer a commit id for much stronger"
         printf "%s\n" "      reproducibility guarantees"
-        printf "%s\n" "   -u COMMIT: Git commit or tag for https://github.com/ocaml/ocaml for the host ABI. Defaults to -v COMMIT"
+        printf "%s\n" "   -u COMMIT: (Deprecated). Git commit or tag for https://github.com/ocaml/ocaml for the host ABI. Defaults to -v COMMIT"
         printf "%s\n" "   -a TARGETABIS: Optional. A named list of self-contained Posix shell script that can be sourced to set the"
         printf "%s\n" "      compiler environment variables for the target ABI. If not specified then the OCaml environment"
         printf "%s\n" "      will be purely for the host ABI. All path should use the native host platform's path"
@@ -184,8 +184,7 @@ BUILD_CROSS_ARGS=()
 
 DKMLDIR=
 DKMLHOSTABI=${DKML_HOST_ABI:-}
-HOST_GIT_COMMITID_OR_TAG=
-TARGET_GIT_COMMITID_OR_TAG=
+GIT_COMMITID_OR_TAG=
 TARGETDIR=
 TARGETABIS=
 MSVS_PREFERENCE="$OPT_MSVS_PREFERENCE"
@@ -200,7 +199,7 @@ while getopts ":d:v:u:t:a:b:e:i:j:k:m:n:rf:p:g:o:h" opt; do
         d )
             DKMLDIR="$OPTARG"
             if [ ! -e "$DKMLDIR/.dkmlroot" ]; then
-                printf "%s\n" "Expected a DKMLDIR at $DKMLDIR but no .dkmlroot found" >&2;
+                printf "%s\n" "Expected a DKMLDIR at $DKMLDIR but no .dkmlroot found" >&2
                 usage
                 exit 1
             fi
@@ -211,12 +210,11 @@ while getopts ":d:v:u:t:a:b:e:i:j:k:m:n:rf:p:g:o:h" opt; do
             DKMLDIR="$DKMLDIR_1/$DKMLDIR_2"
         ;;
         v )
-            TARGET_GIT_COMMITID_OR_TAG="$OPTARG"
-            SETUP_ARGS+=( -v "$TARGET_GIT_COMMITID_OR_TAG" )
+            GIT_COMMITID_OR_TAG="$OPTARG"
+            SETUP_ARGS+=( -v "$GIT_COMMITID_OR_TAG" )
         ;;
         u )
-            HOST_GIT_COMMITID_OR_TAG="$OPTARG"
-            SETUP_ARGS+=( -v "$HOST_GIT_COMMITID_OR_TAG" )
+            printf "WARNING: r-c-ocaml-1-setup.sh -u COMMIT is deprecated. Use -v option instead\n" >&2
         ;;
         t )
             TARGETDIR="$OPTARG"
@@ -277,13 +275,10 @@ while getopts ":d:v:u:t:a:b:e:i:j:k:m:n:rf:p:g:o:h" opt; do
 done
 shift $((OPTIND -1))
 
-if [ -z "$DKMLDIR" ] || [ -z "$TARGET_GIT_COMMITID_OR_TAG" ] || [ -z "$TARGETDIR" ]; then
+if [ -z "$DKMLDIR" ] || [ -z "$GIT_COMMITID_OR_TAG" ] || [ -z "$TARGETDIR" ]; then
     printf "%s\n" "Missing required options" >&2
     usage
     exit 1
-fi
-if [ -z "$HOST_GIT_COMMITID_OR_TAG" ]; then
-    HOST_GIT_COMMITID_OR_TAG=$TARGET_GIT_COMMITID_OR_TAG
 fi
 if [ "$RUNTIMEONLY" = ON ] && [ -n "$TARGETABIS" ]; then
     printf "-r and -a TARGETABIS cannot be used at the same time\n" >&2
@@ -547,7 +542,7 @@ if [ -n "$TEMPLATEDIR" ]; then
     rm -rf "$OCAMLSRC_UNIX"
     cp -rp "$TEMPLATEDIR/$HOSTSRC_SUBDIR" "$OCAMLSRC_UNIX"
 else
-    get_ocaml_source "$HOST_GIT_COMMITID_OR_TAG" "$OCAMLSRC_UNIX" "$OCAMLSRC_MIXED" "$BUILDHOST_ARCH"
+    get_ocaml_source "$GIT_COMMITID_OR_TAG" "$OCAMLSRC_UNIX" "$OCAMLSRC_MIXED" "$BUILDHOST_ARCH"
 fi
 
 # Find but do not apply the cross-compiling patches to the host ABI
@@ -571,7 +566,7 @@ if [ -n "$TARGETABIS" ]; then
             # clean install
             clean_ocaml_install "$TARGETDIR_UNIX/$CROSS_SUBDIR/$_targetabi"
             # git clone
-            get_ocaml_source "$TARGET_GIT_COMMITID_OR_TAG" "$TARGETDIR_UNIX/$CROSS_SUBDIR/$_targetabi/$HOSTSRC_SUBDIR" "$TARGETDIR_MIXED/$CROSS_SUBDIR/$_targetabi/$HOSTSRC_SUBDIR" "$_targetabi"
+            get_ocaml_source "$GIT_COMMITID_OR_TAG" "$TARGETDIR_UNIX/$CROSS_SUBDIR/$_targetabi/$HOSTSRC_SUBDIR" "$TARGETDIR_MIXED/$CROSS_SUBDIR/$_targetabi/$HOSTSRC_SUBDIR" "$_targetabi"
             # git patch src/ocaml
             apply_ocaml_crosscompile_patch "$OCAMLPATCHFILE"  "$TARGETDIR_UNIX/$CROSS_SUBDIR/$_targetabi/$HOSTSRC_SUBDIR"
             if [ -n "$OCAMLPATCHEXTRA" ]; then
