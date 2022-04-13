@@ -178,6 +178,10 @@ ocaml_configure_windows() {
 
   ocaml_configure_windows_WINPREFIX=$(printf "%s\n" "${ocaml_configure_windows_PREFIX}" | /usr/bin/cygpath -f - -m)
 
+  # TMP is set in MSYS2 but not Cygwin. Needed by MSVC or we get https://docs.microsoft.com/en-us/cpp/error-messages/tool-errors/command-line-error-d8037?view=msvc-170
+  ocaml_configure_windows_TMP=$(/usr/bin/cygpath -aw "$TMP")
+  touch "$ocaml_configure_windows_TMP/test.file"
+
   # With MSYS2 it is quite possible to have INCLUDE and Include in the same environment. Opam seems to use camel case, which
   # is probably fine in Cygwin.
   # And ordinarily you don't need to set DEP_CC, LD, etc. which are auto-discovered by ./configure. However, if gcc
@@ -189,6 +193,7 @@ ocaml_configure_windows() {
     INCLUDE="${MSVS_INC}${INCLUDE:-}" \
     MSYS2_ARG_CONV_EXCL='*' \
     DEP_CC="false" LD="link" \
+    TMP="$ocaml_configure_windows_TMP" \
     $ocaml_configure_no_ocaml_leak_environment \
     ./configure --prefix "$ocaml_configure_windows_WINPREFIX" \
                 --build=$ocaml_configure_windows_BUILD --host="$ocaml_configure_windows_HOST" \
