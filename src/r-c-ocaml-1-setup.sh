@@ -112,7 +112,7 @@ usage() {
         printf "%s\n" "   -d DIR: DKML directory containing a .dkmlroot file"
         printf "%s\n" "   -t DIR: Target directory for the reproducible directory tree"
         printf "%s\n" "   -v COMMIT_OR_DIR: Git commit or tag or directory for https://github.com/ocaml/ocaml. Strongly prefer a commit id"
-        printf "%s\n" "      instead of a git tag for for much stronger reproducibility guarantees"
+        printf "%s\n" "      instead of a git tag for much stronger reproducibility guarantees"
         printf "%s\n" "   -u COMMIT: (Deprecated). Git commit or tag for https://github.com/ocaml/ocaml for the host ABI. Defaults to -v COMMIT"
         printf "%s\n" "   -a TARGETABIS: Optional. A named list of self-contained Posix shell script that can be sourced to set the"
         printf "%s\n" "      compiler environment variables for the target ABI. If not specified then the OCaml environment"
@@ -344,6 +344,7 @@ case $HOST_SUBDIR in
     fi
 esac
 
+# ensure git, if directory, is an absolute directory
 if [ -d "$GIT_COMMITID_TAG_OR_DIR" ]; then
     if [ -x /usr/bin/cygpath ]; then
         GIT_COMMITID_TAG_OR_DIR=$(/usr/bin/cygpath -am "$GIT_COMMITID_TAG_OR_DIR")
@@ -484,24 +485,24 @@ get_ocaml_source() {
             log_trace install -d "$get_ocaml_source_SRCUNIX"
             log_trace rm -rf "$get_ocaml_source_SRCUNIX" # clean any partial downloads
             log_trace cp -rp "$get_ocaml_source_COMMIT_TAG_OR_DIR" "$get_ocaml_source_SRCUNIX"
+        fi
 
-            # Make it git patchable if it is not a git repository already
+        # Make it git patchable if it is not a git repository already
 
-            if [ ! -e "$get_ocaml_source_SRCUNIX/.git" ]; then
-                log_trace git -C "$get_ocaml_source_SRCMIXED" init
-                log_trace git -C "$get_ocaml_source_SRCMIXED" config user.email "nobody+autocommitter@diskuv.ocaml.org"
-                log_trace git -C "$get_ocaml_source_SRCMIXED" config user.name  "Auto Committer"
-                log_trace git -C "$get_ocaml_source_SRCMIXED" add -A
-                log_trace git -C "$get_ocaml_source_SRCMIXED" commit -m "Commit from source tree"
-            fi
+        if [ ! -e "$get_ocaml_source_SRCUNIX/.git" ]; then
+            log_trace git -C "$get_ocaml_source_SRCMIXED" init
+            log_trace git -C "$get_ocaml_source_SRCMIXED" config user.email "nobody+autocommitter@diskuv.ocaml.org"
+            log_trace git -C "$get_ocaml_source_SRCMIXED" config user.name  "Auto Committer"
+            log_trace git -C "$get_ocaml_source_SRCMIXED" add -A
+            log_trace git -C "$get_ocaml_source_SRCMIXED" commit -m "Commit from source tree"
+        fi
 
-            if [ -e "$get_ocaml_source_SRCUNIX"/flexdll ] && [ ! -e "$get_ocaml_source_SRCUNIX"/flexdll/.git ]; then
-                log_trace git -C "$get_ocaml_source_SRCMIXED/flexdll" init
-                log_trace git -C "$get_ocaml_source_SRCMIXED/flexdll" config user.email "nobody+autocommitter@diskuv.ocaml.org"
-                log_trace git -C "$get_ocaml_source_SRCMIXED/flexdll" config user.name  "Auto Committer"
-                log_trace git -C "$get_ocaml_source_SRCMIXED/flexdll" add -A
-                log_trace git -C "$get_ocaml_source_SRCMIXED/flexdll" commit -m "Commit from source tree"
-            fi
+        if [ -e "$get_ocaml_source_SRCUNIX"/flexdll ] && [ ! -e "$get_ocaml_source_SRCUNIX"/flexdll/.git ]; then
+            log_trace git -C "$get_ocaml_source_SRCMIXED/flexdll" init
+            log_trace git -C "$get_ocaml_source_SRCMIXED/flexdll" config user.email "nobody+autocommitter@diskuv.ocaml.org"
+            log_trace git -C "$get_ocaml_source_SRCMIXED/flexdll" config user.name  "Auto Committer"
+            log_trace git -C "$get_ocaml_source_SRCMIXED/flexdll" add -A
+            log_trace git -C "$get_ocaml_source_SRCMIXED/flexdll" commit -m "Commit from source tree"
         fi
     else
         # Otherwise do git checkout / git fetch ...
@@ -628,7 +629,7 @@ fi
 # ---------------------------
 # Finish
 
-# Copy self into share/dkml-bootstrap/100co (short form of 100co
+# Copy self into share/dkml-bootstrap/100co (short form of 100-compile-ocaml
 # so Windows and macOS paths are short)
 export BOOTSTRAPNAME=100co
 export DEPLOYDIR_UNIX="$TARGETDIR_UNIX"
