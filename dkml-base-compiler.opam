@@ -1,26 +1,12 @@
-# Since both `ocaml` and `ocaml-config` Opam packages require
-# ocaml-system or ocaml-base-compiler or ocaml-variants, we have no choice
-# but to pin ocaml or ocaml-config (actually, we could use a separate Opam
-# repository but trying to move away from that).
-#
-# Should ask Opam if they can add `dkml-base-compiler` to `ocaml`
-# and `ocaml-config`.
 opam-version: "2.0"
 name: "dkml-base-compiler"
 version: "4.12.1"
 synopsis: "OCaml cross-compiler and libraries from the DKML distribution that works with at least Win32 and macOS"
 description:
   """The DKML distribution of the OCaml bytecode and native compiler, Stdlib and the other OCaml libraries (str, unix, bigarray, etc.).
-A cross-compiler for macOS x86_64 to macOS arm64 is included (todo: make selectable with a findlib.conf 'darwin_arm64' toolchain); for build consistency the regular OCaml compiler will be for x86_64 regardless of whether the machine is Apple Silicon.
+A cross-compiler for macOS x86_64 to macOS arm64 is included; for build consistency the regular OCaml compiler will be for x86_64 regardless of whether the build machine is Apple Silicon.
 Sometime in 2022 you will no longer need this package for Win32 and can instead use the fully-supported Windows version of ocaml-base-compiler.
 Install with something like: opam switch create ocaml-4.12.1 '--formula="dkml-base-compiler" {>= "4.12.1" & < "4.13.0~"}'"""
-# Test locally with the following (prefix with `with-dkml` on Windows):
-#   opam switch create ocaml-4.12.1 --repos default --empty
-#   opam pin add --switch ocaml-4.12.1 --yes --no-action ocaml.4.12.1 .
-#   opam pin add --switch ocaml-4.12.1 --yes --no-action ocaml-config.2 .
-#   opam pin add --switch ocaml-4.12.1 --yes --no-action dkml-base-compiler .
-#   opam install --switch ocaml-4.12.1 dkml-base-compiler
-#   opam switch set-invariant --switch ocaml-4.12.1 --packages dkml-base-compiler.4.12.1
 maintainer: ["opensource+diskuv-ocaml@support.diskuv.com"]
 authors: ["Diskuv, Inc. <opensource+diskuv-ocaml@support.diskuv.com>"]
 license: "Apache-2.0"
@@ -42,6 +28,11 @@ build-env: [
 conflict-class: "ocaml-core-compiler"
 flags: [ compiler avoid-version hidden-version ]
 build: [
+  # OCaml source code
+  ["install" "-d" "dl/ocaml/flexdll"]
+  ["tar" "xCfz" "dl/ocaml"          "dl/ocaml.tar.gz"   "--strip-components=1"]
+  ["tar" "xCfz" "dl/ocaml/flexdll"  "dl/flexdll.tar.gz" "--strip-components=1"]
+
   # Create a DKMLDIR. Its structure mimics a git submodule setup.
   #   <dkmldir>/.dkmlroot
   ["install" "-d" "dkmldir"]
@@ -54,18 +45,17 @@ build: [
   #   <dkmldir>/vendor/dkml-compiler/
   ["install" "-d" "dkmldir/vendor/dkml-compiler/src"]
   ["sh" "-eufc" "tar cCf src/ - . | tar xCf dkmldir/vendor/dkml-compiler/src/ -"]
-
+]
+install: [
   # Run r-c-ocaml-1-setup.sh
   [
     "env" "TOPDIR=dkmldir/vendor/dkml-runtime-common/all/emptytop"
       "dkmldir/vendor/dkml-compiler/src/r-c-ocaml-1-setup.sh"
       "-d" "dkmldir"
       "-t" "%{prefix}%"
-      "-f" "%{_:build}%/src-ocaml"
+      "-f" "src-ocaml"
       "-g" "%{_:share}%/mlcross"
-      #   OCaml 4.12.1
-      "-u" "46c947827ec2f6d6da7fe5e195ae5dda1d2ad0c5"
-      "-v" "46c947827ec2f6d6da7fe5e195ae5dda1d2ad0c5"
+      "-v" "dl/ocaml"
       #   Host architectures
       "-ewindows_x86"     { os = "win32" & dkml-option-32bit:installed }
       "-ewindows_x86_64"  { os = "win32" & !dkml-option-32bit:installed }
@@ -102,6 +92,14 @@ build: [
   ]
 ]
 dev-repo: "git+https://github.com/diskuv/dkml-component-ocamlcompiler.git"
+extra-source "dl/ocaml.tar.gz" {
+  src: "https://github.com/ocaml/ocaml/archive/4.12.1.tar.gz"
+  checksum: "sha256=f5a48a90557cb47ace7b1590fcab1362a1af38629a218350f69c225c57e96a41"
+}
+extra-source "dl/flexdll.tar.gz" {
+  src: "https://github.com/alainfrisch/flexdll/archive/0.39.tar.gz"
+  checksum: "sha256=51a6ef2e67ff475c33a76b3dc86401a0f286c9a3339ee8145053ea02d2fb5974"
+}
 extra-source "dl/dkml-runtime-common.tar.gz" {
   # dkml-runtime-common can be less or equal to DKML_VER
   src: "https://github.com/diskuv/dkml-runtime-common/archive/refs/tags/v0.4.0-prerel19_r3.tar.gz"
