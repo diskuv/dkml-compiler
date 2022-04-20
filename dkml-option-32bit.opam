@@ -1,7 +1,7 @@
 opam-version: "2.0"
 name: "dkml-option-32bit"
 version: "4.12.1"
-synopsis: "Set the DKML distribution of OCaml to be compiled in 32-bit mode for 64-bit Linux and OS X hosts"
+synopsis: "Set the DKML distribution of OCaml to be compiled in 32-bit mode"
 authors: ["Diskuv, Inc. <opensource+diskuv-ocaml@support.diskuv.com>"]
 license: "Apache-2.0"
 homepage: "https://github.com/diskuv/dkml-compiler"
@@ -12,6 +12,6 @@ depexts: [
 depends: [
   "dkml-base-compiler" {post & = version}
 ]
-available: [ (arch = "x86_64" & os = "linux") | os = "win32" ]
+available: [ os = "linux" | os = "win32" ]
 maintainer: ["opensource+diskuv-ocaml@support.diskuv.com"]
 flags: compiler
