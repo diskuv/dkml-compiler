@@ -343,6 +343,22 @@ case $HOST_SUBDIR in
         exit 107
     fi
 esac
+case $CROSS_SUBDIR in
+/* | ?:*) # /a/b/c or C:\Windows
+    if [ -x /usr/bin/cygpath ]; then
+        CROSS_SUBDIR_MIXED=$(/usr/bin/cygpath -m "$CROSS_SUBDIR")
+    else
+        CROSS_SUBDIR_MIXED="$CROSS_SUBDIR"
+    fi
+    if [ "${CROSS_SUBDIR##"$TARGETDIR_UNIX/"}" != "$CROSS_SUBDIR" ]; then
+        CROSS_SUBDIR="${CROSS_SUBDIR##"$TARGETDIR_UNIX/"}"
+    elif [ "${CROSS_SUBDIR_MIXED##"$TARGETDIR_MIXED/"}" != "$CROSS_SUBDIR_MIXED" ]; then
+        CROSS_SUBDIR="${CROSS_SUBDIR_MIXED##"$TARGETDIR_MIXED/"}"
+    else
+        printf "FATAL: Could not resolve CROSS_SUBDIR=%s as a subdirectory of %s\n" "$CROSS_SUBDIR" "$TARGETDIR_UNIX" >&2
+        exit 107
+    fi
+esac
 
 # ensure git, if directory, is an absolute directory
 if [ -d "$GIT_COMMITID_TAG_OR_DIR" ]; then
