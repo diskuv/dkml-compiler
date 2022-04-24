@@ -16,14 +16,15 @@ jobs:
       matrix:
         # repository
         #    [HOST/]OWNER/REPO format
-        repository:
-          - "diskuv/dkml-installer-ocaml"
-          - "diskuv/dkml-component-opam"
+        include:
+        - repository: diskuv/dkml-installer-ocaml
+          yml: package.yml
+        - repository: diskuv/dkml-component-opam
+          yml: asset.yml
     runs-on: ubuntu-latest
     steps:
       - name: POST workflow dispatch
         env:
-          REPOSITORY: ${{ matrix.repository }}
           GITHUB_TOKEN: ${{ secrets.TRIGGER_DKML_INSTALLER_OCAML }}
         run: |
-          set -x && gh workflow --repo "${REPOSITORY}" run package.yml -f dkml-compiler=${GITHUB_SHA}
+          set -x && gh workflow --repo "${{matrix.repository}}" run ${{matrix.yml}} -f dkml-compiler=${GITHUB_SHA}
