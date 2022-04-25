@@ -1,5 +1,4 @@
 opam-version: "2.0"
-name: "dkml-option-32bit"
 version: "4.12.1"
 synopsis: "Set the DKML distribution of OCaml to be compiled in 32-bit mode"
 authors: ["Diskuv, Inc. <opensource+diskuv-ocaml@support.diskuv.com>"]
