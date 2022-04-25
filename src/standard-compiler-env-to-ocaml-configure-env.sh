@@ -32,7 +32,7 @@
 set -euf
 
 # shellcheck disable=SC1091
-. "$DKMLDIR"/vendor/dkml-runtime-common/unix/crossplatform-functions.sh
+. "$DKMLDIR"/vendor/drc/unix/crossplatform-functions.sh
 
 # Microsoft cl.exe and link.exe use forward slash (/) options; do not ever let MSYS2 interpret
 # the forward slash and try to convert it to a Windows path.

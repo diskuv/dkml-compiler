@@ -298,7 +298,7 @@ USERMODE=ON
 STATEDIR=
 
 # shellcheck disable=SC1091
-. "$DKMLDIR/vendor/dkml-runtime-common/unix/_common_tool.sh"
+. "$DKMLDIR/vendor/drc/unix/_common_tool.sh"
 
 disambiguate_filesystem_paths
 

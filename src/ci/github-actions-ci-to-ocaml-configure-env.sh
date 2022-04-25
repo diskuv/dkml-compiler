@@ -36,7 +36,7 @@
 set -euf
 
 # shellcheck disable=SC1091
-. "$DKMLDIR"/vendor/dkml-runtime-common/unix/crossplatform-functions.sh
+. "$DKMLDIR"/vendor/drc/unix/crossplatform-functions.sh
 
 # Get BUILDHOST_ARCH
 autodetect_buildhost_arch

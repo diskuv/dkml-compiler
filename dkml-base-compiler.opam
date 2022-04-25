@@ -38,9 +38,9 @@ build: [
   ["install" "-d" "dkmldir"]
   ["sh" "-c" "printf 'dkml_root_version=%s\\n' \"$DKML_VER\" > dkmldir/.dkmlroot"]
 
-  #   <dkmldir>/vendor/dkml-runtime-common/
-  ["install" "-d" "dkmldir/vendor/dkml-runtime-common"]
-  ["tar" "xCfz" "dkmldir/vendor/dkml-runtime-common" "dl/dkml-runtime-common.tar.gz" "--strip-components=1"]
+  #   <dkmldir>/vendor/drc/
+  ["install" "-d" "dkmldir/vendor/drc"]
+  ["tar" "xCfz" "dkmldir/vendor/drc" "dl/dkml-runtime-common.tar.gz" "--strip-components=1"]
 
   #   <dkmldir>/vendor/dkml-compiler/
   ["install" "-d" "dkmldir/vendor/dkml-compiler/src"]
@@ -49,7 +49,7 @@ build: [
 install: [
   # Run r-c-ocaml-1-setup.sh
   [
-    "env" "TOPDIR=dkmldir/vendor/dkml-runtime-common/all/emptytop"
+    "env" "TOPDIR=dkmldir/vendor/drc/all/emptytop"
       "dkmldir/vendor/dkml-compiler/src/r-c-ocaml-1-setup.sh"
       "-d" "dkmldir"
       "-t" "%{prefix}%"
@@ -102,8 +102,8 @@ extra-source "dl/flexdll.tar.gz" {
 }
 extra-source "dl/dkml-runtime-common.tar.gz" {
   # dkml-runtime-common can be less or equal to DKML_VER
-  src: "https://github.com/diskuv/dkml-runtime-common/archive/refs/tags/v0.4.0-prerel19_r4.tar.gz"
+  src: "https://github.com/diskuv/dkml-runtime-common/archive/refs/tags/v0.4.0-prerel19_r5.tar.gz"
   checksum: [
-    "sha256=07a3621663287d073a842c7e102e62495bda6177035084ee64193e15babab72f"
+    "sha256=576effbcc9fb4b16d886c7531ddd3b809e9a275d2cc54633c009da859cc6d24b"
   ]
 }
