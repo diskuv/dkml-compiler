@@ -6,7 +6,7 @@ description:
   """The DKML distribution of the OCaml bytecode and native compiler, Stdlib and the other OCaml libraries (str, unix, bigarray, etc.).
 A cross-compiler for macOS x86_64 to macOS arm64 is included; for build consistency the regular OCaml compiler will be for x86_64 regardless of whether the build machine is Apple Silicon.
 Sometime in 2022 you will no longer need this package for Win32 and can instead use the fully-supported Windows version of ocaml-base-compiler.
-Install with something like: opam switch create dkml-4.12.1 '--formula="dkml-base-compiler" {>= "4.12.1" & < "4.13.0~"}'"""
+Install with something like: opam switch create dkml-4.12.1 '--formula="dkml-base-compiler" {>= "4.12.1~" & < "4.13.0~"}'"""
 maintainer: ["opensource+diskuv-ocaml@support.diskuv.com"]
 authors: ["Diskuv, Inc. <opensource+diskuv-ocaml@support.diskuv.com>"]
 license: "Apache-2.0"
