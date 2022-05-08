@@ -102,8 +102,8 @@ extra-source "dl/flexdll.tar.gz" {
 }
 extra-source "dl/dkml-runtime-common.tar.gz" {
   # dkml-runtime-common can be less or equal to DKML_VER
-  src: "https://github.com/diskuv/dkml-runtime-common/archive/refs/tags/v0.4.0-prerel19_r5.tar.gz"
+  src: "https://github.com/diskuv/dkml-runtime-common/archive/refs/tags/v0.4.0-prerel21.tar.gz"
   checksum: [
-    "sha256=576effbcc9fb4b16d886c7531ddd3b809e9a275d2cc54633c009da859cc6d24b"
+    "sha256=67ed41124c320a9f28abd4266bbab983f289b7c4e80d8fb451faf80e691bbf76"
   ]
 }
