@@ -1,6 +1,6 @@
 opam-version: "2.0"
 name: "dkml-base-compiler"
-version: "4.12.1~prerel11"
+version: "4.12.1~prerel35"
 synopsis: "OCaml cross-compiler and libraries from the DKML distribution that works with at least Win32 and macOS"
 description:
   """The DKML distribution of the OCaml bytecode and native compiler, Stdlib and the other OCaml libraries (str, unix, bigarray, etc.).
@@ -102,8 +102,8 @@ extra-source "dl/flexdll.tar.gz" {
 }
 extra-source "dl/dkml-runtime-common.tar.gz" {
   # dkml-runtime-common can be less or equal to DKML_VER
-  src: "https://github.com/diskuv/dkml-runtime-common/archive/refs/tags/v0.4.0-prerel21.tar.gz"
+  src: "https://github.com/diskuv/dkml-runtime-common/archive/refs/tags/v0.4.0-prerel35.tar.gz"
   checksum: [
-    "sha256=67ed41124c320a9f28abd4266bbab983f289b7c4e80d8fb451faf80e691bbf76"
+    "sha256=dab4616b989f67e981e0090933285f45211ce1031b6da5885a7834224ec4a751"
   ]
 }
