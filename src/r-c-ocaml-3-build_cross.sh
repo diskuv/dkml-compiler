@@ -133,9 +133,6 @@ fi
 # END Command line processing
 # ------------------
 
-# Need feature flag and usermode and statedir until all legacy code is removed in _common_tool.sh
-# shellcheck disable=SC2034
-DKML_FEATUREFLAG_CMAKE_PLATFORM=ON
 # shellcheck disable=SC2034
 USERMODE=ON
 # shellcheck disable=SC2034
@@ -278,7 +275,7 @@ build_world() {
   # Make C compiler script for target ABI. Any compile spec (especially from CMake) will be
   # applied.
   install -d "$build_world_BUILD_ROOT"/support
-  DKML_FEATUREFLAG_CMAKE_PLATFORM=ON DKML_TARGET_ABI="$build_world_TARGET_ABI" autodetect_compiler "$build_world_BUILD_ROOT"/support/with-target-c-compiler.sh
+  DKML_TARGET_ABI="$build_world_TARGET_ABI" autodetect_compiler "$build_world_BUILD_ROOT"/support/with-target-c-compiler.sh
 
   # Target wrappers
   # shellcheck disable=SC2086

@@ -137,9 +137,6 @@ fi
 # END Command line processing
 # ------------------
 
-# Need feature flag and usermode and statedir until all legacy code is removed in _common_tool.sh
-# shellcheck disable=SC2034
-DKML_FEATUREFLAG_CMAKE_PLATFORM=ON
 # shellcheck disable=SC2034
 USERMODE=ON
 # shellcheck disable=SC2034
@@ -201,7 +198,7 @@ fi
 install -d "$OCAMLSRC_MIXED"/support
 HOST_DKML_COMPILE_SPEC=${DKML_COMPILE_SPEC:-1}
 HOST_DKML_COMPILE_TYPE=${DKML_COMPILE_TYPE:-SYS}
-DKML_FEATUREFLAG_CMAKE_PLATFORM=ON DKML_TARGET_ABI="$DKMLHOSTABI" DKML_COMPILE_SPEC=$HOST_DKML_COMPILE_SPEC DKML_COMPILE_TYPE=$HOST_DKML_COMPILE_TYPE autodetect_compiler "$OCAMLSRC_MIXED"/support/with-host-c-compiler.sh
+DKML_TARGET_ABI="$DKMLHOSTABI" DKML_COMPILE_SPEC=$HOST_DKML_COMPILE_SPEC DKML_COMPILE_TYPE=$HOST_DKML_COMPILE_TYPE autodetect_compiler "$OCAMLSRC_MIXED"/support/with-host-c-compiler.sh
 
 # ./configure
 if [ "$RUNTIMEONLY" = ON ]; then

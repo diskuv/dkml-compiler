@@ -289,9 +289,6 @@ fi
 # END Command line processing
 # ------------------
 
-# Need feature flag and usermode and statedir until all legacy code is removed in _common_tool.sh
-# shellcheck disable=SC2034
-DKML_FEATUREFLAG_CMAKE_PLATFORM=ON
 # shellcheck disable=SC2034
 USERMODE=ON
 # shellcheck disable=SC2034
@@ -583,7 +580,7 @@ get_ocaml_source() {
     if [ ! -e "$get_ocaml_source_SRCUNIX"/msvs-detect ]; then
         case "$get_ocaml_source_TARGETPLATFORM" in
           windows_*)
-            DKML_FEATUREFLAG_CMAKE_PLATFORM=ON DKML_TARGET_ABI=$get_ocaml_source_TARGETPLATFORM autodetect_compiler --msvs-detect "$WORK"/msvs-detect
+            DKML_TARGET_ABI=$get_ocaml_source_TARGETPLATFORM autodetect_compiler --msvs-detect "$WORK"/msvs-detect
             install "$WORK"/msvs-detect "$get_ocaml_source_SRCUNIX"/msvs-detect
             ;;
         esac
