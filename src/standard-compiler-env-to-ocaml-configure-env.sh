@@ -121,16 +121,27 @@ fi
 export CC
 
 # CFLAGS
-# The value of this appears in `ocamlc -config`; will be viral to most Opam packages with embedded C code.
+# The value of this *does* appear in `ocamlc -config` so it is
+# similar to CC. However CFLAGS is not used when building a shared
+# library for github.com/ocaml/ocaml. So options that are agnostic
+# to shared vs static libraries should be in CC.
 if [ -n "${CC:-}" ]; then
-  # -m32 is an option that needs to be in CC for OCaml rather than CFLAGS since CFLAGS not used to created shared libraries.
-  if printf "%s" "${CFLAGS:-}" | PATH=/usr/bin:/bin grep -q '\B-m32\b'; then
+  # -m32 is an option that needs to be in CC for OCaml
+  if printf "%s" " ${CFLAGS:-} " | PATH=/usr/bin:/bin grep -q ' -m32 '; then
       CC="$CC -m32"
-      CFLAGS=$(printf "%s" "$CFLAGS" | PATH=/usr/bin:/bin sed 's/\B-m32\b//g')
+      CFLAGS=$(printf "%s" " $CFLAGS " | PATH=/usr/bin:/bin sed 's/ -m32 / /g')
   fi
-  if printf "%s" "${CFLAGS:-}" | PATH=/usr/bin:/bin grep -q '\B-m64\b'; then
+  if printf "%s" " ${CFLAGS:-} " | PATH=/usr/bin:/bin grep -q ' -m64 '; then
       CC="$CC -m64"
-      CFLAGS=$(printf "%s" "$CFLAGS" | PATH=/usr/bin:/bin sed 's/\B-m64\b//g')
+      CFLAGS=$(printf "%s" " $CFLAGS " | PATH=/usr/bin:/bin sed 's/ -m64 / /g')
+  fi
+
+  # -mmacosx-version-min=MM.NN needs to be in CC for OCaml
+  if printf "%s" " ${CFLAGS:-} " | PATH=/usr/bin:/bin grep -q ' -mmacosx-version-min=[0-9.]* '; then
+    # sigh. vanilla sed does not have non-greedy regex so removing the -mmacosx-version-min=MM.NN is complex.
+    _OSX_VMIN=$(printf "%s" " $CFLAGS " | PATH=/usr/bin:/bin sed 's/.* -mmacosx-version-min=//; s/\([0-9.]*\) .*/\1/ ')
+    CC="$CC -mmacosx-version-min=$_OSX_VMIN"
+    CFLAGS=$(printf "%s" " $CFLAGS " | PATH=/usr/bin:/bin sed 's/ -mmacosx-version-min=[0-9.]* / /g')
   fi
 
   # For OCaml 5.00 there is an error with GCC:
@@ -178,7 +189,7 @@ elif [ -n "${AS:-}" ]; then
   fi
 
   # A CMake-configured `AS` will be missing the `-c` option needed by OCaml; fix that
-  if printf "%s" "${DKML_COMPILE_CM_CMAKE_ASM_COMPILE_OBJECT:-}" | PATH=/usr/bin:/bin grep -q -E -- '\B-c\b'; then
+  if printf "%s" " ${DKML_COMPILE_CM_CMAKE_ASM_COMPILE_OBJECT:-} " | PATH=/usr/bin:/bin grep -q -E -- ' -c '; then
     # CMAKE_ASM_COMPILE_OBJECT contains '-c' as a single word. Ex: <CMAKE_ASM_COMPILER> <DEFINES> <INCLUDES> <FLAGS> -o <OBJECT> -c <SOURCE>
     AS="$AS -c"
   fi
@@ -342,7 +353,7 @@ if cmake_flag_on "${DKML_COMPILE_CM_MSVC:-}"; then
     #   (cd _build/default/src && C:\DiskuvOCaml\BuildTools\VC\Tools\MSVC\14.26.28801\bin\HostX64\x86\cl.exe -nologo -O2 -Gy- -MD -DWIN32 -D_WINDOWS -Zi -Ob0 -Od -RTC1 -FS -D_CRT_SECURE_NO_DEPRECATE -nologo -O2 -Gy- -MD -DWIN32 -D_WINDOWS -Zi -Ob0 -Od -RTC1 -FS -D_LARGEFILE64_SOURCE -I Z:/build/windows_x86/Debug/dksdk/host-tools/_opam/lib/ocaml -I Z:\build\windows_x86\Debug\dksdk\system\_opam\lib\sexplib0 -I ../compiler-stdlib/src -I ../hash_types/src -I ../shadow-stdlib/src /Foexn_stubs.obj -c exn_stubs.c)
     #   cl : Command line error D8016 : '/RTC1' and '/O2' command-line options are incompatible
     # we remove any /RTC1 from the flags
-    CFLAGS=$(printf "%s" "${CFLAGS:-}" | PATH=/usr/bin:/bin sed 's#\B/RTC1\b##g')
+    CFLAGS=$(printf "%s" " ${CFLAGS:-} " | PATH=/usr/bin:/bin sed 's# /RTC1 # ß#g')
 
     # Always use dash (-) form of options rather than slash (/) options. Makes MSYS2 not try
     # to think the option is a filepath and try to translate it.
