@@ -508,6 +508,7 @@ get_ocaml_source() {
             log_trace git -C "$get_ocaml_source_SRCMIXED" config user.name  "Auto Committer"
             log_trace git -C "$get_ocaml_source_SRCMIXED" add -A
             log_trace git -C "$get_ocaml_source_SRCMIXED" commit -m "Commit from source tree"
+            log_trace git -C "$get_ocaml_source_SRCMIXED" tag r-c-ocaml-1-setup-srctree
         fi
 
         if [ -e "$get_ocaml_source_SRCUNIX"/flexdll ] && [ ! -e "$get_ocaml_source_SRCUNIX"/flexdll/.git ]; then
@@ -516,7 +517,14 @@ get_ocaml_source() {
             log_trace git -C "$get_ocaml_source_SRCMIXED/flexdll" config user.name  "Auto Committer"
             log_trace git -C "$get_ocaml_source_SRCMIXED/flexdll" add -A
             log_trace git -C "$get_ocaml_source_SRCMIXED/flexdll" commit -m "Commit from source tree"
+            log_trace git -C "$get_ocaml_source_SRCMIXED/flexdll" tag r-c-ocaml-1-setup-srctree
         fi
+
+        # Move the repository to the expected tag
+        log_trace git -C "$get_ocaml_source_SRCMIXED" stash
+        log_trace git -C "$get_ocaml_source_SRCMIXED/flexdll" stash
+        log_trace git -C "$get_ocaml_source_SRCMIXED" -c advice.detachedHead=false checkout r-c-ocaml-1-setup-srctree
+        log_trace git -C "$get_ocaml_source_SRCMIXED/flexdll" -c advice.detachedHead=false checkout r-c-ocaml-1-setup-srctree
     else
         # Otherwise do git checkout / git fetch ...
 
@@ -533,8 +541,10 @@ get_ocaml_source() {
             log_trace git -C "$get_ocaml_source_SRCMIXED" fetch --depth 1 origin "$get_ocaml_source_COMMIT"
             log_trace git -C "$get_ocaml_source_SRCMIXED" reset --hard FETCH_HEAD
         else
-            # Git fetch can be very expensive after a shallow clone; we skip advancing the repository
-            # if the expected tag/commit is a commit and the actual git commit is the expected git commit
+            # Move the repository to the expected commit
+            #
+            #   Git fetch can be very expensive after a shallow clone; we skip advancing the repository
+            #   if the expected tag/commit is a commit and the actual git commit is the expected git commit
             git_head=$(log_trace git -C "$get_ocaml_source_SRCMIXED" rev-parse HEAD)
             if [ ! "$git_head" = "$get_ocaml_source_COMMIT" ]; then
                 # allow tag to move (for development and for emergency fixes), if the user chose a tag rather than a commit
