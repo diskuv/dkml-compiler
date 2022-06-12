@@ -1,15 +1,9 @@
-name: Test and Notify
+name: Initiate tests on opam and '-installer' repositories
+
 on:
-  push:
-    branches:
-      # Any commit to the main branch
-      - "main"
-    tags:
-      # Any push to a tag that starts with 'v'
-      - v*
+  workflow_dispatch:
 
 jobs:
-  # Notify Installers on GitHub
   github-notify:
     strategy:
       fail-fast: true
