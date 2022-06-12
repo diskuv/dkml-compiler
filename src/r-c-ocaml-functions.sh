@@ -42,6 +42,24 @@
 # autodetect_system_path() of crossplatform-functions.sh.
 ocaml_configure_no_ocaml_leak_environment="OCAML_TOPLEVEL_PATH= OCAMLLIB="
 
+# When executing an `ocamlc -pp` preprocessor command like
+# https://github.com/ocaml/ocaml/blob/77b164c65e7bc8625d0bd79542781952afdd2373/stdlib/Compflags#L18-L20
+# (invoked by https://github.com/ocaml/ocaml/blob/77b164c65e7bc8625d0bd79542781952afdd2373/stdlib/Makefile#L201),
+# `ocamlc` will use a temporary directory TMPDIR to hold
+# the preprocessor output. However for MSYS2 you can get
+# a TMPDIR with a space that OCaml 4.12.1 will choke on:
+# * `C:\Users\person 1\AppData\Local\Programs\DiskuvOCaml\tools\MSYS2\tmp\ocamlpp87171a`
+# * https://gitlab.com/diskuv/diskuv-ocaml/-/issues/13#note_987989664
+# So set the TMPDIR to a DOS 8.3 short path like
+# `C:\Users\PERSON~1\AppData\Local\Programs\DISKUV~1\...\tmp`
+export_safe_tmpdir() {
+  TMPDIR=$WORK
+  if [ -x /usr/bin/cygpath ]; then
+      TMPDIR=$(cygpath -ad "$TMPDIR")
+  fi
+  export TMPDIR
+}
+
 dump_logs_on_error() {
   if [ -e utils/config.ml ]; then
     printf '@ERR+ utils/config.ml\n' >&2

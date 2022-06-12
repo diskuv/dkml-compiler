@@ -169,6 +169,8 @@ autodetect_posix_shell
 # shellcheck disable=SC1091
 . "$DKMLDIR/vendor/dkml-compiler/src/r-c-ocaml-functions.sh"
 
+export_safe_tmpdir
+
 ## Parameters
 
 if [ -x /usr/bin/cygpath ]; then

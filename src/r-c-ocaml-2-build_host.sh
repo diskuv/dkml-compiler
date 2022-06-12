@@ -173,6 +173,8 @@ autodetect_posix_shell
 # shellcheck disable=SC1091
 . "$DKMLDIR/vendor/dkml-compiler/src/r-c-ocaml-functions.sh"
 
+export_safe_tmpdir
+
 if [ -n "$HOSTABISCRIPT" ]; then
     case "$HOSTABISCRIPT" in
     /* | ?:*) # /a/b/c or C:\Windows
