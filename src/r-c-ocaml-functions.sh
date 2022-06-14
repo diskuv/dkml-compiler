@@ -50,14 +50,25 @@ ocaml_configure_no_ocaml_leak_environment="OCAML_TOPLEVEL_PATH= OCAMLLIB="
 # a TMPDIR with a space that OCaml 4.12.1 will choke on:
 # * `C:\Users\person 1\AppData\Local\Programs\DiskuvOCaml\tools\MSYS2\tmp\ocamlpp87171a`
 # * https://gitlab.com/diskuv/diskuv-ocaml/-/issues/13#note_987989664
-# So set the TMPDIR to a DOS 8.3 short path like
-# `C:\Users\PERSON~1\AppData\Local\Programs\DISKUV~1\...\tmp`
+#
+# Root cause:
+# https://github.com/ocaml/ocaml/blob/cce52acc7c7903e92078e9fe40745e11a1b944f0/driver/pparse.ml#L27-L29
+#
+# Mitigation:
+# > Filename.get_temp_dir_name (https://v2.ocaml.org/api/Filename.html#VALget_temp_dir_name) uses
+# > TMPDIR on Unix and TEMP on Windows
+# * Make OCaml's temporary directory be the WORK directory
+# * Set it to a DOS 8.3 short path like
+#  `C:\Users\PERSON~1\AppData\Local\Programs\DISKUV~1\...\tmp` on Windows.
 export_safe_tmpdir() {
   TMPDIR=$WORK
+  TEMP=$WORK
   if [ -x /usr/bin/cygpath ]; then
       TMPDIR=$(cygpath -ad "$TMPDIR")
+      TEMP=$(cygpath -ad "$TEMP")
   fi
   export TMPDIR
+  export TEMP
 }
 
 dump_logs_on_error() {
@@ -131,10 +142,11 @@ ocaml_make() {
       # Set MSVS_*
       detect_msvs "$ocaml_make_ABI"
 
-      # With MSYS2 it is quite possible to have INCLUDE and Include in the same environment. Opam seems to use camel case, which
-      # is probably fine in Cygwin.
-      # Also, Windows needs IFLEXDIR=-I../flexdll makefile variable or else a prior system OCaml (or a prior OCaml in the PATH) can
-      # cause IFLEXDIR=..../ocaml/bin which will can hard-to-reproduce failures (missing flexdll.h, etc.).
+      # With MSYS2
+      # * it is quite possible to have INCLUDE and Include in the same environment. Opam seems to use camel case, which
+      #   is probably fine in Cygwin.
+      # * Windows needs IFLEXDIR=-I../flexdll makefile variable or else a prior system OCaml (or a prior OCaml in the PATH) can
+      #   cause IFLEXDIR=..../ocaml/bin which will can hard-to-reproduce failures (missing flexdll.h, etc.).
       if ! log_trace --return-error-code env --unset=LIB --unset=INCLUDE --unset=PATH --unset=Lib --unset=Include --unset=Path \
         PATH="$MSVS_PATH$DKML_SYSTEM_PATH" \
         LIB="$MSVS_LIB;${LIB:-}" \
@@ -196,14 +208,14 @@ ocaml_configure_windows() {
 
   ocaml_configure_windows_WINPREFIX=$(printf "%s\n" "${ocaml_configure_windows_PREFIX}" | /usr/bin/cygpath -f - -m)
 
-  # TMP is set in MSYS2 but not Cygwin. Needed by MSVC or we get https://docs.microsoft.com/en-us/cpp/error-messages/tool-errors/command-line-error-d8037?view=msvc-170
-  ocaml_configure_windows_TMP=$(/usr/bin/cygpath -aw "$TMP")
-  touch "$ocaml_configure_windows_TMP/test.file"
-
-  # With MSYS2 it is quite possible to have INCLUDE and Include in the same environment. Opam seems to use camel case, which
-  # is probably fine in Cygwin.
-  # And ordinarily you don't need to set DEP_CC, LD, etc. which are auto-discovered by ./configure. However, if gcc
-  # is present (in MSYS2 or Cygwin) then gcc will be used for DEP_CC and ld used for LD.
+  # With MSYS2
+  # * it is quite possible to have INCLUDE and Include in the same environment. Opam seems to use camel case, which
+  #   is probably fine in Cygwin.
+  # * ordinarily you don't need to set DEP_CC, LD, etc. which are auto-discovered by ./configure. However, if gcc
+  #   is present (in MSYS2 or Cygwin) then gcc will be used for DEP_CC and ld used for LD.
+  # * TMP is set but it isn't in Cygwin. Regardless, needed by MSVC or we get
+  #   https://docs.microsoft.com/en-us/cpp/error-messages/tool-errors/command-line-error-d8037?view=msvc-170
+  #   . See comments in export_safe_tmpdir() for why we need DOS 8.3 TMPDIR
   # shellcheck disable=SC2086
   configure_environment_for_ocaml --unset=LIB --unset=INCLUDE --unset=PATH --unset=Lib --unset=Include --unset=Path \
     PATH="${MSVS_PATH}$DKML_SYSTEM_PATH" \
@@ -211,7 +223,7 @@ ocaml_configure_windows() {
     INCLUDE="${MSVS_INC}${INCLUDE:-}" \
     MSYS2_ARG_CONV_EXCL='*' \
     DEP_CC="false" LD="link" \
-    TMP="$ocaml_configure_windows_TMP" \
+    TMP="$TMPDIR" \
     $ocaml_configure_no_ocaml_leak_environment \
     ./configure --prefix "$ocaml_configure_windows_WINPREFIX" \
                 --build=$ocaml_configure_windows_BUILD --host="$ocaml_configure_windows_HOST" \
