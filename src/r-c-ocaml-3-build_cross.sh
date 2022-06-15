@@ -165,11 +165,10 @@ autodetect_system_binaries
 autodetect_system_path
 autodetect_cpus
 autodetect_posix_shell
+export_safe_tmpdir
 
 # shellcheck disable=SC1091
 . "$DKMLDIR/vendor/dkml-compiler/src/r-c-ocaml-functions.sh"
-
-export_safe_tmpdir
 
 ## Parameters
 
