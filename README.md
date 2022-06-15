@@ -2,6 +2,13 @@
 
 POSIX Bourne shell scripts to compile the DKML distribution of OCaml.
 
+## Packages that rely on dkml-compiler
+
+* dkml-component-ocamlcompiler
+* dkml-component-ocamlrun
+* dkml-component-opam
+* dkml-runtime-apps
+
 ## Contributing
 
 See [the Contributors section of dkml-install-api](https://github.com/diskuv/dkml-install-api/blob/main/contributors/README.md).
