@@ -525,6 +525,8 @@ get_ocaml_source() {
         log_trace git -C "$get_ocaml_source_SRCMIXED/flexdll" stash
         log_trace git -C "$get_ocaml_source_SRCMIXED" -c advice.detachedHead=false checkout r-c-ocaml-1-setup-srctree
         log_trace git -C "$get_ocaml_source_SRCMIXED/flexdll" -c advice.detachedHead=false checkout r-c-ocaml-1-setup-srctree
+        log_trace git -C "$get_ocaml_source_SRCMIXED" reset --hard r-c-ocaml-1-setup-srctree
+        log_trace git -C "$get_ocaml_source_SRCMIXED/flexdll" reset --hard r-c-ocaml-1-setup-srctree
     else
         # Otherwise do git checkout / git fetch ...
 
@@ -546,12 +548,15 @@ get_ocaml_source() {
             #   Git fetch can be very expensive after a shallow clone; we skip advancing the repository
             #   if the expected tag/commit is a commit and the actual git commit is the expected git commit
             git_head=$(log_trace git -C "$get_ocaml_source_SRCMIXED" rev-parse HEAD)
+            log_trace git -C "$get_ocaml_source_SRCMIXED" stash
             if [ ! "$git_head" = "$get_ocaml_source_COMMIT" ]; then
                 # allow tag to move (for development and for emergency fixes), if the user chose a tag rather than a commit
                 if git -C "$get_ocaml_source_SRCMIXED" tag -l "$get_ocaml_source_COMMIT" | awk 'BEGIN{nonempty=0} NF>0{nonempty+=1} END{exit nonempty==0}'; then git -C "$get_ocaml_source_SRCMIXED" tag -d "$get_ocaml_source_COMMIT"; fi
+
                 log_trace git -C "$get_ocaml_source_SRCMIXED" fetch --tags
                 log_trace git -C "$get_ocaml_source_SRCMIXED" -c advice.detachedHead=false checkout "$get_ocaml_source_COMMIT"
             fi
+            log_trace git -C "$get_ocaml_source_SRCMIXED" reset --hard "$get_ocaml_source_COMMIT"
         fi
         log_trace git -C "$get_ocaml_source_SRCMIXED" submodule update --init --recursive
 
