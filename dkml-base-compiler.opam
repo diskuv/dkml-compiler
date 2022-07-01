@@ -1,11 +1,18 @@
 opam-version: "2.0"
 name: "dkml-base-compiler"
-version: "4.12.1~prerel83"
+# Composite version format is M.N.O~vA.B.C[~prelP]
+# where:
+# - M.N.O is OCaml compiler version
+# - A.B.C is the DKML version of the extra-source dkml-runtime-common
+# - P is optional DKML prerelease version
+# Examples:
+# - 4.12.1~prerel69 (legacy format) < 4.12.1~v0.4.0 < 4.12.1~v0.4.1~prerel69 < 4.12.1~v0.4.1
+# Confer: Version Ordering in https://opam.ocaml.org/doc/Manual.html#Package-Formulas
+version: "4.12.1~v0.4.0"
 synopsis: "OCaml cross-compiler and libraries from the DKML distribution that works with at least Win32 and macOS"
 description:
   """The DKML distribution of the OCaml bytecode and native compiler, Stdlib and the other OCaml libraries (str, unix, bigarray, etc.).
 A cross-compiler for macOS x86_64 to macOS arm64 is included; for build consistency the regular OCaml compiler will be for x86_64 regardless of whether the build machine is Apple Silicon.
-Sometime in 2022 you will no longer need this package for Win32 and can instead use the fully-supported Windows version of ocaml-base-compiler.
 Install with something like: opam switch create dkml-4.12.1 '--formula="dkml-base-compiler" {>= "4.12.1~" & < "4.13.0~"}'"""
 maintainer: ["opensource+diskuv-ocaml@support.diskuv.com"]
 authors: ["Diskuv, Inc. <opensource+diskuv-ocaml@support.diskuv.com>"]
@@ -22,9 +29,6 @@ depends: [
 depopts: [
   "ocaml-option-32bit"
 ]
-build-env: [
-  [DKML_VER = "0.4.0"]
-]
 conflict-class: "ocaml-core-compiler"
 flags: [ compiler avoid-version ]
 build: [
@@ -36,7 +40,9 @@ build: [
   # Create a DKMLDIR. Its structure mimics a git submodule setup.
   #   <dkmldir>/.dkmlroot
   ["install" "-d" "dkmldir"]
-  ["sh" "-c" "printf 'dkml_root_version=%s\\n' \"$DKML_VER\" > dkmldir/.dkmlroot"]
+  #     4.12.1~v0.4.1          --dkml-semver--> 0.4.1
+  #     4.12.1~v0.4.1~prerel69 --dkml-semver--> 0.4.1-prerel69
+  ["sh" "-c" "printf 'dkml_root_version=%s\\n' '%{version}%' | sed 's/[0-9.]*~v//; s/~/-/' > dkmldir/.dkmlroot"]
 
   #   <dkmldir>/vendor/drc/
   ["install" "-d" "dkmldir/vendor/drc"]
@@ -101,9 +107,8 @@ extra-source "dl/flexdll.tar.gz" {
   checksum: "sha256=51a6ef2e67ff475c33a76b3dc86401a0f286c9a3339ee8145053ea02d2fb5974"
 }
 extra-source "dl/dkml-runtime-common.tar.gz" {
-  # dkml-runtime-common can be less or equal to DKML_VER
-  src: "https://github.com/diskuv/dkml-runtime-common/archive/refs/tags/v0.4.0-prerel83.tar.gz"
+  src: "https://github.com/diskuv/dkml-runtime-common/archive/refs/tags/v0.4.0.tar.gz"
   checksum: [
-    "sha256=218fe4dd0fbbfb063b202c975fe07cf7887760c2bd8f4ef6f3071386aa3110b6"
+    "sha256=8793c636e14b630722ba59145aa1d895fddbb151de4b7f515cefb8942ec2f917"
   ]
 }
