@@ -455,24 +455,24 @@ set_patches() {
     PATCHES=()
     for set_patches_STEM in "${VERSION_STEMS[@]}"; do
         # Find, sort and accumulate common patches that belong to the stem.
-        find "vendor/dkml-compiler/src/p" -type f -name "$set_patches_CATEGORY-common-$set_patches_STEM-*.patch" | sort > "$WORK/p"
+        find "vendor/dkml-compiler/src/p" -type f -name "$set_patches_CATEGORY-common-$set_patches_STEM-*.patch" | LC_ALL=C sort > "$WORK/p"
         while IFS= read -r line; do
             PATCHES+=("$DKMLDIR/$line")
             ALL_PATCH_FILES+=("$line")
         done < "$WORK/p"
         #   Markdown
-        find "vendor/dkml-compiler/src/p" -type f -name "$set_patches_CATEGORY-common-$set_patches_STEM-*.md" | sort > "$WORK/p"
+        find "vendor/dkml-compiler/src/p" -type f -name "$set_patches_CATEGORY-common-$set_patches_STEM-*.md" | LC_ALL=C sort > "$WORK/p"
         while IFS= read -r line; do
             ALL_PATCH_FILES+=("$line")
         done < "$WORK/p"
         # Find, sort and accumulate host/cross patches that belong to the stem.
-        find "vendor/dkml-compiler/src/p" -type f -name "$set_patches_CATEGORY-$set_patches_HOSTCROSS-$set_patches_STEM-*.patch" | sort > "$WORK/p"
+        find "vendor/dkml-compiler/src/p" -type f -name "$set_patches_CATEGORY-$set_patches_HOSTCROSS-$set_patches_STEM-*.patch" | LC_ALL=C sort > "$WORK/p"
         while IFS= read -r line; do
             PATCHES+=("$DKMLDIR/$line")
             ALL_PATCH_FILES+=("$line")
         done < "$WORK/p"
         #   Markdown
-        find "vendor/dkml-compiler/src/p" -type f -name "$set_patches_CATEGORY-$set_patches_HOSTCROSS-$set_patches_STEM-*.md" | sort > "$WORK/p"
+        find "vendor/dkml-compiler/src/p" -type f -name "$set_patches_CATEGORY-$set_patches_HOSTCROSS-$set_patches_STEM-*.md" | LC_ALL=C sort > "$WORK/p"
         while IFS= read -r line; do
             ALL_PATCH_FILES+=("$line")
         done < "$WORK/p"
