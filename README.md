@@ -9,9 +9,24 @@ POSIX Bourne shell scripts to compile the DKML distribution of OCaml.
 * dkml-component-opam
 * dkml-runtime-apps
 
-## Contributing
+## Developing
 
-See [the Contributors section of dkml-install-api](https://github.com/diskuv/dkml-install-api/blob/main/contributors/README.md).
+You'll first want to download everything that the `.opam` downloads. Do that
+with:
+
+```bash
+rm -rf dl ; git restore dl/.gitkeep
+opam install ./dkml-base-compiler.opam --inplace-build --update-invariant
+```
+
+Then make a baseline of the OCaml source code that can be used for patching:
+
+```
+cd dl/ocaml
+git init
+git config core.safecrlf false
+git add -A
+```
 
 ## Status
 

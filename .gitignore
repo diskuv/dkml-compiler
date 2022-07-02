@@ -1,3 +1,6 @@
 _build/
 _opam/
 /*.install
+# when developing patches with: opam install ./dkml-base-compiler.opam --inplace-build
+/dkmldir/
+/dl/

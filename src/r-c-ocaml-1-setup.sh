@@ -401,68 +401,137 @@ SETUP_ARGS+=( -b "'$MSVS_PREFERENCE'" -e "$DKMLHOSTABI" )
 BUILD_HOST_ARGS+=( -b "'$MSVS_PREFERENCE'" -e "$DKMLHOSTABI" )
 BUILD_CROSS_ARGS+=( -e "$DKMLHOSTABI" )
 
-# Find OCaml patch
-# Source: https://github.com/EduardoRFS/reason-mobile/tree/master/patches/ocaml/files or https://github.com/anmonteiro/nix-overlays/tree/master/cross
-find_ocaml_crosscompile_patch() {
-    find_ocaml_crosscompile_patch_VER=$1
+# ---------------------
+# Patching functions
+
+# Sets the array VERSION_STEMS
+#   Stems must be underscores since they are separated by dashes
+set_ocaml_version_stems() {
+    set_version_stems_VER=$1
     shift
-    case "$find_ocaml_crosscompile_patch_VER" in
-    4.11.*)
-        OCAMLPATCHFILE=r-c-ocaml-cross_4_11.patch
-        OCAMLPATCHEXTRA= # TODO
-        ;;
-    4.12.*)
-        OCAMLPATCHFILE=r-c-ocaml-cross_4_12.patch
-        OCAMLPATCHEXTRA=r-c-ocaml-cross_4_12_extra.patch
-        ;;
-    4.13.*)
-        # shellcheck disable=SC2034
-        OCAMLPATCHFILE=r-c-ocaml-cross_4_13.patch
-        # shellcheck disable=SC2034
-        OCAMLPATCHEXTRA= # TODO
-        ;;
-    5.00.*)
-        # shellcheck disable=SC2034
-        OCAMLPATCHFILE=r-c-ocaml-cross_5_00.patch
-        # shellcheck disable=SC2034
-        OCAMLPATCHEXTRA=r-c-ocaml-cross_5_00_extra.patch
-        ;;
-    *)
-        echo "FATAL: There is no cross-compiling patch file yet for OCaml $find_ocaml_crosscompile_patch_VER" >&2
-        exit 107
-        ;;
+    VERSION_STEMS=()
+    case "$set_version_stems_VER" in
+        4.*) VERSION_STEMS+=("4") ;;
+        5.*) VERSION_STEMS+=("5") ;;
+    esac
+    case "$set_version_stems_VER" in
+        4.11.*) VERSION_STEMS+=("4_11") ;;
+        4.12.*) VERSION_STEMS+=("4_12") ;;
+        4.13.*) VERSION_STEMS+=("4_13") ;;
+        4.14.*) VERSION_STEMS+=("4_14") ;;
+        5.00.*) VERSION_STEMS+=("5_00") ;;
+        5.01.*) VERSION_STEMS+=("5_01") ;;
     esac
 }
-
-apply_ocaml_crosscompile_patch() {
-    apply_ocaml_crosscompile_patch_PATCHFILE=$1
+set_flexdll_version_stems() {
+    set_version_stems_VER=$1
     shift
-    apply_ocaml_crosscompile_patch_SRCDIR=$1
+    VERSION_STEMS=()
+    case "$set_version_stems_VER" in
+        0.*) VERSION_STEMS+=("0") ;;
+    esac
+    case "$set_version_stems_VER" in
+        0.39) VERSION_STEMS+=("0_39") ;;
+    esac
+}
+# Sets the array PATCHES and accumulates dkmldir/ relative paths, including
+# any Markdown .md files, in array ALL_PATCH_FILES.
+ALL_PATCH_FILES=()
+set_patches() {
+    set_patches_CATEGORY=$1
+    shift
+    set_patches_VER=$1
+    shift
+    set_patches_HOSTCROSS=$1
     shift
 
-    apply_ocaml_crosscompile_patch_SRCDIR_MIXED="$apply_ocaml_crosscompile_patch_SRCDIR"
-    apply_ocaml_crosscompile_patch_PATCH_MIXED="$PWD"/vendor/dkml-compiler/src/$apply_ocaml_crosscompile_patch_PATCHFILE
+    # Set VERSION_STEMS
+    case "$set_patches_CATEGORY" in
+        ocaml)   set_ocaml_version_stems "$set_patches_VER";;
+        flexdll) set_flexdll_version_stems "$set_patches_VER";;
+        *) printf "FATAL: No category %s\n" "$set_patches_CATEGORY" >&2; exit 107
+    esac
+
+    PATCHES=()
+    for set_patches_STEM in "${VERSION_STEMS[@]}"; do
+        # Find, sort and accumulate common patches that belong to the stem.
+        find "vendor/dkml-compiler/src/p" -type f -name "$set_patches_CATEGORY-common-$set_patches_STEM-*.patch" | sort > "$WORK/p"
+        while IFS= read -r line; do
+            PATCHES+=("$DKMLDIR/$line")
+            ALL_PATCH_FILES+=("$line")
+        done < "$WORK/p"
+        #   Markdown
+        find "vendor/dkml-compiler/src/p" -type f -name "$set_patches_CATEGORY-common-$set_patches_STEM-*.md" | sort > "$WORK/p"
+        while IFS= read -r line; do
+            ALL_PATCH_FILES+=("$line")
+        done < "$WORK/p"
+        # Find, sort and accumulate host/cross patches that belong to the stem.
+        find "vendor/dkml-compiler/src/p" -type f -name "$set_patches_CATEGORY-$set_patches_HOSTCROSS-$set_patches_STEM-*.patch" | sort > "$WORK/p"
+        while IFS= read -r line; do
+            PATCHES+=("$DKMLDIR/$line")
+            ALL_PATCH_FILES+=("$line")
+        done < "$WORK/p"
+        #   Markdown
+        find "vendor/dkml-compiler/src/p" -type f -name "$set_patches_CATEGORY-$set_patches_HOSTCROSS-$set_patches_STEM-*.md" | sort > "$WORK/p"
+        while IFS= read -r line; do
+            ALL_PATCH_FILES+=("$line")
+        done < "$WORK/p"
+    done
+}
+
+apply_patch() {
+    apply_patch_PATCHFILE=$1
+    shift
+    apply_patch_SRCDIR=$1
+    shift
+    apply_patch_CATEGORY=$1
+    shift
+    apply_patch_HOSTCROSS=$1
+    shift
+
+    apply_patch_PATCHBASENAME=$(basename "$apply_patch_PATCHFILE")
+    apply_patch_SRCDIR_MIXED="$apply_patch_SRCDIR"
+    apply_patch_PATCHFILE_MIXED="$apply_patch_PATCHFILE"
     if [ -x /usr/bin/cygpath ]; then
-        apply_ocaml_crosscompile_patch_SRCDIR_MIXED=$(/usr/bin/cygpath -aw "$apply_ocaml_crosscompile_patch_SRCDIR_MIXED")
-        apply_ocaml_crosscompile_patch_PATCH_MIXED=$(/usr/bin/cygpath -aw "$apply_ocaml_crosscompile_patch_PATCH_MIXED")
+        apply_patch_SRCDIR_MIXED=$(/usr/bin/cygpath -aw "$apply_patch_SRCDIR_MIXED")
+        apply_patch_PATCHFILE_MIXED=$(/usr/bin/cygpath -aw "$apply_patch_PATCHFILE_MIXED")
     fi
     # Before packaging any of these artifacts the CI will likely do a `git clean -d -f -x` to reduce the
     # size and increase the safety of the artifacts. So we do a `git commit` after we have patched so
     # the reproducible source code has the patches applied, even after the `git clean`.
-    # log_trace git -C "$apply_ocaml_crosscompile_patch_SRCDIR_MIXED" apply --verbose "$apply_ocaml_crosscompile_patch_PATCH_MIXED"
-    log_trace git -C "$apply_ocaml_crosscompile_patch_SRCDIR_MIXED" config user.email "nobody+autopatcher@diskuv.ocaml.org"
-    log_trace git -C "$apply_ocaml_crosscompile_patch_SRCDIR_MIXED" config user.name  "Auto Patcher"
-    git -C "$apply_ocaml_crosscompile_patch_SRCDIR_MIXED" am --abort 2>/dev/null || true # clean any previous interrupted mail patch
+    # log_trace git -C "$apply_patch_SRCDIR_MIXED" apply --verbose "$apply_patch_PATCHFILE_MIXED"
+    log_trace git -C "$apply_patch_SRCDIR_MIXED" config user.email "nobody+autopatcher@diskuv.ocaml.org"
+    log_trace git -C "$apply_patch_SRCDIR_MIXED" config user.name  "Auto Patcher"
+    git -C "$apply_patch_SRCDIR_MIXED" am --abort 2>/dev/null || true # clean any previous interrupted mail patch
     {
         printf "From: nobody+autopatcher@diskuv.ocaml.org\n"
-        printf "Subject: OCaml cross-compiling patch %s\n" "$apply_ocaml_crosscompile_patch_PATCHFILE"
+        printf "Subject: Diskuv %s %s patch %s\n" "$apply_patch_CATEGORY" "$apply_patch_HOSTCROSS" "$apply_patch_PATCHBASENAME"
         printf "Date: 1 Jan 2000 00:00:00 +0000\n"
         printf "\n"
         printf "Reproducible patch\n"
         printf "\n"
         printf "%s\n" "---"
-        $DKMLSYS_CAT "$apply_ocaml_crosscompile_patch_PATCH_MIXED"
-    } | log_trace git -C "$apply_ocaml_crosscompile_patch_SRCDIR_MIXED" am --ignore-date --committer-date-is-author-date
+        $DKMLSYS_CAT "$apply_patch_PATCHFILE_MIXED"
+    } | log_trace git -C "$apply_patch_SRCDIR_MIXED" am --ignore-date --committer-date-is-author-date
+}
+
+apply_patches() {
+    apply_patches_SRCDIR=$1
+    shift
+    apply_patches_CATEGORY=$1
+    shift
+    apply_patches_VER=$1
+    shift
+    apply_patches_HOSTCROSS=$1
+    shift
+
+    set_patches "$apply_patches_CATEGORY" "$apply_patches_VER" "$apply_patches_HOSTCROSS"
+    set +u # Fix bash bug with empty arrays
+    echo "patches($apply_patches_CATEGORY $apply_patches_HOSTCROSS) = ${PATCHES[*]}" >&2
+    for patchfile in "${PATCHES[@]}"; do
+        apply_patch "$patchfile" "$apply_patches_SRCDIR" "$apply_patches_CATEGORY" "$apply_patches_HOSTCROSS"
+    done
+    set -u
 }
 
 # ---------------------
@@ -620,9 +689,13 @@ else
     get_ocaml_source "$GIT_COMMITID_TAG_OR_DIR" "$OCAMLSRC_UNIX" "$OCAMLSRC_MIXED" "$BUILDHOST_ARCH"
 fi
 
-# Find but do not apply the cross-compiling patches to the host ABI
+# Get source code versions from the source code
 _OCAMLVER=$(awk 'NR==1{print}' "$OCAMLSRC_UNIX"/VERSION)
-find_ocaml_crosscompile_patch "$_OCAMLVER"
+_FLEXDLLVER=$(awk '$1=="VERSION"{print $NF; exit 0}' "$OCAMLSRC_UNIX"/flexdll/Makefile)
+
+# Find and apply patches to the host ABI
+apply_patches "$OCAMLSRC_UNIX"          ocaml    "$_OCAMLVER"    host
+apply_patches "$OCAMLSRC_UNIX/flexdll"  flexdll  "$_FLEXDLLVER"  host
 
 if [ -n "$TARGETABIS" ]; then
     if [ -n "$TEMPLATEDIR" ]; then
@@ -630,10 +703,6 @@ if [ -n "$TARGETABIS" ]; then
         rm -rf "${TARGETDIR_UNIX:?}/$CROSS_SUBDIR"
         cp -rp "$TEMPLATEDIR/$CROSS_SUBDIR" "$TARGETDIR_UNIX/$CROSS_SUBDIR"
     else
-        if [ -z "$OCAMLPATCHEXTRA" ]; then
-            printf "WARNING: OCaml version %s does not yet have patches for cross-compiling\n" "$_OCAMLVER" >&2
-        fi
-
         # Loop over each target abi script file; each file separated by semicolons, and each term with an equals
         printf "%s\n" "$TARGETABIS" | sed 's/;/\n/g' | sed 's/^\s*//; s/\s*$//' > "$WORK"/tabi
         while IFS= read -r _abientry
@@ -642,14 +711,11 @@ if [ -n "$TARGETABIS" ]; then
             # clean install
             clean_ocaml_install "$TARGETDIR_UNIX/$CROSS_SUBDIR/$_targetabi"
             # git clone
-            get_ocaml_source "$GIT_COMMITID_TAG_OR_DIR" "$TARGETDIR_UNIX/$CROSS_SUBDIR/$_targetabi/$HOSTSRC_SUBDIR" "$TARGETDIR_MIXED/$CROSS_SUBDIR/$_targetabi/$HOSTSRC_SUBDIR" "$_targetabi"
-            # git patch src/ocaml
-            apply_ocaml_crosscompile_patch "$OCAMLPATCHFILE"  "$TARGETDIR_UNIX/$CROSS_SUBDIR/$_targetabi/$HOSTSRC_SUBDIR"
-            if [ -n "$OCAMLPATCHEXTRA" ]; then
-                apply_ocaml_crosscompile_patch "$OCAMLPATCHEXTRA" "$TARGETDIR_UNIX/$CROSS_SUBDIR/$_targetabi/$HOSTSRC_SUBDIR"
-            fi
-            # git patch src/ocaml/flexdll
-            apply_ocaml_crosscompile_patch "r-c-ocaml-cross_flexdll_0_39.patch" "$TARGETDIR_UNIX/$CROSS_SUBDIR/$_targetabi/$HOSTSRC_SUBDIR/flexdll"
+            _srcabidir_unix="$TARGETDIR_UNIX/$CROSS_SUBDIR/$_targetabi/$HOSTSRC_SUBDIR"
+            get_ocaml_source "$GIT_COMMITID_TAG_OR_DIR" "$_srcabidir_unix" "$TARGETDIR_MIXED/$CROSS_SUBDIR/$_targetabi/$HOSTSRC_SUBDIR" "$_targetabi"
+            # Find and apply patches to the target ABI
+            apply_patches "$_srcabidir_unix"            ocaml    "$_OCAMLVER"    cross
+            apply_patches "$_srcabidir_unix/flexdll"    flexdll  "$_FLEXDLLVER"  cross
         done < "$WORK"/tabi
     fi
 fi
@@ -673,14 +739,10 @@ install_reproducible_common
 install_reproducible_readme           vendor/dkml-compiler/src/r-c-ocaml-README.md
 install_reproducible_file             vendor/dkml-compiler/src/r-c-ocaml-check_linker.sh
 install_reproducible_file             vendor/dkml-compiler/src/r-c-ocaml-functions.sh
-install_reproducible_file             vendor/dkml-compiler/src/r-c-ocaml-cross_4_11.patch
-install_reproducible_file             vendor/dkml-compiler/src/r-c-ocaml-cross_4_12.patch
-install_reproducible_file             vendor/dkml-compiler/src/r-c-ocaml-cross_4_12_extra.patch
-install_reproducible_file             vendor/dkml-compiler/src/r-c-ocaml-cross_4_13.patch
-install_reproducible_file             vendor/dkml-compiler/src/r-c-ocaml-cross_5_00.patch
-install_reproducible_file             vendor/dkml-compiler/src/r-c-ocaml-cross_5_00_extra.patch
-install_reproducible_file             vendor/dkml-compiler/src/r-c-ocaml-cross_flexdll_0_39.patch
 install_reproducible_file             vendor/dkml-compiler/src/standard-compiler-env-to-ocaml-configure-env.sh
+for patchfile in "${ALL_PATCH_FILES[@]}"; do
+    install_reproducible_file         "$patchfile"
+done
 if [ -n "$TARGETABIS" ]; then
     _accumulator=
     # Loop over each target abi script file; each file separated by semicolons, and each term with an equals
