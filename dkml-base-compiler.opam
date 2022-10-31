@@ -58,13 +58,12 @@ build: [
   #   <dkmldir>/vendor/drc/
   ["install" "-d" "dkmldir/vendor/drc"]
   #     tar through pipe is essentially an rsync (without requiring rsync)
-  ["sh" "-eufc" "tar cCf '%{dkml-runtime-common:share}%/src/' - . | tar xCf dkmldir/vendor/drc/src/ -"]
+  ["sh" "-eufc" "tar cCf '%{dkml-runtime-common:share}%/' - . | tar xCf dkmldir/vendor/drc/ -"]
 
   #   <dkmldir>/vendor/dkml-compiler/
   ["install" "-d" "dkmldir/vendor/dkml-compiler/src" "dkmldir/vendor/dkml-compiler/env"]
   #     only the standard compiler environment is needed for the base compiler
-  ["install env/standard-compiler-env-to-ocaml-configure-env.sh       dkmldir/vendor/dkml-compiler/env/"]
-  ["install env/standard-compiler-env-to-ocaml-configure-launcher.sh  dkmldir/vendor/dkml-compiler/env/"]
+  ["install" "env/standard-compiler-env-to-ocaml-configure-env.sh"      "dkmldir/vendor/dkml-compiler/env/"]
   #     tar through pipe is essentially an rsync (without requiring rsync)
   ["sh" "-eufc" "tar cCf src/ - . | tar xCf dkmldir/vendor/dkml-compiler/src/ -"]
 ]

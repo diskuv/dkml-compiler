@@ -13,5 +13,4 @@ install -d "$targetdir"
 install \
     env/github-actions-ci-to-ocaml-configure-env.sh \
     env/standard-compiler-env-to-ocaml-configure-env.sh \
-    env/standard-compiler-env-to-ocaml-configure-launcher.sh \
     "$targetdir"
