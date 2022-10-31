@@ -8,7 +8,7 @@ name: "dkml-base-compiler"
 # Examples:
 # - 4.12.1~prerel69 (legacy format) < 4.12.1~v0.4.0 < 4.12.1~v0.4.1~prerel69 < 4.12.1~v0.4.1
 # Confer: Version Ordering in https://opam.ocaml.org/doc/Manual.html#Package-Formulas
-version: "4.12.1~v1.0.0"
+version: "4.12.1~v1.0.1"
 synopsis: "OCaml cross-compiler and libraries from the DKML distribution that works with at least Win32 and macOS"
 description:
   """The DKML distribution of the OCaml bytecode and native compiler, Stdlib and the other OCaml libraries (str, unix, bigarray, etc.).
@@ -31,7 +31,11 @@ depopts: [
 ]
 conflict-class: "ocaml-core-compiler"
 flags: [ compiler avoid-version ]
-available: opam-version >= "2.1.0"
+available: [
+  opam-version >= "2.1.0" &
+  ( (arch = "x86_64" & (os = "linux" | os = "win32" | os = "macos")) |
+    (arch = "arm64" & os = "macos") )
+]
 build: [
   # Dump Homebrew, which is needed for reproducible build auditing in drc's crossplatform-functions.sh.
   ["scripts/macos-bundle-dump.sh"] {os = "macos"}
@@ -102,7 +106,7 @@ install: [
     """
   ]
 ]
-dev-repo: "git+https://github.com/diskuv/dkml-component-ocamlcompiler.git"
+dev-repo: "git+https://github.com/diskuv/dkml-compiler.git"
 extra-source "dl/ocaml.tar.gz" {
   src: "https://github.com/ocaml/ocaml/archive/4.12.1.tar.gz"
   checksum: "sha256=f5a48a90557cb47ace7b1590fcab1362a1af38629a218350f69c225c57e96a41"
@@ -118,10 +122,8 @@ extra-source "dl/homebrew-bundle.tar.gz" {
   ]
 }
 extra-source "dl/dkml-runtime-common.tar.gz" {
-  # This violates the v1.0.0 versioning, but this future patch is needed to allow the 'bundle'
-  # brew tap to be used on macOS in the Opam sandbox.
-  src: "https://github.com/diskuv/dkml-runtime-common/archive/refs/tags/v1.0.1-prerel0b.tar.gz"
+  src: "https://github.com/diskuv/dkml-runtime-common/releases/download/v1.0.1/src.tar.gz"
   checksum: [
-    "sha256=563b89382f07a4ce56917a8eb7034c5fa6993572f087ad909e58229e78748056"
+    "sha256=35a88827e3e02665a6ed5abf1c1aa457fbb3c2a78ff61c4211d24bec8d8b757d"
   ]
 }
