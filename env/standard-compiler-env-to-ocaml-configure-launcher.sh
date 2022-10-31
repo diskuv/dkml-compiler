@@ -29,6 +29,6 @@
 set -euf
 
 # shellcheck disable=SC1091
-. "$DKMLDIR"/vendor/dkml-compiler/src/standard-compiler-env-to-ocaml-configure-env.sh
+. "$DKMLDIR"/vendor/dkml-compiler/env/standard-compiler-env-to-ocaml-configure-env.sh
 
 exec env "$@"

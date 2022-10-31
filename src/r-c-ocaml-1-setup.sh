@@ -739,7 +739,7 @@ install_reproducible_common
 install_reproducible_readme           vendor/dkml-compiler/src/r-c-ocaml-README.md
 install_reproducible_file             vendor/dkml-compiler/src/r-c-ocaml-check_linker.sh
 install_reproducible_file             vendor/dkml-compiler/src/r-c-ocaml-functions.sh
-install_reproducible_file             vendor/dkml-compiler/src/standard-compiler-env-to-ocaml-configure-env.sh
+install_reproducible_file             vendor/dkml-compiler/env/standard-compiler-env-to-ocaml-configure-env.sh
 for patchfile in "${ALL_PATCH_FILES[@]}"; do
     install_reproducible_file         "$patchfile"
 done

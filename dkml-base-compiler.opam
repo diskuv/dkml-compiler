@@ -25,6 +25,8 @@ depends: [
   "base-unix" {post}
   "base-bigarray" {post}
   "base-threads" {post}
+
+  "dkml-runtime-common" {= "1.0.1"}
 ]
 depopts: [
   "ocaml-option-32bit"
@@ -34,6 +36,7 @@ flags: [ compiler avoid-version ]
 available: [
   opam-version >= "2.1.0" &
   ( (arch = "x86_64" & (os = "linux" | os = "win32" | os = "macos")) |
+    (arch = "x86_32" & (os = "linux" | os = "win32")) |
     (arch = "arm64" & os = "macos") )
 ]
 build: [
@@ -50,14 +53,19 @@ build: [
   ["install" "-d" "dkmldir"]
   #     4.12.1~v0.4.1          --dkml-semver--> 0.4.1
   #     4.12.1~v0.4.1~prerel69 --dkml-semver--> 0.4.1-prerel69
-  ["sh" "-c" "printf 'dkml_root_version=%s\\n' '%{version}%' | sed 's/[0-9.]*~v//; s/~/-/' > dkmldir/.dkmlroot"]
+  ["sh" "-eufc" "printf 'dkml_root_version=%s\\n' '%{version}%' | sed 's/[0-9.]*~v//; s/~/-/' > dkmldir/.dkmlroot"]
 
   #   <dkmldir>/vendor/drc/
   ["install" "-d" "dkmldir/vendor/drc"]
-  ["tar" "xCfz" "dkmldir/vendor/drc" "dl/dkml-runtime-common.tar.gz" "--strip-components=1"]
+  #     tar through pipe is essentially an rsync (without requiring rsync)
+  ["sh" "-eufc" "tar cCf '%{dkml-runtime-common:share}%/src/' - . | tar xCf dkmldir/vendor/drc/src/ -"]
 
   #   <dkmldir>/vendor/dkml-compiler/
-  ["install" "-d" "dkmldir/vendor/dkml-compiler/src"]
+  ["install" "-d" "dkmldir/vendor/dkml-compiler/src" "dkmldir/vendor/dkml-compiler/env"]
+  #     only the standard compiler environment is needed for the base compiler
+  ["install env/standard-compiler-env-to-ocaml-configure-env.sh       dkmldir/vendor/dkml-compiler/env/"]
+  ["install env/standard-compiler-env-to-ocaml-configure-launcher.sh  dkmldir/vendor/dkml-compiler/env/"]
+  #     tar through pipe is essentially an rsync (without requiring rsync)
   ["sh" "-eufc" "tar cCf src/ - . | tar xCf dkmldir/vendor/dkml-compiler/src/ -"]
 ]
 install: [
@@ -78,14 +86,14 @@ install: [
       "-elinux_x86_64"    { os = "linux" & (arch = "x86_64" & !ocaml-option-32bit:installed) }
       "-edarwin_x86_64"   { os = "macos" }
       #   Target architectures (if cross-compiling)
-      "-adarwin_arm64=vendor/dkml-compiler/src/standard-compiler-env-to-ocaml-configure-env.sh" { os = "macos" }
+      "-adarwin_arm64=vendor/dkml-compiler/env/standard-compiler-env-to-ocaml-configure-env.sh" { os = "macos" }
       #     TODO: Would be nice to bundle the 3 Android cross-compilers here since they are already supported
       #     by DKML, but I (jonahbeckford@) doubt there is an Android NDK available on the Opam hosts.
       #     Confer: https://github.com/diskuv/diskuv-ocaml-ghmirror/runs/4831077050
       #     Perhaps the Android NDK should just be downloaded via an 'android-option-ndk23' package? That would give control of the NDK version.
-      # "-aandroid_arm64v8a=vendor/dkml-compiler/src/ci/github-actions-ci-to-ocaml-configure-env.sh;android_x86_64=vendor/dkml-compiler/src/ci/github-actions-ci-to-ocaml-configure-env.sh"] { os = "linux" & !ocaml-option-32bit:installed }
-      # "-aandroid_arm32v7a=vendor/dkml-compiler/src/ci/github-actions-ci-to-ocaml-configure-env.sh" { os = "linux" & ocaml-option-32bit:installed }
-      "-k" "vendor/dkml-compiler/src/standard-compiler-env-to-ocaml-configure-env.sh"
+      # "-aandroid_arm64v8a=vendor/dkml-compiler/env/github-actions-ci-to-ocaml-configure-env.sh;android_x86_64=vendor/dkml-compiler/env/github-actions-ci-to-ocaml-configure-env.sh"] { os = "linux" & !ocaml-option-32bit:installed }
+      # "-aandroid_arm32v7a=vendor/dkml-compiler/env/github-actions-ci-to-ocaml-configure-env.sh" { os = "linux" & ocaml-option-32bit:installed }
+      "-k" "vendor/dkml-compiler/env/standard-compiler-env-to-ocaml-configure-env.sh"
   ]
 
   # Run r-c-ocaml-2-build_host-noargs.sh
@@ -119,11 +127,5 @@ extra-source "dl/homebrew-bundle.tar.gz" {
   src: "https://github.com/Homebrew/homebrew-bundle/archive/4756e4c4cf95485c5ea4da27375946c1dac2c71d.tar.gz"
   checksum: [
     "sha256=10c024ca7871cea36b4c27b2601971d3fa6cba6f37855613baf0026d0f555e76"
-  ]
-}
-extra-source "dl/dkml-runtime-common.tar.gz" {
-  src: "https://github.com/diskuv/dkml-runtime-common/releases/download/v1.0.1/src.tar.gz"
-  checksum: [
-    "sha256=35a88827e3e02665a6ed5abf1c1aa457fbb3c2a78ff61c4211d24bec8d8b757d"
   ]
 }
