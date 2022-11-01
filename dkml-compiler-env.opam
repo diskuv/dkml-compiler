@@ -11,6 +11,6 @@ depends: []
 dev-repo: "git+https://github.com/diskuv/dkml-compiler.git"
 build: []
 install: [
-  [".\\install-env.cmd"  "%{_:share}%"] {os = "win32"}
-  ["./install-env.sh" "%{_:share}%"]  {!(os = "win32")}
+  [".\\install-env.cmd"  "%{_:lib}%"] {os = "win32"}
+  ["./install-env.sh" "%{_:lib}%"]  {!(os = "win32")}
 ]
