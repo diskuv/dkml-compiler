@@ -10,5 +10,6 @@ SET TARGETDIR=%1
 MKDIR %TARGETDIR%
 
 @REM Copy in binary mode so that CRLF is not added
-COPY /Y /B env\github-actions-ci-to-ocaml-configure-env.sh          %TARGETDIR%
-COPY /Y /B env\standard-compiler-env-to-ocaml-configure-env.sh      %TARGETDIR%
+COPY /Y /B env\META                                             %TARGETDIR%
+COPY /Y /B env\github-actions-ci-to-ocaml-configure-env.sh      %TARGETDIR%
+COPY /Y /B env\standard-compiler-env-to-ocaml-configure-env.sh  %TARGETDIR%
