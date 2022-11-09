@@ -41,7 +41,7 @@ available: [
 ]
 build: [
   # Dump Homebrew, which is needed for reproducible build auditing in drc's crossplatform-functions.sh.
-  ["scripts/macos-bundle-dump.sh"] {os = "macos"}
+  ["sh" "scripts/macos-bundle-dump.sh"] {os = "macos"}
 
   # OCaml source code
   ["install" "-d" "dl/ocaml/flexdll"]
@@ -83,9 +83,23 @@ install: [
       "-ewindows_x86_64"  { os = "win32" & (arch = "x86_64" & !ocaml-option-32bit:installed) }      
       "-elinux_x86"       { os = "linux" & (arch = "x86_32" |  ocaml-option-32bit:installed) }
       "-elinux_x86_64"    { os = "linux" & (arch = "x86_64" & !ocaml-option-32bit:installed) }
-      "-edarwin_x86_64"   { os = "macos" }
-      #   Target architectures (if cross-compiling)
-      "-adarwin_arm64=vendor/dkml-compiler/env/standard-compiler-env-to-ocaml-configure-env.sh" { os = "macos" }
+      "-edarwin_x86_64"   { os = "macos" & arch = "x86_64" }
+      "-edarwin_arm64"    { os = "macos" & arch = "arm64" }
+      #   Target architectures (if cross-compiling; similar to dkml-component-staging-ocamlrun.opam)
+      #     TODO: With the -adarwin_x86_64 configuration below, an Apple Silicon machine will produce an arm64 ocamlopt.opt
+      #     in the staging-files/darwin_arm64 directory,
+      #     and that ocamlopt.opt will create x86_64 OCaml native executables. So that darwin_arm64/bin/ocamlopt.opt will not
+      #     run on an x86_64 machine.
+      #     The -adarwin_arm64 configuration is similar but has one important difference. The config will produce an x86_64
+      #     ocamlopt.opt, in the staging-files/darwin_x86_64 directory, and that ocamlopt.opt will create arm64 OCaml native
+      #     executables. But that darwin_x86_64/bin/ocamlopt.opt _will_ run on almost _all_ Apple Silicon (arm64) machines
+      #     because of Rosetta2. The only major exception is Opam CI has disabled Rosetta2 as of Nov 8, 2022.
+      #     Ideally we would have [-aHOST] and [-aHOST-TARGET]. That is: -adarwin_x86_64, -adarwin_arm64 and
+      #     -adarwin_x86_64-darwin_arm64. But that cross specification has ripple effects that needs time (technical debt) to
+      #     get right. Luckily our build machines are always Apple x86_64 (GitHub Actions and GitLab CI/CD), and even if the
+      #     build machines were Apple Silicon we typically only care about the generated artifacts (the target ABI).
+      "-adarwin_x86_64=vendor/dkml-compiler/src/standard-compiler-env-to-ocaml-configure-env.sh" { os = "macos" & arch = "arm64" }
+      "-adarwin_arm64=vendor/dkml-compiler/src/standard-compiler-env-to-ocaml-configure-env.sh"  { os = "macos" & arch = "x86_64" }
       #     TODO: Would be nice to bundle the 3 Android cross-compilers here since they are already supported
       #     by DKML, but I (jonahbeckford@) doubt there is an Android NDK available on the Opam hosts.
       #     Confer: https://github.com/diskuv/diskuv-ocaml-ghmirror/runs/4831077050
