@@ -1,10 +1,5 @@
 #!/bin/sh
 #
-# This file has parts that are governed by one license and other parts that are governed by a second license (both apply).
-# The first license is:
-#   Licensed under https://github.com/ocaml/opam/blob/012103bc52bfd4543f3d6f59edde91ac70acebc8/LICENSE - LGPL 2.1 with special linking exceptions
-# The second license (Apache License, Version 2.0) is below.
-#
 # ----------------------------
 # Copyright 2021 Diskuv, Inc.
 #
@@ -20,11 +15,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ----------------------------
-#
-# @jonahbeckford: 2021-10-26
-# - This file is licensed differently than the rest of the Diskuv OCaml distribution.
-#   Keep the Apache License in this file since this file is part of the reproducible
-#   build files.
 #
 ######################################
 # r-c-ocaml-2-build_host.sh -d DKMLDIR -t TARGETDIR
@@ -56,7 +46,7 @@ usage() {
         printf "%s\n" "   -b PREF: Required and used only for the MSVC compiler. See r-c-ocaml-1-setup.sh"
         printf "%s\n" "   -e DKMLHOSTABI: Uses the Diskuv OCaml compiler detector find a host ABI compiler"
         printf "%s\n" "   -f HOSTSRC_SUBDIR: Use HOSTSRC_SUBDIR subdirectory of -t DIR to place the source code of the host ABI"
-        printf "%s\n" "   -p HOST_SUBDIR: Optional. Use HOST_SUBDIR subdirectory of -t DIR to place the host ABI. Defaults to $HOST_SUBDIR"
+        printf "%s\n" "   -p HOST_SUBDIR: Optional. Use HOST_SUBDIR subdirectory of -t DIR to place the host ABI"
         printf "%s\n" "   -i OCAMLCARGS: Optional. Extra arguments passed to ocamlc like -g to save debugging"
         printf "%s\n" "   -j OCAMLOPTARGS: Optional. Extra arguments passed to ocamlopt like -g to save debugging"
         printf "%s\n" "   -k HOSTABISCRIPT: Optional. See r-c-ocaml-1-setup.sh"

@@ -46,7 +46,6 @@ usage() {
         printf "%s\n" "Usage:"
         printf "%s\n" "    r-c-ocaml-1-setup.sh"
         printf "%s\n" "        -h                       Display this help message."
-        printf "%s\n" "        -d DIR -t DIR -v COMMIT  Setup compilation of OCaml."
         printf "\n"
         printf "%s\n" "Artifacts include:"
         printf "%s\n" "    flexlink (only on Windows)"
@@ -175,12 +174,15 @@ usage() {
         printf "%s\n" "      CROSS_SUBDIR for cross-compilation, the source code is copied from TEMPLATE_DIR/HOSTSRC_SUBDIR and"
         printf "%s\n" "      TEMPLATE_DIR/CROSS_SUBDIR. The expectation is the template directory comes from a prior 1-setup.sh invocation; in"
         printf "%s\n" "      particular the patching has already been done"
+        printf "%s\n" "   -x Do not include temporary object files (only useful for debugging) in target directory"
+        printf "%s\n" "   -z Do not include .git repositories in target directory"
     } >&2
 }
 
 SETUP_ARGS=()
 BUILD_HOST_ARGS=()
 BUILD_CROSS_ARGS=()
+TRIM_ARGS=()
 
 DKMLDIR=
 DKMLHOSTABI=${DKML_HOST_ABI:-}
@@ -190,7 +192,7 @@ TARGETABIS=
 MSVS_PREFERENCE="$OPT_MSVS_PREFERENCE"
 RUNTIMEONLY=OFF
 TEMPLATEDIR=
-while getopts ":d:v:u:t:a:b:e:i:j:k:m:n:rf:p:g:o:h" opt; do
+while getopts ":d:v:u:t:a:b:e:i:j:k:m:n:rf:p:g:o:xzh" opt; do
     case ${opt} in
         h )
             usage
@@ -221,6 +223,7 @@ while getopts ":d:v:u:t:a:b:e:i:j:k:m:n:rf:p:g:o:h" opt; do
             SETUP_ARGS+=( -t . )
             BUILD_HOST_ARGS+=( -t . )
             BUILD_CROSS_ARGS+=( -t . )
+            TRIM_ARGS+=( -t . )
         ;;
         a )
             TARGETABIS="$OPTARG"
@@ -265,6 +268,14 @@ while getopts ":d:v:u:t:a:b:e:i:j:k:m:n:rf:p:g:o:h" opt; do
         o )
             SETUP_ARGS+=( -o "$OPTARG" )
             TEMPLATEDIR=$OPTARG
+        ;;
+        x )
+            SETUP_ARGS+=( -x )
+            TRIM_ARGS+=( -x )
+        ;;
+        z )
+            SETUP_ARGS+=( -z )
+            TRIM_ARGS+=( -z )
         ;;
         \? )
             printf "%s\n" "This is not an option: -$OPTARG" >&2
@@ -372,6 +383,7 @@ fi
 SETUP_ARGS+=( -p "$HOST_SUBDIR" -f "$HOSTSRC_SUBDIR" -g "$CROSS_SUBDIR" )
 BUILD_HOST_ARGS+=( -p "$HOST_SUBDIR" -f "$HOSTSRC_SUBDIR" )
 BUILD_CROSS_ARGS+=( -f "$HOSTSRC_SUBDIR" -g "$CROSS_SUBDIR" )
+TRIM_ARGS+=( -f "$HOSTSRC_SUBDIR" -g "$CROSS_SUBDIR"  )
 
 # To be portable whether we build scripts in a container or not, we
 # change the directory to always be in the DKMLDIR (just like a container
@@ -769,3 +781,4 @@ install_reproducible_system_packages  vendor/dkml-compiler/src/r-c-ocaml-0-syste
 install_reproducible_script_with_args vendor/dkml-compiler/src/r-c-ocaml-1-setup.sh "${COMMON_ARGS[@]}" "${SETUP_ARGS[@]}"
 install_reproducible_script_with_args vendor/dkml-compiler/src/r-c-ocaml-2-build_host.sh "${COMMON_ARGS[@]}" "${BUILD_HOST_ARGS[@]}"
 install_reproducible_script_with_args vendor/dkml-compiler/src/r-c-ocaml-3-build_cross.sh "${COMMON_ARGS[@]}" "${BUILD_CROSS_ARGS[@]}"
+install_reproducible_script_with_args vendor/dkml-compiler/src/r-c-ocaml-9-trim.sh "${COMMON_ARGS[@]}" "${TRIM_ARGS[@]}"
