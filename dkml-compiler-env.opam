@@ -1,5 +1,5 @@
 opam-version: "2.0"
-version: "1.0.2~prerel8"
+version: "1.0.2~prerel9"
 synopsis: "Scripts to configure DKML compilation in various environments"
 description: "Scripts to configure DKML compilation in various environments"
 maintainer: ["opensource+diskuv-ocaml@support.diskuv.com"]
