@@ -3,7 +3,7 @@ name: "dkml-base-compiler"
 # Composite version format is M.N.O~vA.B.C[~prelP]
 # where:
 # - M.N.O is OCaml compiler version
-# - A.B.C is the DKML version of the extra-source dkml-runtime-common
+# - A.B.C is the DKML version of the dkml-runtime-common
 # - P is optional DKML prerelease version
 # Examples:
 # - 4.12.1~prerel69 (legacy format) < 4.12.1~v0.4.0 < 4.12.1~v0.4.1~prerel69 < 4.12.1~v0.4.1
@@ -26,7 +26,7 @@ depends: [
   "base-bigarray" {post}
   "base-threads" {post}
 
-  "dkml-runtime-common" {= "1.0.2~prerel9"}
+  "dkml-runtime-common-native" {= "1.0.2~prerel9"}
 ]
 depopts: [
   "ocaml-option-32bit"
@@ -58,7 +58,7 @@ build: [
   #   <dkmldir>/vendor/drc/
   ["install" "-d" "dkmldir/vendor/drc"]
   #     tar through pipe is essentially an rsync (without requiring rsync)
-  ["sh" "-eufc" "tar cCf '%{dkml-runtime-common:lib}%/' - . | tar xCf dkmldir/vendor/drc/ -"]
+  ["sh" "-eufc" "tar cCf '%{dkml-runtime-common-native:lib}%/' - . | tar xCf dkmldir/vendor/drc/ -"]
 
   #   <dkmldir>/vendor/dkml-compiler/
   ["install" "-d" "dkmldir/vendor/dkml-compiler/src" "dkmldir/vendor/dkml-compiler/env"]
