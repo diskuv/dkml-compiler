@@ -116,14 +116,14 @@ if [ "$REMOVE_OBJECTFILES" = ON ]; then
     git -C "$OCAMLSRC_MIXED" clean -d -f -x
     git -C "$OCAMLSRC_MIXED" submodule foreach --recursive "git clean -d -f -x -"
     if [ -d "$CROSSSRC_MIXED" ]; then
-        find "$CROSSSRC_MIXED" -mindepth 1 -maxdepth 1 -type d -print0 | xargs -0 -n1 -I{} git -C {} clean -d -f -x
-        find "$CROSSSRC_MIXED" -mindepth 1 -maxdepth 1 -type d -print0 | xargs -0 -n1 -I{} git -C {} submodule foreach --recursive "git clean -d -f -x -"
+        find "$CROSSSRC_MIXED" -mindepth 1 -maxdepth 1 -type d -print0 | xargs -r0 -n1 -I{} git -C {} clean -d -f -x
+        find "$CROSSSRC_MIXED" -mindepth 1 -maxdepth 1 -type d -print0 | xargs -r0 -n1 -I{} git -C {} submodule foreach --recursive "git clean -d -f -x -"
     fi
 fi
 
 if [ "$REMOVE_GITDIR" = ON ]; then
-    find "$OCAMLSRC_MIXED" -name .git -type d -exec rm -rf {} \;
+    find "$OCAMLSRC_MIXED" -name .git -type d -print0 | xargs -r0 -- rm -rf
     if [ -d "$CROSSSRC_MIXED" ]; then
-        find "$CROSSSRC_MIXED" -name .git -type d -exec rm -rf {} \;
+        find "$CROSSSRC_MIXED" -name .git -type d -print0 | xargs -r0 -- rm -rf
     fi
 fi
