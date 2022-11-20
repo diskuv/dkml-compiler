@@ -31,6 +31,48 @@ set -euf
 # ------------------
 # BEGIN Command line processing
 
+BINARIES=(
+    flexlink
+    ocaml
+    ocamlc.byte
+    ocamlc
+    ocamlc.opt
+    ocamlcmt
+    ocamlcp.byte
+    ocamlcp
+    ocamlcp.opt
+    ocamldebug
+    ocamldep.byte
+    ocamldep
+    ocamldep.opt
+    ocamldoc
+    ocamldoc.opt
+    ocamllex.byte
+    ocamllex
+    ocamllex.opt
+    ocamlmklib.byte
+    ocamlmklib
+    ocamlmklib.opt
+    ocamlmktop.byte
+    ocamlmktop
+    ocamlmktop.opt
+    ocamlobjinfo.byte
+    ocamlobjinfo
+    ocamlobjinfo.opt
+    ocamlopt.byte
+    ocamlopt
+    ocamlopt.opt
+    ocamloptp.byte
+    ocamloptp
+    ocamloptp.opt
+    ocamlprof.byte
+    ocamlprof
+    ocamlprof.opt
+    ocamlrun
+    ocamlrund
+    ocamlruni
+    ocamlyacc
+)
 # Since installtime/windows/Machine/Machine.psm1 has minimum VS14 we only select that version
 # or greater. We'll ignore '10.0' (Windows SDK 10) which may bundle Visual Studio 2015, 2017 or 2019.
 # Also we do _not_ use the environment (ie. no '@' in MSVS_PREFERENCE) since that isn't reproducible,
@@ -47,47 +89,10 @@ usage() {
         printf "%s\n" "    r-c-ocaml-1-setup.sh"
         printf "%s\n" "        -h                       Display this help message."
         printf "\n"
-        printf "%s\n" "Artifacts include:"
-        printf "%s\n" "    flexlink (only on Windows)"
-        printf "%s\n" "    ocaml"
-        printf "%s\n" "    ocamlc.byte"
-        printf "%s\n" "    ocamlc"
-        printf "%s\n" "    ocamlc.opt"
-        printf "%s\n" "    ocamlcmt"
-        printf "%s\n" "    ocamlcp.byte"
-        printf "%s\n" "    ocamlcp"
-        printf "%s\n" "    ocamlcp.opt"
-        printf "%s\n" "    ocamldebug"
-        printf "%s\n" "    ocamldep.byte"
-        printf "%s\n" "    ocamldep"
-        printf "%s\n" "    ocamldep.opt"
-        printf "%s\n" "    ocamldoc"
-        printf "%s\n" "    ocamldoc.opt"
-        printf "%s\n" "    ocamllex.byte"
-        printf "%s\n" "    ocamllex"
-        printf "%s\n" "    ocamllex.opt"
-        printf "%s\n" "    ocamlmklib.byte"
-        printf "%s\n" "    ocamlmklib"
-        printf "%s\n" "    ocamlmklib.opt"
-        printf "%s\n" "    ocamlmktop.byte"
-        printf "%s\n" "    ocamlmktop"
-        printf "%s\n" "    ocamlmktop.opt"
-        printf "%s\n" "    ocamlobjinfo.byte"
-        printf "%s\n" "    ocamlobjinfo"
-        printf "%s\n" "    ocamlobjinfo.opt"
-        printf "%s\n" "    ocamlopt.byte"
-        printf "%s\n" "    ocamlopt"
-        printf "%s\n" "    ocamlopt.opt"
-        printf "%s\n" "    ocamloptp.byte"
-        printf "%s\n" "    ocamloptp"
-        printf "%s\n" "    ocamloptp.opt"
-        printf "%s\n" "    ocamlprof.byte"
-        printf "%s\n" "    ocamlprof"
-        printf "%s\n" "    ocamlprof.opt"
-        printf "%s\n" "    ocamlrun"
-        printf "%s\n" "    ocamlrund"
-        printf "%s\n" "    ocamlruni"
-        printf "%s\n" "    ocamlyacc"
+        printf "%s\n" "Artifacts include (flexlink only on Windows):"
+        for binary in "${BINARIES[@]}"; do
+            printf "    %s\n" "$binary"
+        done
         printf "\n"
         printf "%s\n" "The compiler for the host machine ('ABI') comes from the PATH (like /usr/bin/gcc) as detected by OCaml's ./configure"
         printf "%s\n" "script, except on Windows machines where https://github.com/metastack/msvs-tools#msvs-detect is used to search"
@@ -555,9 +560,14 @@ autodetect_buildhost_arch
 clean_ocaml_install() {
     clean_ocaml_install_DIR=$1
     shift
-    for clean_ocaml_install_SUBDIR in bin lib man; do
-        log_trace rm -rf "${clean_ocaml_install_DIR:?}/$clean_ocaml_install_SUBDIR"
+    # This can be a clean install for an upgrade of an existing OCaml installation;
+    # that means we can't just blow away entire directories unless we know for
+    # sure it is specific to OCaml
+    for binary in "${BINARIES[@]}"; do
+        log_trace rm -f "${clean_ocaml_install_DIR:?}/bin/$binary.exe"
+        log_trace rm -f "${clean_ocaml_install_DIR:?}/bin/$binary"
     done
+    log_trace rm -rf "${clean_ocaml_install_DIR:?}/lib/ocaml"
 }
 
 get_ocaml_source() {
