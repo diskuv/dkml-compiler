@@ -44,6 +44,15 @@ disambiguate_filesystem_paths
 
 # Pre-adjustments
 
+#   This section can be replaced by outside actors like dkml-base-compiler.opam to inject
+#   custom options. Just replace: <start of line>INJECT_CFLAGS=<end of line>
+INJECT_CFLAGS=
+if [ -n "${CFLAGS:-}" ]; then
+  CFLAGS="$INJECT_CFLAGS $CFLAGS"
+else
+  CFLAGS="$INJECT_CFLAGS"
+fi
+
 #   CMake with Xcode will use a low-level compiler like
 #   /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/cc
 #   rather than the high-level compiler driver /usr/bin/clang; with the low-level compiler you
@@ -126,7 +135,7 @@ export CC
 # library for github.com/ocaml/ocaml. So options that are agnostic
 # to shared vs static libraries should be in CC.
 if [ -n "${CC:-}" ]; then
-  # -m32 is an option that needs to be in CC for OCaml
+  # -m32 and -m64 are options that need to be in CC for OCaml
   if printf "%s" " ${CFLAGS:-} " | PATH=/usr/bin:/bin grep -q ' -m32 '; then
       CC="$CC -m32"
       CFLAGS=$(printf "%s" " $CFLAGS " | PATH=/usr/bin:/bin sed 's/ -m32 / /g')
@@ -134,6 +143,20 @@ if [ -n "${CC:-}" ]; then
   if printf "%s" " ${CFLAGS:-} " | PATH=/usr/bin:/bin grep -q ' -m64 '; then
       CC="$CC -m64"
       CFLAGS=$(printf "%s" " $CFLAGS " | PATH=/usr/bin:/bin sed 's/ -m64 / /g')
+  fi
+
+  # -Os is an option that should be in CC for OCaml
+  # Confer: https://wiki.gentoo.org/wiki/GCC_optimization
+  if printf "%s" " ${CFLAGS:-} " | PATH=/usr/bin:/bin grep -q ' -Os '; then
+      CC="$CC -Os"
+      CFLAGS=$(printf "%s" " $CFLAGS " | PATH=/usr/bin:/bin sed 's/ -Os / /g')
+  fi
+
+  # -Z7 is an option that should be in CC for OCaml
+  # Confer: https://learn.microsoft.com/en-us/cpp/build/reference/z7-zi-zi-debug-information-format?view=msvc-170
+  if printf "%s" " ${CFLAGS:-} " | PATH=/usr/bin:/bin grep -q ' -Z7 '; then
+      CC="$CC -Z7"
+      CFLAGS=$(printf "%s" " $CFLAGS " | PATH=/usr/bin:/bin sed 's/ -Z7 / /g')
   fi
 
   # -mmacosx-version-min=MM.NN needs to be in CC for OCaml
