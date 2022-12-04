@@ -197,6 +197,7 @@ TARGETABIS=
 MSVS_PREFERENCE="$OPT_MSVS_PREFERENCE"
 RUNTIMEONLY=OFF
 TEMPLATEDIR=
+HOSTABISCRIPT=
 while getopts ":d:v:u:t:a:b:e:i:j:k:m:n:rf:p:g:o:xzh" opt; do
     case ${opt} in
         h )
@@ -254,6 +255,7 @@ while getopts ":d:v:u:t:a:b:e:i:j:k:m:n:rf:p:g:o:xzh" opt; do
             BUILD_CROSS_ARGS+=( -j "$OPTARG" )
         ;;
         k )
+            HOSTABISCRIPT=$OPTARG
             SETUP_ARGS+=( -k "$OPTARG" )
             BUILD_HOST_ARGS+=( -k "$OPTARG" )
         ;;
@@ -761,7 +763,9 @@ install_reproducible_common
 install_reproducible_readme           vendor/dkml-compiler/src/r-c-ocaml-README.md
 install_reproducible_file             vendor/dkml-compiler/src/r-c-ocaml-check_linker.sh
 install_reproducible_file             vendor/dkml-compiler/src/r-c-ocaml-functions.sh
-install_reproducible_file             vendor/dkml-compiler/env/standard-compiler-env-to-ocaml-configure-env.sh
+if [ -n "$HOSTABISCRIPT" ]; then
+    install_reproducible_file         "$HOSTABISCRIPT"
+fi
 for patchfile in "${ALL_PATCH_FILES[@]}"; do
     install_reproducible_file         "$patchfile"
 done
