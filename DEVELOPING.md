@@ -10,6 +10,6 @@ doing the commands below:
 with-dkml rm -rf _opam
 opam switch create . --empty --repos default
 opam pin add dkml-runtime-common "git+file://$(with-dkml cygpath -am ../drc/.git)" --yes
-opam pin add ocaml -k version 4.12.1 --no-action
+opam pin add ocaml -k version 4.14.0 --no-action
 opam install . --yes
 ```

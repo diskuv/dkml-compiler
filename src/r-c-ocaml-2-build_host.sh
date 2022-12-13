@@ -41,6 +41,7 @@ usage() {
         printf "%s\n" "See 'r-c-ocaml-1-setup.sh -h' for more comprehensive docs."
         printf "\n"
         printf "%s\n" "Options"
+        printf "%s\n" "   -s OCAMLVER: The OCaml version"
         printf "%s\n" "   -d DIR: DKML directory containing a .dkmlroot file"
         printf "%s\n" "   -t DIR: Target directory for the reproducible directory tree"
         printf "%s\n" "   -b PREF: Required and used only for the MSVC compiler. See r-c-ocaml-1-setup.sh"
@@ -57,6 +58,7 @@ usage() {
     } >&2
 }
 
+_OCAMLVER=
 DKMLDIR=
 TARGETDIR=
 DKMLHOSTABI=
@@ -68,12 +70,13 @@ RUNTIMEONLY=OFF
 HOSTSRC_SUBDIR=
 HOST_SUBDIR=
 export MSVS_PREFERENCE=
-while getopts ":d:t:b:e:m:i:j:k:rf:p:h" opt; do
+while getopts ":s:d:t:b:e:m:i:j:k:rf:p:h" opt; do
     case ${opt} in
         h )
             usage
             exit 0
         ;;
+        s) _OCAMLVER="$OPTARG" ;;
         d )
             DKMLDIR="$OPTARG"
             if [ ! -e "$DKMLDIR/.dkmlroot" ]; then
@@ -118,7 +121,7 @@ while getopts ":d:t:b:e:m:i:j:k:rf:p:h" opt; do
 done
 shift $((OPTIND -1))
 
-if [ -z "$DKMLDIR" ] || [ -z "$TARGETDIR" ] || [ -z "$DKMLHOSTABI" ] || [ -z "$HOSTSRC_SUBDIR" ]; then
+if [ -z "$_OCAMLVER" ] || [ -z "$DKMLDIR" ] || [ -z "$TARGETDIR" ] || [ -z "$DKMLHOSTABI" ] || [ -z "$HOSTSRC_SUBDIR" ]; then
     printf "%s\n" "Missing required options" >&2
     usage
     exit 1
@@ -194,6 +197,13 @@ DKML_TARGET_ABI="$DKMLHOSTABI" DKML_COMPILE_SPEC=$HOST_DKML_COMPILE_SPEC DKML_CO
 # ./configure
 if [ "$RUNTIMEONLY" = ON ]; then
     CONFIGUREARGS="$CONFIGUREARGS --disable-native-compiler --disable-stdlib-manpages"
+else
+    case "$_OCAMLVER" in
+        4.14.*,5.*)
+            # Install native toplevel
+            CONFIGUREARGS="$CONFIGUREARGS --enable-native-toplevel"
+            ;;
+    esac
 fi
 log_trace ocaml_configure "$OCAMLHOST_UNIX" "$DKMLHOSTABI" "$HOSTABISCRIPT" "$CONFIGUREARGS"
 

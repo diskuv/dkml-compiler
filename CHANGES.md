@@ -1,3 +1,7 @@
+## `4.14.0~v1.0.2`
+
+* OCaml 4.14.0
+
 ## `4.12.1~v1.0.2`
 
 * Support `ocaml-option-32bit`

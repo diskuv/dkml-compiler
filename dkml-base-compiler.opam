@@ -6,21 +6,21 @@ name: "dkml-base-compiler"
 # - A.B.C is the DKML version of the dkml-runtime-common
 # - P is optional DKML prerelease version
 # Examples:
-# - 4.12.1~prerel69 (legacy format) < 4.12.1~v0.4.0 < 4.12.1~v0.4.1~prerel69 < 4.12.1~v0.4.1
+# - 4.14.0~prerel69 (legacy format) < 4.14.0~v0.4.0 < 4.14.0~v0.4.1~prerel69 < 4.14.0~v0.4.1
 # Confer: Version Ordering in https://opam.ocaml.org/doc/Manual.html#Package-Formulas
-version: "4.12.1~v1.0.2~prerel29"
+version: "4.14.0~v1.0.2~prerel29"
 synopsis: "OCaml cross-compiler and libraries from the DKML distribution that works with at least Win32 and macOS"
 description:
   """The DKML distribution of the OCaml bytecode and native compiler, Stdlib and the other OCaml libraries (str, unix, bigarray, etc.).
 A cross-compiler for macOS x86_64 to macOS arm64 is included; for build consistency the regular OCaml compiler will be for x86_64 regardless of whether the build machine is Apple Silicon.
-Install with something like: opam switch create dkml-4.12.1 '--formula="dkml-base-compiler" {>= "4.12.1~" & < "4.13.0~"}'"""
+Install with something like: opam switch create dkml-4.14.0 '--formula="dkml-base-compiler" {>= "4.14.0~" & < "4.13.0~"}'"""
 maintainer: ["opensource+diskuv-ocaml@support.diskuv.com"]
 authors: ["Diskuv, Inc. <opensource+diskuv-ocaml@support.diskuv.com>"]
 license: "Apache-2.0"
 homepage: "https://github.com/diskuv/dkml-compiler"
 bug-reports: "https://github.com/diskuv/dkml-compiler/issues"
 depends: [
-  "ocaml" {= "4.12.1" & post}
+  "ocaml" {= "4.14.0" & post}
 
   "base-unix" {post}
   "base-bigarray" {post}
@@ -53,8 +53,8 @@ build: [
   # Create a DKMLDIR. Its structure mimics a git submodule setup.
   #   <dkmldir>/.dkmlroot
   ["install" "-d" "dkmldir"]
-  #     4.12.1~v0.4.1          --dkml-semver--> 0.4.1
-  #     4.12.1~v0.4.1~prerel69 --dkml-semver--> 0.4.1-prerel69
+  #     4.14.0~v0.4.1          --dkml-semver--> 0.4.1
+  #     4.14.0~v0.4.1~prerel69 --dkml-semver--> 0.4.1-prerel69
   ["sh" "-eufc" "printf 'dkml_root_version=%s\\n' '%{version}%' | sed 's/[0-9.]*~v//; s/~/-/' > dkmldir/.dkmlroot"]
 
   #   <dkmldir>/vendor/drc/
@@ -144,12 +144,12 @@ install: [
 ]
 dev-repo: "git+https://github.com/diskuv/dkml-compiler.git"
 extra-source "dl/ocaml.tar.gz" {
-  src: "https://github.com/ocaml/ocaml/archive/4.12.1.tar.gz"
-  checksum: "sha256=f5a48a90557cb47ace7b1590fcab1362a1af38629a218350f69c225c57e96a41"
+  src: "https://github.com/ocaml/ocaml/archive/4.14.0.tar.gz"
+  checksum: "sha256=39f44260382f28d1054c5f9d8bf4753cb7ad64027da792f7938344544da155e8"
 }
 extra-source "dl/flexdll.tar.gz" {
-  src: "https://github.com/alainfrisch/flexdll/archive/0.39.tar.gz"
-  checksum: "sha256=51a6ef2e67ff475c33a76b3dc86401a0f286c9a3339ee8145053ea02d2fb5974"
+  src: "https://github.com/alainfrisch/flexdll/archive/0.42.tar.gz"
+  checksum: "sha256=a2dce0a0d2f2c5c9f52f65e281db7405f51ff22dc71cdbf494eb241c8a4bdf0f"
 }
 extra-source "dl/homebrew-bundle.tar.gz" {
   src: "https://github.com/Homebrew/homebrew-bundle/archive/4756e4c4cf95485c5ea4da27375946c1dac2c71d.tar.gz"

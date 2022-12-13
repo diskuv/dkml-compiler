@@ -23,3 +23,5 @@ msys64/
 # when developing patches with: opam install ./dkml-base-compiler.opam --inplace-build
 /dkmldir/
 /dl/
+/ocaml.config
+/where

@@ -452,6 +452,9 @@ set_flexdll_version_stems() {
     case "$set_version_stems_VER" in
         0.39) VERSION_STEMS+=("0_39") ;;
     esac
+    case "$set_version_stems_VER" in
+        0.42) VERSION_STEMS+=("0_42") ;;
+    esac
 }
 # Sets the array PATCHES and accumulates dkmldir/ relative paths, including
 # any Markdown .md files, in array ALL_PATCH_FILES.
@@ -716,6 +719,10 @@ fi
 # Get source code versions from the source code
 _OCAMLVER=$(awk 'NR==1{print}' "$OCAMLSRC_UNIX"/VERSION)
 _FLEXDLLVER=$(awk '$1=="VERSION"{print $NF; exit 0}' "$OCAMLSRC_UNIX"/flexdll/Makefile)
+
+# Pass versions to build scripts
+BUILD_HOST_ARGS+=( -s "$_OCAMLVER" )
+BUILD_CROSS_ARGS+=( -s "$HOSTSRC_SUBDIR" )
 
 # Find and apply patches to the host ABI
 apply_patches "$OCAMLSRC_UNIX"          ocaml    "$_OCAMLVER"    host

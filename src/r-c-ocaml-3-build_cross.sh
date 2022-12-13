@@ -57,6 +57,7 @@ usage() {
     printf "%s\n" "If not '-a TARGETABIS' is specified, this script does nothing"
     printf "\n"
     printf "%s\n" "Options"
+    printf "%s\n" "   -s OCAMLVER: The OCaml version"
     printf "%s\n" "   -d DIR: DKML directory containing a .dkmlroot file"
     printf "%s\n" "   -t DIR: Target directory for the reproducible directory tree"
     printf "%s\n" "   -a TARGETABIS: Optional. See r-c-ocaml-1-setup.sh"
@@ -71,6 +72,7 @@ usage() {
   } >&2
 }
 
+_OCAMLVER=
 DKMLDIR=
 TARGETDIR=
 TARGETABIS=
@@ -80,11 +82,14 @@ OCAMLCARGS=
 OCAMLOPTARGS=
 HOSTSRC_SUBDIR=
 CROSS_SUBDIR=
-while getopts ":d:t:a:n:e:f:g:i:j:h" opt; do
+while getopts ":s:d:t:a:n:e:f:g:i:j:h" opt; do
   case ${opt} in
   h)
     usage
     exit 0
+    ;;
+  s)
+    _OCAMLVER="$OPTARG"
     ;;
   d)
     DKMLDIR="$OPTARG"
@@ -124,7 +129,7 @@ while getopts ":d:t:a:n:e:f:g:i:j:h" opt; do
 done
 shift $((OPTIND - 1))
 
-if [ -z "$DKMLDIR" ] || [ -z "$TARGETDIR" ] || [ -z "$DKMLHOSTABI" ] || [ -z "$HOSTSRC_SUBDIR" ] || [ -z "$CROSS_SUBDIR" ]; then
+if [ -z "$_OCAMLVER" ] || [ -z "$DKMLDIR" ] || [ -z "$TARGETDIR" ] || [ -z "$DKMLHOSTABI" ] || [ -z "$HOSTSRC_SUBDIR" ] || [ -z "$CROSS_SUBDIR" ]; then
   printf "%s\n" "Missing required options" >&2
   usage
   exit 1
