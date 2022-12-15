@@ -1,0 +1,13 @@
+diff --git a/Makefile b/Makefile
+index 3c74bc7..0501338 100644
+--- a/Makefile
++++ b/Makefile
+@@ -1129,7 +1129,7 @@ endif
+ 	$(CAMLC) $(COMPFLAGS) -c $<
+ 
+ %.cmx: %.ml
+-	$(CAMLOPT) $(COMPFLAGS) $(OPTCOMPFLAGS) -c $< -I $(@D)
++	$(CAMLOPT) $(COMPFLAGS) $(OPTCOMPFLAGS) -I otherlibs/dynlink -c $< -I $(@D)
+ 
+ partialclean::
+ 	for d in utils parsing typing bytecomp asmcomp middle_end file_formats \
