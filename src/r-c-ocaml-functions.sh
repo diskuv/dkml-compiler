@@ -342,9 +342,6 @@ ocaml_configure() {
     printf "exec %s %s\n" "$DKMLSYS_ENV" '"$@"' > "$WORK"/basic-env.sh
     log_script "$WORK"/basic-env.sh
     make_preconfigured_env_script "$WORK"/basic-env.sh "$WORK"/preconfigured-env.sh
-    configure_environment_for_ocaml() {
-      log_shell "$WORK"/preconfigured-env.sh "$@"
-    }
     run_script_and_then_configure_environment_for_ocaml() {
       run_script_and_then_configure_environment_for_ocaml_SCRIPT=$1
       shift
