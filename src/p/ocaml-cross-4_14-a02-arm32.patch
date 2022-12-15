@@ -160,10 +160,28 @@ index 6d2363a..1a746b6 100644
      (fun i ->
         Buffer.clear b;
 diff --git a/configure b/configure
-index 8a2c007..2930207 100644
-Binary files a/configure and b/configure differ
-diff --git a/runtime/arm.S b/runtime/arm.S
-index 612757a..ee06152 100644
+index 8a2c007..2930207 100755
+--- a/configure
++++ b/configure
+@@ -6650,7 +6650,7 @@ case $with_sysroot in #(
+      lt_sysroot=`$CC --print-sysroot 2>/dev/null`
+    fi
+    ;; #(
+- /*)
++ /* | ?:*) # /a/b/c or C:\Windows
+    lt_sysroot=`echo "$with_sysroot" | sed -e "$sed_quote_subst"`
+    ;; #(
+  no|'')
+@@ -12901,6 +12901,9 @@ esac
+ case $host in #(
+   *-*-mingw32|*-pc-windows) :
+      ;; #(
++  *-*-linux-android*) :
++    # https://android.googlesource.com/platform/bionic/+/master/docs/32-bit-abi.md
++    ;;
+   *) :
+     common_cppflags="$common_cppflags -D_FILE_OFFSET_BITS=64" ;;
+ esac
 --- a/runtime/arm.S
 +++ b/runtime/arm.S
 @@ -129,7 +129,9 @@ caml_hot__code_end:
