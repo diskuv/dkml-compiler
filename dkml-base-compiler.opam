@@ -8,7 +8,7 @@ name: "dkml-base-compiler"
 # Examples:
 # - 4.14.0~prerel69 (legacy format) < 4.14.0~v0.4.0 < 4.14.0~v0.4.1~prerel69 < 4.14.0~v0.4.1
 # Confer: Version Ordering in https://opam.ocaml.org/doc/Manual.html#Package-Formulas
-version: "4.14.0~v1.1.0~prerel4"
+version: "4.14.0~v1.1.0~prerel5"
 synopsis: "OCaml cross-compiler and libraries from the DKML distribution that works with at least Win32 and macOS"
 description:
   """The DKML distribution of the OCaml bytecode and native compiler, Stdlib and the other OCaml libraries (str, unix, bigarray, etc.).
@@ -26,7 +26,7 @@ depends: [
   "base-bigarray" {post}
   "base-threads" {post}
 
-  "dkml-runtime-common-native" {= "1.1.0~prerel4"}
+  "dkml-runtime-common-native" {= "1.1.0~prerel5"}
 ]
 depopts: [
   "ocaml-option-32bit"
