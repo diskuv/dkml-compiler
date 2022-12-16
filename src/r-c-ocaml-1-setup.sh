@@ -56,6 +56,7 @@ BINARIES=(
     ocamlmktop.byte
     ocamlmktop
     ocamlmktop.opt
+    ocamlnat
     ocamlobjinfo.byte
     ocamlobjinfo
     ocamlobjinfo.opt
@@ -89,7 +90,7 @@ usage() {
         printf "%s\n" "    r-c-ocaml-1-setup.sh"
         printf "%s\n" "        -h                       Display this help message."
         printf "\n"
-        printf "%s\n" "Artifacts include (flexlink only on Windows):"
+        printf "%s\n" "Artifacts include (flexlink only on Windows, ocamlnat only on 4.14+):"
         for binary in "${BINARIES[@]}"; do
             printf "    %s\n" "$binary"
         done
@@ -722,7 +723,7 @@ _FLEXDLLVER=$(awk '$1=="VERSION"{print $NF; exit 0}' "$OCAMLSRC_UNIX"/flexdll/Ma
 
 # Pass versions to build scripts
 BUILD_HOST_ARGS+=( -s "$_OCAMLVER" )
-BUILD_CROSS_ARGS+=( -s "$HOSTSRC_SUBDIR" )
+BUILD_CROSS_ARGS+=( -s "$_OCAMLVER" )
 
 # Find and apply patches to the host ABI
 apply_patches "$OCAMLSRC_UNIX"          ocaml    "$_OCAMLVER"    host

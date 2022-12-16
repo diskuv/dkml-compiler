@@ -199,7 +199,7 @@ if [ "$RUNTIMEONLY" = ON ]; then
     CONFIGUREARGS="$CONFIGUREARGS --disable-native-compiler --disable-stdlib-manpages"
 else
     case "$_OCAMLVER" in
-        4.14.*,5.*)
+        4.14.*|5.*)
             # Install native toplevel
             CONFIGUREARGS="$CONFIGUREARGS --enable-native-toplevel"
             ;;

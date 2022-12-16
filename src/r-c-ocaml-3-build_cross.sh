@@ -304,6 +304,12 @@ build_world() {
   esac
 
   # ./configure
+  case "$_OCAMLVER" in
+      4.14.*|5.*)
+          # Install native toplevel
+          CONFIGUREARGS="$CONFIGUREARGS --enable-native-toplevel"
+          ;;
+  esac
   log_trace ocaml_configure "$build_world_PREFIX" "$build_world_TARGET_ABI" "$build_world_PRECONFIGURE" "--host=$build_world_HOST_TRIPLET $CONFIGUREARGS --disable-ocamldoc"
 
   # Build
@@ -379,6 +385,14 @@ build_world() {
   log_trace make_target "$build_world_TARGET_ABI" "$build_world_BUILD_ROOT" otherlibraries
   log_trace make_target "$build_world_TARGET_ABI" "$build_world_BUILD_ROOT" otherlibrariesopt
   log_trace make_target "$build_world_TARGET_ABI" "$build_world_BUILD_ROOT" ocamltoolsopt
+  case "$_OCAMLVER" in
+    4.14.*|5.*)
+        # Install native toplevel
+        log_trace make_target "$build_world_TARGET_ABI" "$build_world_BUILD_ROOT" \
+          "ocamlnat${build_world_TARGET_EXE_EXT}" \
+          toplevel/toploop.cmx
+        ;;
+  esac
   #   stop warning about native binary older than bytecode binary
   log_trace touch "lex/ocamllex.opt${build_world_TARGET_EXE_EXT}"
   log_trace make_target "$build_world_TARGET_ABI" "$build_world_BUILD_ROOT" driver/main.cmx driver/optmain.cmx \
