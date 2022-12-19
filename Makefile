@@ -5,7 +5,7 @@ all: install
 create-switch: _opam/.opam-switch/switch-config
 
 _opam/.opam-switch/switch-config:
-	opam switch create . --empty --repo default=https://opam.ocaml.org,diskuv=git+https://github.com/diskuv/diskuv-opam-repository.git#main
+	opam switch create . --empty --repo diskuv=git+https://github.com/diskuv/diskuv-opam-repository.git#main,default=https://opam.ocaml.org
 
 .PHONY: install
 install: create-switch
