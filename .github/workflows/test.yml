@@ -1,0 +1,36 @@
+name: Test compiler
+
+on:
+  pull_request:
+  push:
+  schedule:
+    # Prime the caches every Tuesday
+    - cron: 0 1 * * TUE
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - macos-latest
+          - ubuntu-latest
+          - windows-latest
+        ocaml-compiler:
+          - dkml-base-compiler
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Use OCaml ${{ matrix.ocaml-compiler }}
+        uses: ocaml/setup-ocaml@v2
+        with:
+          ocaml-compiler: ${{ matrix.ocaml-compiler }}
+          opam-repositories: |
+            diskuv: git+https://github.com/diskuv/diskuv-opam-repository.git#main
+            default: https://opam.ocaml.org
+          opam-local-packages: |
+            dkml-base-compiler.opam
