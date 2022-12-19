@@ -20,9 +20,11 @@ opam install . --yes
 make local-install
 ```
 
-Then if you need local troubleshooting do:
+It is okay if it fails. You can do more local troubleshooting with:
 
 ```sh
+rm -rf _build/prefix
+
 env TOPDIR=dkmldir/vendor/drc/all/emptytop \
     DKML_REPRODUCIBLE_SYSTEM_BREWFILE=./Brewfile \
     dkmldir/vendor/dkml-compiler/src/r-c-ocaml-1-setup.sh \
@@ -38,5 +40,7 @@ env TOPDIR=dkmldir/vendor/drc/all/emptytop \
 
 (cd '_build/prefix' && share/dkml/repro/100co/vendor/dkml-compiler/src/r-c-ocaml-2-build_host-noargs.sh)
 
-(cd '_build/prefix' && DKML_BUILD_TRACE=ON DKML_BUILD_TRACE_LEVEL=2 share/dkml/repro/100co/vendor/dkml-compiler/src/r-c-ocaml-3-build_cross-noargs.sh)
+(cd '_build/prefix' && DKML_BUILD_TRACE=ON DKML_BUILD_TRACE_LEVEL=2 \
+    share/dkml/repro/100co/vendor/dkml-compiler/src/r-c-ocaml-3-build_cross-noargs.sh 2>&1 | \
+    tee build_cross.log)
 ```

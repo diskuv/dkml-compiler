@@ -717,6 +717,9 @@ else
     get_ocaml_source "$GIT_COMMITID_TAG_OR_DIR" "$OCAMLSRC_UNIX" "$OCAMLSRC_MIXED" "$BUILDHOST_ARCH"
 fi
 
+# Add get_sak.mk to runtime/
+install vendor/dkml-compiler/src/r-c-ocaml-get_sak.make "$OCAMLSRC_UNIX"/runtime/get_sak.make
+
 # Get source code versions from the source code
 _OCAMLVER=$(awk 'NR==1{print}' "$OCAMLSRC_UNIX"/VERSION)
 _FLEXDLLVER=$(awk '$1=="VERSION"{print $NF; exit 0}' "$OCAMLSRC_UNIX"/flexdll/Makefile)
@@ -771,6 +774,7 @@ install_reproducible_common
 install_reproducible_readme           vendor/dkml-compiler/src/r-c-ocaml-README.md
 install_reproducible_file             vendor/dkml-compiler/src/r-c-ocaml-check_linker.sh
 install_reproducible_file             vendor/dkml-compiler/src/r-c-ocaml-functions.sh
+install_reproducible_file             vendor/dkml-compiler/src/r-c-ocaml-get_sak.make
 if [ -n "$HOSTABISCRIPT" ]; then
     install_reproducible_file         "$HOSTABISCRIPT"
 fi

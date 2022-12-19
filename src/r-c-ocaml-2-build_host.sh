@@ -207,6 +207,15 @@ else
 fi
 log_trace ocaml_configure "$OCAMLHOST_UNIX" "$DKMLHOSTABI" "$HOSTABISCRIPT" "$CONFIGUREARGS"
 
+# Capture SAK_ variables for use in cross-compiler.
+# We need $(1) and $(2) parameter placeholders to get passed as well, so
+# we encode them.
+log_trace make -C runtime -f get_sak.make sak.source.sh 1=__1__ 2=__2__
+if [ "${DKML_BUILD_TRACE:-OFF}" = ON ] && [ "${DKML_BUILD_TRACE_LEVEL:-0}" -ge 2 ] ; then
+    printf '@+ runtime/sak.source.sh\n' >&2
+    cat runtime/sak.source.sh >&2
+fi
+
 # fix readonly perms we'll set later (if we've re-used the files because
 # of a cache)
 log_trace "$DKMLSYS_CHMOD" -R ug+w      stdlib/

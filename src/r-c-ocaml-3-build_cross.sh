@@ -188,6 +188,10 @@ export OCAMLSRC_MIXED
 # Probe the artifacts from ./configure already done by the host ABI and host ABI's ./ocamlc
 init_hostvars
 
+# Get the variables for runtime/sak
+#       shellcheck disable=SC1091
+. "$OCAMLSRC_MIXED/runtime/sak.source.sh"
+
 make_target() {
   make_target_ABI=$1
   shift
@@ -200,7 +204,9 @@ make_target() {
   # to always switch into Unix context.
   CAMLC="$HOST_SPACELESS_ENV_MIXED_EXE $make_target_BUILD_ROOT/support/ocamlcTarget.wrapper" \
   CAMLOPT="$HOST_SPACELESS_ENV_MIXED_EXE $make_target_BUILD_ROOT/support/ocamloptTarget.wrapper" \
-  make_caml "$make_target_ABI" BUILD_ROOT="$make_target_BUILD_ROOT" "$@"
+  make_caml "$make_target_ABI" BUILD_ROOT="$make_target_BUILD_ROOT" \
+  SAK_CC="$SAK_CC" SAK_CFLAGS="$SAK_CFLAGS" SAK_LINK="$SAK_LINK" \
+  "$@"
 }
 
 # Get a triplet that can be used by OCaml's ./configure.
@@ -305,27 +311,28 @@ build_world() {
 
   # ./configure
   case "$_OCAMLVER" in
-      4.14.*|5.*)
-          # Install native toplevel
-          CONFIGUREARGS="$CONFIGUREARGS --enable-native-toplevel"
-          ;;
+    4.14.*|5.*)
+      # Install native toplevel
+      CONFIGUREARGS="$CONFIGUREARGS --enable-native-toplevel"
+      ;;
   esac
   log_trace ocaml_configure "$build_world_PREFIX" "$build_world_TARGET_ABI" "$build_world_PRECONFIGURE" "--host=$build_world_HOST_TRIPLET $CONFIGUREARGS --disable-ocamldoc"
 
   # Build
   # -----
 
+  # Make a host ABI form of 'sak' (Runtime Builder's Swiss Army Knife)
+  case "$_OCAMLVER" in
+    4.14.*|5.*)
+      log_trace make_host -final -C runtime "sak$build_world_TARGET_EXE_EXT" \
+        SAK_CC="$SAK_CC" SAK_CFLAGS="$SAK_CFLAGS" SAK_LINK="$SAK_LINK"
+      ;;
+  esac
+
   # Make non-boot ./ocamlc and ./ocamlopt compiler
   if [ "$OCAML_CONFIGURE_NEEDS_MAKE_FLEXDLL" = ON ]; then
     log_trace make_host -final flexdll
   fi
-  #   Troubleshooting
-  {
-    log_trace make_host -final -C runtime build_config.h
-    printf '+ <start> runtime/build_config.h\n' >&2
-    cat runtime/build_config.h >&2
-    printf '+ <end> runtime/build_config.h\n' >&2
-  }
   log_trace make_host -final runtime coreall
   log_trace make_host -final opt-core
   log_trace make_host -final ocamlc.opt NATIVECCLIBS= BYTECCLIBS= # host and target C libraries don't mix
