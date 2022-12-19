@@ -26,3 +26,4 @@ msys64/
 /ocaml.config
 /where
 /Brewfile
+.vscode/c_cpp_properties.json

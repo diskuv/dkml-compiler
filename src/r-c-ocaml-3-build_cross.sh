@@ -319,6 +319,13 @@ build_world() {
   if [ "$OCAML_CONFIGURE_NEEDS_MAKE_FLEXDLL" = ON ]; then
     log_trace make_host -final flexdll
   fi
+  #   Troubleshooting
+  {
+    log_trace make_host -final -C runtime build_config.h
+    printf '+ <start> runtime/build_config.h\n' >&2
+    cat runtime/build_config.h >&2
+    printf '+ <end> runtime/build_config.h\n' >&2
+  }
   log_trace make_host -final runtime coreall
   log_trace make_host -final opt-core
   log_trace make_host -final ocamlc.opt NATIVECCLIBS= BYTECCLIBS= # host and target C libraries don't mix
