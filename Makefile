@@ -19,4 +19,5 @@ local-install: create-switch
 	OPAMSWITCH="$$PWD" && \
 	  if [ -x /usr/bin/cygpath ]; then OPAMSWITCH=$$(/usr/bin/cygpath -aw "$$OPAMSWITCH"); fi && \
 	  opam pin ocaml -k version 4.14.0 --no-action --yes && \
+	  rm -rf dkmldir Brewfile && \
 	  opam install ./ocaml.opam ./dkml-base-compiler.opam --inplace-build --keep-build-dir --yes
