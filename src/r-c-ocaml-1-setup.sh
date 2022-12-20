@@ -442,6 +442,10 @@ set_ocaml_version_stems() {
         5.00.*) VERSION_STEMS+=("5_00") ;;
         5.01.*) VERSION_STEMS+=("5_01") ;;
     esac
+    case "$set_version_stems_VER" in
+        4.14.0) VERSION_STEMS+=("4_14_0") ;;
+        4.14.1) VERSION_STEMS+=("4_14_1") ;;
+    esac
 }
 set_flexdll_version_stems() {
     set_version_stems_VER=$1
