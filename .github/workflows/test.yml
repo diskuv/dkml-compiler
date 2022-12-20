@@ -15,7 +15,11 @@ jobs:
         os:
           - macos-latest
           - ubuntu-latest
-          - windows-latest
+          # No Windows because ...
+          #    Initialise the opam repositories
+          #      D:\cygwin\bin\opam.exe repository add default https://opam.ocaml.org --all-switches --set-default
+          #      [ERROR] Could not update repository "default": Failed to extract archive C:/Users/RUNNER~1/AppData/Local/Temp/opam-5188-5a61c5/index.tar.gz: "C:\\Windows\\system32\\tar.exe xfz /cygdrive/c/Users/RUNNER~1/AppData/Local/Temp/opam-5188-5a61c5/index.tar.gz -C /cygdrive/d/.opam/repo/default.new" exited with code 1 "tar.exe: Error opening archive: Failed to open '/cygdrive/c/Users/RUNNER~1/AppData/Local/Temp/opam-5188-5a61c5/index.tar.gz'"
+          # - windows-latest
         ocaml-compiler:
           - dkml-base-compiler
 
