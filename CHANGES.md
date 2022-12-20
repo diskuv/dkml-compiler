@@ -1,6 +1,7 @@
-## `4.14.0~v1.0.2`
+## `4.14.0~v1.1.0`
 
 * OCaml 4.14.0
+* Include experimental `ocamlnat`
 
 ## `4.12.1~v1.0.2`
 
