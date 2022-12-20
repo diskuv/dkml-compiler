@@ -8,7 +8,7 @@ sure you have done a `git commit` before doing the commands below:
 ```powershell
 Remove-Item -LiteralPath _opam -Recurse
 
-opam switch create . --empty --repo diskuv=git+https://github.com/diskuv/diskuv-opam-repository.git#main,default=https://opam.ocaml.org
+opam switch create . --empty --repos diskuv=git+https://github.com/diskuv/diskuv-opam-repository.git#main,default=https://opam.ocaml.org
 
 #   Force an update since 'opam switch create' only updates when it newly registers the repository
 opam update diskuv
