@@ -101,7 +101,7 @@ detect_msvs() {
   fi
 }
 
-ocaml_make() {
+ocaml_make_real() {
   ocaml_make_ABI=$1
   shift
 
@@ -142,6 +142,12 @@ ocaml_make() {
         exit 107
     fi
   fi
+}
+
+ocaml_make() {
+    ocaml_make_real \
+        "$@" \
+        -j"$NUMCPUS" -l"$NUMCPUS"
 }
 
 ocaml_configure_windows() {
@@ -531,7 +537,6 @@ make_caml() {
   shift
 
   ocaml_make "$make_caml_ABI" \
-    -j"$NUMCPUS" -l"$NUMCPUS" \
     CAMLDEP="$CAMLDEP" \
     CAMLLEX="$OCAMLLEX" OCAMLLEX="$OCAMLLEX" \
     CAMLYACC="$OCAMLYACC" OCAMLYACC="$OCAMLYACC" \
