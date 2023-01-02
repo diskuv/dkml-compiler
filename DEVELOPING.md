@@ -46,6 +46,8 @@ env TOPDIR=dkmldir/vendor/drc/all/emptytop \
 make local-install
 ```
 
+(this also works on Linux)
+
 It is okay if it fails. You can do more local troubleshooting with:
 
 ```sh
@@ -70,3 +72,5 @@ env TOPDIR=dkmldir/vendor/drc/all/emptytop \
     share/dkml/repro/100co/vendor/dkml-compiler/src/r-c-ocaml-3-build_cross-noargs.sh 2>&1 | \
     tee build_cross.log)
 ```
+
+You can also add `--verbose` to the 'opam install' line in the Makefile.

@@ -62,6 +62,9 @@ rm -rf dl ; git restore dl/.gitkeep
 opam install ./dkml-base-compiler.opam --inplace-build --update-invariant
 ```
 
+It is recommended to first follow the instructions in DEVELOPING.md
+to set up (an empty) opam switch with the appropriate external repositories.
+
 ### Patching
 
 In what follows, `VER` is a placeholder for the OCaml major version (ex. `4`)
