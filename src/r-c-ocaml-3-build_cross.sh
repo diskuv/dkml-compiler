@@ -295,6 +295,10 @@ build_world() {
   # shellcheck disable=SC2086
   log_trace genWrapper "$build_world_BUILD_ROOT/support/ocamloptTarget.wrapper" "$build_world_BUILD_ROOT"/support/with-target-c-compiler.sh "$OCAMLSRC_MIXED"/support/with-linking-on-host.sh "$build_world_BUILD_ROOT/ocamlopt.opt$build_world_TARGET_EXE_EXT" $OCAMLOPTARGS -I "$build_world_BUILD_ROOT/stdlib" -I "$build_world_BUILD_ROOT/otherlibs/unix" -nostdlib
 
+  # macOS, and probably Windows, don't like the way the next `make clean` removes read-only files.
+  # would get ... rm: Debug/dksdk/ocaml/opt/mlcross/darwin_x86_64: Permission denied
+  log_trace "$DKMLSYS_CHMOD" -R u+w .
+
   # clean (otherwise you will 'make inconsistent assumptions' errors with a mix of host + target binaries)
   make clean
 
