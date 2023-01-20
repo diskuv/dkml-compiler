@@ -54,16 +54,16 @@ that can take the "mlcross" Opam directory structure and add it to
 
 ## Developing
 
-You'll first want to recreate the [build directories](#build-directories)
-that `dkml-base-compiler.opam` assembles. Do that with:
+First run `with-dkml make local-install` on Diskuv OCaml on Windows, or
+`make local-install` on other platforms, to install the compiler in
+a local opam switch using an in-place build.
 
-```bash
-rm -rf dl ; git restore dl/.gitkeep
-opam install ./dkml-base-compiler.opam --inplace-build --update-invariant
-```
+As a useful side-effect, the in-place build recreates the
+[build directories](#build-directories) that `dkml-base-compiler.opam`
+assembles. Even if the `make local-install` fails to build a working OCaml
+compiler, you still have all the directories ready for local development.
 
-It is recommended to first follow the instructions in DEVELOPING.md
-to set up (an empty) opam switch with the appropriate external repositories.
+More developer documentation is in [DEVELOPING.md](./DEVELOPING.md).
 
 ### Patching
 

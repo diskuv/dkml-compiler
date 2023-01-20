@@ -4,8 +4,10 @@ all: install
 .PHONY: create-switch
 create-switch: _opam/.opam-switch/switch-config
 
+#   Force an update since 'opam switch create' only updates when it newly registers the repository
 _opam/.opam-switch/switch-config:
 	opam switch create . --empty --repos diskuv=git+https://github.com/diskuv/diskuv-opam-repository.git#main,default=https://opam.ocaml.org
+	opam update diskuv
 
 .PHONY: install
 install: create-switch

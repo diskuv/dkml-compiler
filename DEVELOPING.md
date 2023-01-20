@@ -1,24 +1,33 @@
 # Developing
 
-## Windows
+Everything in this document assumes you have done:
 
-You can do the following in PowerShell to build the compiler into a local switch. Make
-sure you have done a `git commit` before doing the commands below:
+```sh
+# *nix: Linux, macOS, etc.
+make local-install
 
-```powershell
-Remove-Item -LiteralPath _opam -Recurse
-
-opam switch create . --empty --repos diskuv=git+https://github.com/diskuv/diskuv-opam-repository.git#main,default=https://opam.ocaml.org
-
-#   Force an update since 'opam switch create' only updates when it newly registers the repository
-opam update diskuv
-
-opam pin add ocaml -k version 4.14.0 --no-action
-opam install .\dkml-base-compiler.opam --inplace-build --keep-build-dir --yes
+# Windows
+with-dkml make local-install
 ```
 
-It is okay if it fails. You can do more local troubleshooting by running
-the following inside a `with-dkml bash` shell:
+You may also add `--verbose` to the 'opam install' lines in the `Makefile`.
+
+## Upgrading the DKML scripts
+
+```bash
+opam install ./dkml-compiler-maintain.opam --deps-only
+opam upgrade dkml-workflows
+
+# Regenerate the DKML workflow scaffolding
+opam exec -- generate-setup-dkml-scaffold
+opam exec -- dune build '@gen-dkml' --auto-promote
+```
+
+## Local Development
+
+### Windows
+
+Run the following inside a `with-dkml bash` shell:
 
 ```sh
 rm -rf _build/prefix
@@ -38,17 +47,9 @@ env TOPDIR=dkmldir/vendor/drc/all/emptytop \
 (cd '_build/prefix' && share/dkml/repro/100co/vendor/dkml-compiler/src/r-c-ocaml-2-build_host-noargs.sh)
 ```
 
-## macOS
+### macOS
 
-### Apple Silicon
-
-```sh
-make local-install
-```
-
-(this also works on Linux)
-
-It is okay if it fails. You can do more local troubleshooting with:
+#### Apple Silicon
 
 ```sh
 rm -rf _build/prefix
@@ -72,5 +73,3 @@ env TOPDIR=dkmldir/vendor/drc/all/emptytop \
     share/dkml/repro/100co/vendor/dkml-compiler/src/r-c-ocaml-3-build_cross-noargs.sh 2>&1 | \
     tee build_cross.log)
 ```
-
-You can also add `--verbose` to the 'opam install' line in the Makefile.
