@@ -21,8 +21,8 @@ while getopts ":hp:s:" opt; do
 done
 shift $((OPTIND -1))
 
-if [ -n "$PREFIX" ]; then usage; exit 2; fi
-if [ -n "$SCRIPT" ]; then usage; exit 2; fi
+if [ -z "$PREFIX" ]; then usage; exit 2; fi
+if [ -z "$SCRIPT" ]; then usage; exit 2; fi
 
 # Run script
 cd "$PREFIX"

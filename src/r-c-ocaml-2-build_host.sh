@@ -45,6 +45,7 @@ usage() {
         printf "%s\n" "   -d DIR: DKML directory containing a .dkmlroot file"
         printf "%s\n" "   -t DIR: Target directory for the reproducible directory tree"
         printf "%s\n" "   -b PREF: Required and used only for the MSVC compiler. See r-c-ocaml-1-setup.sh"
+        printf "%s\n" "   -c OCAMLC_OPT_EXE: If a possibly older 'ocamlc.opt' is specified, it speeds up compilation of the new OCaml compiler"
         printf "%s\n" "   -e DKMLHOSTABI: Uses the Diskuv OCaml compiler detector find a host ABI compiler"
         printf "%s\n" "   -f HOSTSRC_SUBDIR: Use HOSTSRC_SUBDIR subdirectory of -t DIR to place the source code of the host ABI"
         printf "%s\n" "   -p HOST_SUBDIR: Optional. Use HOST_SUBDIR subdirectory of -t DIR to place the host ABI"
@@ -72,9 +73,10 @@ RUNTIMEONLY=OFF
 HOSTSRC_SUBDIR=
 HOST_SUBDIR=
 HOST_ONLY=OFF
+OCAMLC_OPT_EXE=
 FLEXLINKFLAGS=
 export MSVS_PREFERENCE=
-while getopts ":s:d:t:b:e:m:i:j:k:l:rf:p:o:h" opt; do
+while getopts ":s:d:t:b:c:e:m:i:j:k:l:rf:p:o:h" opt; do
     case ${opt} in
         h )
             usage
@@ -99,6 +101,7 @@ while getopts ":s:d:t:b:e:m:i:j:k:l:rf:p:o:h" opt; do
         e )
             DKMLHOSTABI="$OPTARG"
         ;;
+        c ) OCAMLC_OPT_EXE="$OPTARG" ;;
         f ) HOSTSRC_SUBDIR=$OPTARG ;;
         p ) HOST_SUBDIR=$OPTARG ;;
         m )
@@ -186,6 +189,16 @@ if [ -n "$HOSTABISCRIPT" ]; then
     esac
 fi
 
+if [ -n "$OCAMLC_OPT_EXE" ]; then
+    case "$OCAMLC_OPT_EXE" in
+    /* | ?:*) # /a/b/c or C:\Windows
+    ;;
+    *) # relative path; need absolute path since we will soon change dir to $OCAMLSRC_UNIX
+    OCAMLC_OPT_EXE="$DKMLDIR/$OCAMLC_OPT_EXE"
+    ;;
+    esac
+fi
+
 cd "$OCAMLSRC_UNIX"
 
 # Dump environment variables
@@ -216,6 +229,14 @@ else
     esac
 fi
 log_trace ocaml_configure "$OCAMLHOST_UNIX" "$DKMLHOSTABI" "$HOSTABISCRIPT" "$CONFIGUREARGS"
+
+# Skip bootstrapping if ocamlc.opt is present
+if [ -n "$OCAMLC_OPT_EXE" ]; then
+    case "$DKMLHOSTABI" in
+        windows_*) log_trace install "$OCAMLC_OPT_EXE" boot/ocamlc.opt.exe ;;
+        *)         log_trace install "$OCAMLC_OPT_EXE" boot/ocamlc.opt
+    esac
+fi
 
 # Capture SAK_ variables for use in cross-compiler.
 # We need $(1) and $(2) parameter placeholders to get passed as well, so

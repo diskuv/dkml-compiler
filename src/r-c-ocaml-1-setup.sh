@@ -119,6 +119,8 @@ usage() {
         printf "%s\n" "   -v COMMIT_OR_DIR: Git commit or tag or directory for https://github.com/ocaml/ocaml. Strongly prefer a commit id"
         printf "%s\n" "      instead of a git tag for much stronger reproducibility guarantees"
         printf "%s\n" "   -u COMMIT: (Deprecated). Git commit or tag for https://github.com/ocaml/ocaml for the host ABI. Defaults to -v COMMIT"
+        printf "%s\n" "   -c OCAMLC_OPT_EXE: Optional relative path from [-d DIR] to a possibly older 'ocamlc.opt'. It speeds up compilation"
+        printf "%s\n" "      of the new OCaml compiler. If the executable does not exist it is not an error; it is silently dropped"
         printf "%s\n" "   -a TARGETABIS: Optional. A named list of self-contained Posix shell script that can be sourced to set the"
         printf "%s\n" "      compiler environment variables for the target ABI. If not specified then the OCaml environment"
         printf "%s\n" "      will be purely for the host ABI. All path should use the native host platform's path"
@@ -163,8 +165,8 @@ usage() {
         printf "%s\n" "      the environment variable DKML_HOST_ABI, or if not defined then an autodetection of the host architecture."
         printf "%s\n" "   -i OCAMLCARGS: Optional. Extra arguments passed to ocamlc like -g to save debugging"
         printf "%s\n" "   -j OCAMLOPTARGS: Optional. Extra arguments passed to ocamlopt like -g to save debugging"
-        printf "%s\n" "   -k HOSTABISCRIPT: Optional. A self-contained Posix shell script that can be sourced to set the"
-        printf "%s\n" "      compiler environment variables for the host ABI. See '-a TARGETABIS' for the shell script semantics."
+        printf "%s\n" "   -k HOSTABISCRIPT: Optional. A self-contained Posix shell script relative to [-d DIR] that can be sourced to"
+        printf "%s\n" "      set the compiler environment variables for the host ABI. See '-a TARGETABIS' for the shell script semantics."
         printf "%s\n" "   -l FLEXLINKFLAGS: Options added to flexlink while building ocaml, ocamlc, etc. native Windows executables"
         printf "%s\n" "   -m HOSTCONFIGUREARGS: Optional. Extra arguments passed to OCaml's ./configure for the host ABI. --with-flexdll"
         printf "%s\n" "      and --host will have already been set appropriately, but you can override the --host heuristic by adding it"
@@ -200,7 +202,8 @@ MSVS_PREFERENCE="$OPT_MSVS_PREFERENCE"
 RUNTIMEONLY=OFF
 TEMPLATEDIR=
 HOSTABISCRIPT=
-while getopts ":d:v:u:t:a:b:e:i:j:k:l:m:n:rf:p:g:o:xzh" opt; do
+OCAMLC_OPT_EXE=
+while getopts ":d:v:u:t:a:b:c:e:i:j:k:l:m:n:rf:p:g:o:xzh" opt; do
     case ${opt} in
         h )
             usage
@@ -240,6 +243,7 @@ while getopts ":d:v:u:t:a:b:e:i:j:k:l:m:n:rf:p:g:o:xzh" opt; do
             MSVS_PREFERENCE="$OPTARG"
             SETUP_ARGS+=( -b "$OPTARG" )
         ;;
+        c)  OCAMLC_OPT_EXE="$OPTARG" ;;
         e )
             DKMLHOSTABI="$OPTARG"
         ;;
@@ -410,6 +414,16 @@ if [ -x /usr/bin/cygpath ]; then
 else
     OCAMLSRC_UNIX="$TARGETDIR_UNIX/$HOSTSRC_SUBDIR"
     OCAMLSRC_MIXED="$OCAMLSRC_UNIX"
+fi
+
+# Handle: -c OCAMLC_OPT_EXE
+if [ -n "$OCAMLC_OPT_EXE" ]; then
+    if [ -e "$OCAMLC_OPT_EXE" ]; then
+        SETUP_ARGS+=( -c "$OCAMLC_OPT_EXE" )
+        BUILD_HOST_ARGS+=( -c "$OCAMLC_OPT_EXE" )
+    else
+        OCAMLC_OPT_EXE=
+    fi
 fi
 
 # Set DKMLSYS_CAT and other things
@@ -789,6 +803,9 @@ install_reproducible_file             vendor/dkml-compiler/src/r-c-ocaml-functio
 install_reproducible_file             vendor/dkml-compiler/src/r-c-ocaml-get_sak.make
 if [ -n "$HOSTABISCRIPT" ]; then
     install_reproducible_file         "$HOSTABISCRIPT"
+fi
+if [ -n "$OCAMLC_OPT_EXE" ]; then
+    install_reproducible_file         "$OCAMLC_OPT_EXE"
 fi
 for patchfile in "${ALL_PATCH_FILES[@]}"; do
     install_reproducible_file         "$patchfile"

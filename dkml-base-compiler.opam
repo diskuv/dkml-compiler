@@ -80,6 +80,16 @@ build: [
   ] { !dkml-option-debuginfo:installed & !dkml-option-minsize:installed }
   #     tar through pipe is essentially an rsync (without requiring rsync)
   ["sh" "-eufc" "tar cCf src/ - . | tar xCf dkmldir/vendor/dkml-compiler/src/ -"]
+
+  #   <dkmldir>/vendor/dkml-compiler/bin/bootstrap-ocamlc.opt.exe
+  #   to speed up compile
+  ["install" "-d" "dkmldir/vendor/dkml-compiler/bin"]
+  ["install" "dl/windows_x86-ocamlc.opt.exe" "dkmldir/vendor/dkml-compiler/bin/bootstrap-ocamlc.opt.exe"]     { os = "win32" & (arch = "x86_32" |  ocaml-option-32bit:installed) }
+  ["install" "dl/windows_x86_64-ocamlc.opt.exe" "dkmldir/vendor/dkml-compiler/bin/bootstrap-ocamlc.opt.exe"]  { os = "win32" & (arch = "x86_64" & !ocaml-option-32bit:installed) }
+  ["install" "dl/linux_x86-ocamlc.opt" "dkmldir/vendor/dkml-compiler/bin/bootstrap-ocamlc.opt.exe"]           { os = "linux" & (arch = "x86_32" |  ocaml-option-32bit:installed) }
+  ["install" "dl/linux_x86_64-ocamlc.opt" "dkmldir/vendor/dkml-compiler/bin/bootstrap-ocamlc.opt.exe"]        { os = "linux" & (arch = "x86_64" & !ocaml-option-32bit:installed) }
+  ["install" "dl/darwin_x86_64-ocamlc.opt" "dkmldir/vendor/dkml-compiler/bin/bootstrap-ocamlc.opt.exe"]       { os = "macos" & arch = "x86_64" }
+  ["install" "dl/darwin_arm64-ocamlc.opt" "dkmldir/vendor/dkml-compiler/bin/bootstrap-ocamlc.opt.exe"]        { os = "macos" & arch = "arm64" }
 ]
 install: [
   # Run r-c-ocaml-1-setup.sh
@@ -92,6 +102,7 @@ install: [
       "-f" "src-ocaml"
       "-g" "%{_:share}%/mlcross"
       "-v" "dl/ocaml"
+      "-c" "vendor/dkml-compiler/bin/bootstrap-ocamlc.opt.exe"
       "-z"
       #   Windows flexlink flags that affect the built ocaml.exe, ocamlc.opt.exe, etc.
       #   It is nice with the toplevel ocaml.exe to be able to debug it when the toplevel
@@ -100,7 +111,7 @@ install: [
       " -link /DEBUG:FULL"  { os = "win32" & dkml-option-debuginfo:installed }
       #   Host architectures
       "-ewindows_x86"     { os = "win32" & (arch = "x86_32" |  ocaml-option-32bit:installed) }
-      "-ewindows_x86_64"  { os = "win32" & (arch = "x86_64" & !ocaml-option-32bit:installed) }      
+      "-ewindows_x86_64"  { os = "win32" & (arch = "x86_64" & !ocaml-option-32bit:installed) }
       "-elinux_x86"       { os = "linux" & (arch = "x86_32" |  ocaml-option-32bit:installed) }
       "-elinux_x86_64"    { os = "linux" & (arch = "x86_64" & !ocaml-option-32bit:installed) }
       "-edarwin_x86_64"   { os = "macos" & arch = "x86_64" }
