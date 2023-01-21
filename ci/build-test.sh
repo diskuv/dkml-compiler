@@ -60,13 +60,13 @@ if [ -e "$xswitch/src-ocaml/config.log" ]; then
 fi
 
 # Update
-if ! [ "${SKIP_OPAM_INSTALL}" = ON ]; then
+if ! [ "${SKIP_OPAM_INSTALL:-}" = ON ]; then
   opamrun update
 fi
 
 # Build and test
 OPAM_PKGNAME=${OPAM_PACKAGE%.opam}
-if ! [ "${SKIP_OPAM_INSTALL}" = ON ]; then
+if ! [ "${SKIP_OPAM_INSTALL:-}" = ON ]; then
   opamrun install "./${OPAM_PKGNAME}.opam" --with-test --yes
 fi
 
