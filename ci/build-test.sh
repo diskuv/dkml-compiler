@@ -115,6 +115,12 @@ esac
 file "${STAGE}/bin/ocamlc.opt${exe_ext:-}"
 
 # Zip up everything in stage/, and put into DIST
+case "${dkml_host_abi}" in
+windows_*)
+    if command -v pacman; then
+        pacman -Sy --noconfirm --needed zip
+    fi ;;
+esac
 OLDDIR=$(pwd)
 cd "${STAGE}"
   tar cfz "${OLDDIR}/${DIST}/dkml-compiler.tar.gz" .
