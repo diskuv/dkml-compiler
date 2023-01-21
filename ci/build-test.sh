@@ -90,19 +90,21 @@ if [ -n "${GITHUB_ENV:-}" ]; then
 else
     DIST="dist/${dkml_host_abi}"
 fi
-STAGE=stage
-install -d "${DIST}" "${STAGE}"
-#   Copy executable into stage/
-for d in bin lib share src-ocaml; do
+install -d "${DIST}" "stage"
+#   Copy installation into stage/
+for d in bin lib share/doc share/ocaml-config; do
+    echo "Copying $d ..."
     ls -l "${opam_root}/dkml/$d/"
-    cp -rp "${opam_root}/dkml/$d/" "${STAGE}/"
+    rm -rf "stage/${d:?}/"
+    install -d "stage/$d/"
+    cp -rp "${opam_root}/dkml/$d/" "stage/$d/"
 done
 #   For Windows you must ask your users to first install the vc_redist executable.
 #   Confer: https://github.com/diskuv/dkml-workflows#distributing-your-windows-executables
 case "${dkml_host_abi}" in
-windows_x86_64) wget -O "${STAGE}/vc_redist.x64.exe" https://aka.ms/vs/17/release/vc_redist.x64.exe ;;
-windows_x86) wget -O "${STAGE}/vc_redist.x86.exe" https://aka.ms/vs/17/release/vc_redist.x86.exe ;;
-windows_arm64) wget -O "${STAGE}/vc_redist.arm64.exe" https://aka.ms/vs/17/release/vc_redist.arm64.exe ;;
+windows_x86_64) wget -O "stage/bin/vc_redist.x64.exe" https://aka.ms/vs/17/release/vc_redist.x64.exe ;;
+windows_x86) wget -O "stage/bin/vc_redist.x86.exe" https://aka.ms/vs/17/release/vc_redist.x86.exe ;;
+windows_arm64) wget -O "stage/bin/vc_redist.arm64.exe" https://aka.ms/vs/17/release/vc_redist.arm64.exe ;;
 esac
 
 # Final Diagnostics
@@ -112,7 +114,7 @@ linux_*)
         apk add file
     fi ;;
 esac
-file "${STAGE}/bin/ocamlc.opt${exe_ext:-}"
+file "stage/bin/ocamlc.opt${exe_ext:-}"
 
 # Zip up everything in stage/, and put into DIST
 case "${dkml_host_abi}" in
@@ -121,8 +123,8 @@ windows_*)
         pacman -Sy --noconfirm --needed zip
     fi ;;
 esac
-OLDDIR=$(pwd)
-cd "${STAGE}"
-  tar cfz "${OLDDIR}/${DIST}/dkml-compiler.tar.gz" .
-  zip -rq "${OLDDIR}/${DIST}/dkml-compiler.zip" .
-cd "${OLDDIR}"
+set -x
+cd "stage"
+  tar cfz "../${DIST}/dkml-compiler.tar.gz" .
+  zip -rq "../${DIST}/dkml-compiler.zip" .
+cd ..
