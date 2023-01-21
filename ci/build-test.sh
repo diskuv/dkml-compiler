@@ -60,11 +60,15 @@ if [ -e "$xswitch/src-ocaml/config.log" ]; then
 fi
 
 # Update
-opamrun update
+if ! [ "${SKIP_OPAM_INSTALL}" = ON ]; then
+  opamrun update
+fi
 
 # Build and test
 OPAM_PKGNAME=${OPAM_PACKAGE%.opam}
-opamrun install "./${OPAM_PKGNAME}.opam" --with-test --yes
+if ! [ "${SKIP_OPAM_INSTALL}" = ON ]; then
+  opamrun install "./${OPAM_PKGNAME}.opam" --with-test --yes
+fi
 
 # Copy the installed bin/, lib/, share/ and src-ocaml/ from 'dkml' Opam switch
 # into dist/ folder:
@@ -92,12 +96,18 @@ else
 fi
 install -d "${DIST}" "stage"
 #   Copy installation into stage/
+case "${dkml_host_abi}" in
+windows_*)
+    if command -v pacman; then
+        pacman -Sy --noconfirm --needed rsync
+    fi ;;
+esac
 for d in bin lib share/doc share/ocaml-config; do
     echo "Copying $d ..."
     ls -l "${opam_root}/dkml/$d/"
     rm -rf "stage/${d:?}/"
     install -d "stage/$d/"
-    cp -rp "${opam_root}/dkml/$d/" "stage/$d/"
+    rsync -a "${opam_root}/dkml/$d" "stage/"
 done
 #   For Windows you must ask your users to first install the vc_redist executable.
 #   Confer: https://github.com/diskuv/dkml-workflows#distributing-your-windows-executables
