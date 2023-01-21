@@ -12,6 +12,7 @@ OPAM_PACKAGE=$1
 shift
 
 if [ -x /usr/bin/cygpath ]; then
+    # shellcheck disable=SC2154
     opamroot_unix=$(/usr/bin/cygpath -au "${opam_root}")
 else
     opamroot_unix="${opam_root}"
