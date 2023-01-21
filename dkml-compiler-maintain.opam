@@ -9,7 +9,11 @@ homepage: "https://github.com/diskuv/dkml-compiler"
 bug-reports: "https://github.com/diskuv/dkml-compiler/issues"
 depends: [
   "dune" {>= "2.9"}
+  "bos" {>= "0.2.0"}
+  "dkml-runtime-common"
   "dkml-workflows" {>= "1.1.0"}
+  "diskuvbox" {>= "0.1.1"}
+  "re" {>= "1.10.0"}
   "odoc" {with-doc}
 ]
 build: [
@@ -29,3 +33,9 @@ build: [
   ["dune" "install" "-p" name "--create-install-files" name]
 ]
 dev-repo: "git+https://github.com/diskuv/dkml-compiler.git"
+pin-depends: [
+  [
+    "dkml-runtime-common.~dev"
+    "git+https://github.com/diskuv/dkml-runtime-common.git"
+  ]
+]

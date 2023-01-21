@@ -158,3 +158,25 @@ extra-source "dl/homebrew-bundle.tar.gz" {
     "sha256=10c024ca7871cea36b4c27b2601971d3fa6cba6f37855613baf0026d0f555e76"
   ]
 }
+# BEGIN: Managed by `dune build '@gen-opam' --auto-promote`
+extra-source "dl/windows_x86-ocamlc.opt.exe" {
+  src: "https://github.com/diskuv/dkml-compiler/releases/download/1.2.0-prep3/windows_x86-ocamlc.opt.exe"
+  checksum: "sha256=d2adb06fc01cb389bdba4b2c53b1fc969205b2505e8514b684e5dcdeb356beb3"
+}
+extra-source "dl/windows_x86_64-ocamlc.opt.exe" {
+  src: "https://github.com/diskuv/dkml-compiler/releases/download/1.2.0-prep3/windows_x86_64-ocamlc.opt.exe"
+  checksum: "sha256=76e2809f5c8ed29815a45870c9373cc99a5d1648d8dabcfab76216fc70ca986d"
+}
+extra-source "dl/linux_x86-ocamlc.opt" {
+  src: "https://github.com/diskuv/dkml-compiler/releases/download/1.2.0-prep3/linux_x86-ocamlc.opt"
+  checksum: "sha256=df8eb4e4d3a4e2e01ea0a37561ec999b64edb688ebed420b30451923bd68fc6b"
+}
+extra-source "dl/linux_x86_64-ocamlc.opt" {
+  src: "https://github.com/diskuv/dkml-compiler/releases/download/1.2.0-prep3/linux_x86_64-ocamlc.opt"
+  checksum: "sha256=a5d2914c0901e9bc9ca481fd4c9ea7fd8b79becc2d12dcd8c74142e43e18349f"
+}
+extra-source "dl/darwin_x86_64-ocamlc.opt" {
+  src: "https://github.com/diskuv/dkml-compiler/releases/download/1.2.0-prep3/darwin_x86_64-ocamlc.opt"
+  checksum: "sha256=70f685a14ebda0b297735feda9e450b8aece16ca9ca34b50e1ab8509d0b07fb0"
+}
+# END: Managed by `dune build '@gen-opam' --auto-promote`

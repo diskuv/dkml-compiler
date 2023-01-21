@@ -1,0 +1,147 @@
+; don't waste time traversing down intermediate directories
+
+(dirs
+ (:standard \ dkmldir dl dist msys64 _opam _release .ci))
+
+(rule
+ (alias gen-opam)
+ (target dkml-base-compiler.opam.gen-opam)
+ (deps ci/src/checksum.sh compiler.version.txt)
+ (action
+  (progn
+   (run
+    diskuvbox
+    copy-file
+    -m
+    755
+    %{dep:dkml-base-compiler.opam}
+    %{target}.a)
+   ;  windows_x86 (ocamlc.opt.exe)
+   (run diskuvbox copy-file %{target}.a %{target}.b)
+   (with-stdout-to
+    %{target}.sha256
+    (run
+     sh
+     ci/src/checksum.sh
+     %{lib:dkml-runtime-common:unix/crossplatform-functions.sh}
+     %{read:compiler.version.txt}
+     windows_x86-ocamlc.opt.exe))
+   (with-stdout-to
+    %{target}.a
+    (run
+     ci/src/bump_source.exe
+     --opam-file
+     %{target}.b
+     --version-file
+     compiler.version.txt
+     --download-file
+     dl/windows_x86-ocamlc.opt.exe
+     --artifact
+     windows_x86-ocamlc.opt.exe
+     --sha256-file
+     %{target}.sha256))
+   ;  windows_x86_64 (ocamlc.opt.exe)
+   (run diskuvbox copy-file %{target}.a %{target}.b)
+   (with-stdout-to
+    %{target}.sha256
+    (run
+     sh
+     ci/src/checksum.sh
+     %{lib:dkml-runtime-common:unix/crossplatform-functions.sh}
+     %{read:compiler.version.txt}
+     windows_x86_64-ocamlc.opt.exe))
+   (with-stdout-to
+    %{target}.a
+    (run
+     ci/src/bump_source.exe
+     --opam-file
+     %{target}.b
+     --version-file
+     compiler.version.txt
+     --download-file
+     dl/windows_x86_64-ocamlc.opt.exe
+     --artifact
+     windows_x86_64-ocamlc.opt.exe
+     --sha256-file
+     %{target}.sha256))
+   ;  linux_x86 (ocamlc.opt)
+   (run diskuvbox copy-file %{target}.a %{target}.b)
+   (with-stdout-to
+    %{target}.sha256
+    (run
+     sh
+     ci/src/checksum.sh
+     %{lib:dkml-runtime-common:unix/crossplatform-functions.sh}
+     %{read:compiler.version.txt}
+     linux_x86-ocamlc.opt))
+   (with-stdout-to
+    %{target}.a
+    (run
+     ci/src/bump_source.exe
+     --opam-file
+     %{target}.b
+     --version-file
+     compiler.version.txt
+     --download-file
+     dl/linux_x86-ocamlc.opt
+     --artifact
+     linux_x86-ocamlc.opt
+     --sha256-file
+     %{target}.sha256))
+   ;  linux_x86_64 (ocamlc.opt)
+   (run diskuvbox copy-file %{target}.a %{target}.b)
+   (with-stdout-to
+    %{target}.sha256
+    (run
+     sh
+     ci/src/checksum.sh
+     %{lib:dkml-runtime-common:unix/crossplatform-functions.sh}
+     %{read:compiler.version.txt}
+     linux_x86_64-ocamlc.opt))
+   (with-stdout-to
+    %{target}.a
+    (run
+     ci/src/bump_source.exe
+     --opam-file
+     %{target}.b
+     --version-file
+     compiler.version.txt
+     --download-file
+     dl/linux_x86_64-ocamlc.opt
+     --artifact
+     linux_x86_64-ocamlc.opt
+     --sha256-file
+     %{target}.sha256))
+   ;  darwin_x86_64 (ocamlc.opt)
+   (run diskuvbox copy-file %{target}.a %{target}.b)
+   (with-stdout-to
+    %{target}.sha256
+    (run
+     sh
+     ci/src/checksum.sh
+     %{lib:dkml-runtime-common:unix/crossplatform-functions.sh}
+     %{read:compiler.version.txt}
+     darwin_x86_64-ocamlc.opt))
+   (with-stdout-to
+    %{target}.a
+    (run
+     ci/src/bump_source.exe
+     --opam-file
+     %{target}.b
+     --version-file
+     compiler.version.txt
+     --download-file
+     dl/darwin_x86_64-ocamlc.opt
+     --artifact
+     darwin_x86_64-ocamlc.opt
+     --sha256-file
+     %{target}.sha256))
+   ; finalize the target
+   (run diskuvbox copy-file %{target}.a %{target}))))
+
+(rule
+ (alias gen-opam)
+ (action
+  (diff
+   dkml-base-compiler.opam
+   dkml-base-compiler.opam.gen-opam)))

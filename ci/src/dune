@@ -1,0 +1,6 @@
+(executable
+ (package dkml-compiler-maintain)
+ (name bump_source)
+ (public_name dkml-bump-source)
+ (modules bump_source)
+ (libraries bos re))
