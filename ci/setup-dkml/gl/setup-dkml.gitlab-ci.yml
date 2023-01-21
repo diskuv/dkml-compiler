@@ -9,6 +9,7 @@ variables:
   DKML_COMPILER: "" # "@repository@" = Opam ; "" = latest from default branch ("main") of git clone
   CONF_DKML_CROSS_TOOLCHAIN: "@repository@" # "@repository@" = Opam ; "" = latest from default branch of git clone
   DISKUV_OPAM_REPOSITORY: "" # DEFAULT_DISKUV_OPAM_REPOSITORY_TAG is used as default for empty strings
+  PRIMARY_SWITCH_SKIP_INSTALL: "false"
   SECONDARY_SWITCH: "false"
   VERBOSE: "false"
   DKML_HOME: ""
@@ -48,14 +49,14 @@ variables:
     expire_in: "1 days"
   # Only 4 caches allowed in GitLab CI
   cache:
-    - key: "a_1_${CACHE_PREFIX}-b01628f-${abi_pattern}-${CI_COMMIT_REF_SLUG}"
+    - key: "a_1_${CACHE_PREFIX}-3bb79e4-${abi_pattern}-${CI_COMMIT_REF_SLUG}"
       paths:
         - ${opam_root_cacheable}/download-cache
 
 .common:setup-dkml-cache:
   # Only 4 caches allowed in GitLab CI
   cache:
-    - key: "b_1_${CACHE_PREFIX}-b01628f-${abi_pattern}-${CI_COMMIT_REF_SLUG}"
+    - key: "b_1_${CACHE_PREFIX}-3bb79e4-${abi_pattern}-${CI_COMMIT_REF_SLUG}"
       paths:
         - .ci/sd4/bs
         - ${opam_root_cacheable}/config
@@ -517,6 +518,7 @@ variables:
       DKML_COMPILER=${DKML_COMPILER:-}
       OCAML_COMPILER=${OCAML_COMPILER:-}
       CONF_DKML_CROSS_TOOLCHAIN=${CONF_DKML_CROSS_TOOLCHAIN:-}
+      PRIMARY_SWITCH_SKIP_INSTALL=${PRIMARY_SWITCH_SKIP_INSTALL:-}
       SECONDARY_SWITCH=${SECONDARY_SWITCH:-}
       MANYLINUX=${MANYLINUX:-}
       DKML_HOME=${DKML_HOME:-}
@@ -1557,7 +1559,9 @@ variables:
           opamrun upgrade --switch "$do_install_compiler_NAME" --yes dkml-base-compiler conf-dkml-cross-toolchain ${ocaml_options:-}
           section_end "install-compiler-$do_install_compiler_NAME"
       }
-      do_install_compiler dkml
+      if ! [ "${PRIMARY_SWITCH_SKIP_INSTALL:-}" = "true" ]; then
+          do_install_compiler dkml
+      fi
       if [ "${SECONDARY_SWITCH:-}" = "true" ]; then
           do_install_compiler two
       fi
@@ -2334,6 +2338,7 @@ variables:
       DKML_COMPILER=${DKML_COMPILER:-}
       OCAML_COMPILER=${OCAML_COMPILER:-}
       CONF_DKML_CROSS_TOOLCHAIN=${CONF_DKML_CROSS_TOOLCHAIN:-}
+      PRIMARY_SWITCH_SKIP_INSTALL=${PRIMARY_SWITCH_SKIP_INSTALL:-}
       SECONDARY_SWITCH=${SECONDARY_SWITCH:-}
       MANYLINUX=${MANYLINUX:-}
       DKML_HOME=${DKML_HOME:-}
@@ -3374,7 +3379,9 @@ variables:
           opamrun upgrade --switch "$do_install_compiler_NAME" --yes dkml-base-compiler conf-dkml-cross-toolchain ${ocaml_options:-}
           section_end "install-compiler-$do_install_compiler_NAME"
       }
-      do_install_compiler dkml
+      if ! [ "${PRIMARY_SWITCH_SKIP_INSTALL:-}" = "true" ]; then
+          do_install_compiler dkml
+      fi
       if [ "${SECONDARY_SWITCH:-}" = "true" ]; then
           do_install_compiler two
       fi
@@ -3931,6 +3938,7 @@ variables:
       DKML_COMPILER=${DKML_COMPILER:-}
       OCAML_COMPILER=${OCAML_COMPILER:-}
       CONF_DKML_CROSS_TOOLCHAIN=${CONF_DKML_CROSS_TOOLCHAIN:-}
+      PRIMARY_SWITCH_SKIP_INSTALL=${PRIMARY_SWITCH_SKIP_INSTALL:-}
       SECONDARY_SWITCH=${SECONDARY_SWITCH:-}
       MANYLINUX=${MANYLINUX:-}
       DKML_HOME=${DKML_HOME:-}
@@ -4971,7 +4979,9 @@ variables:
           opamrun upgrade --switch "$do_install_compiler_NAME" --yes dkml-base-compiler conf-dkml-cross-toolchain ${ocaml_options:-}
           section_end "install-compiler-$do_install_compiler_NAME"
       }
-      do_install_compiler dkml
+      if ! [ "${PRIMARY_SWITCH_SKIP_INSTALL:-}" = "true" ]; then
+          do_install_compiler dkml
+      fi
       if [ "${SECONDARY_SWITCH:-}" = "true" ]; then
           do_install_compiler two
       fi

@@ -33,6 +33,10 @@ inputs:
     description: "Turn on verbose logging"
     required: false
     default: 'false'
+  PRIMARY_SWITCH_SKIP_INSTALL:
+    description: "Disable install of dkml-base-compiler in 'dkml' switch"
+    required: false
+    default: 'false'
   SECONDARY_SWITCH:
     description: "Turn on secondary 'two' switch"
     required: false
@@ -397,6 +401,7 @@ runs:
         DKML_COMPILER=${DKML_COMPILER:-}
         OCAML_COMPILER=${OCAML_COMPILER:-}
         CONF_DKML_CROSS_TOOLCHAIN=${CONF_DKML_CROSS_TOOLCHAIN:-}
+        PRIMARY_SWITCH_SKIP_INSTALL=${PRIMARY_SWITCH_SKIP_INSTALL:-}
         SECONDARY_SWITCH=${SECONDARY_SWITCH:-}
         MANYLINUX=${MANYLINUX:-}
         DKML_HOME=${DKML_HOME:-}
@@ -1437,7 +1442,9 @@ runs:
             opamrun upgrade --switch "$do_install_compiler_NAME" --yes dkml-base-compiler conf-dkml-cross-toolchain ${ocaml_options:-}
             section_end "install-compiler-$do_install_compiler_NAME"
         }
-        do_install_compiler dkml
+        if ! [ "${PRIMARY_SWITCH_SKIP_INSTALL:-}" = "true" ]; then
+            do_install_compiler dkml
+        fi
         if [ "${SECONDARY_SWITCH:-}" = "true" ]; then
             do_install_compiler two
         fi
@@ -1588,7 +1595,7 @@ runs:
       shell: bash
       run: |
         set -x
-        echo '64d353-${{ inputs.FDOPEN_OPAMEXE_BOOTSTRAP }}-${{ steps.full_matrix_vars.outputs.dkml_host_abi }}-${{ steps.full_matrix_vars.outputs.opam_abi }}-${{ steps.full_matrix_vars.outputs.bootstrap_opam_version }}' > .ci/sd4/cachekey.opam.binaries
+        echo '069b66-${{ inputs.FDOPEN_OPAMEXE_BOOTSTRAP }}-${{ steps.full_matrix_vars.outputs.dkml_host_abi }}-${{ steps.full_matrix_vars.outputs.opam_abi }}-${{ steps.full_matrix_vars.outputs.bootstrap_opam_version }}' > .ci/sd4/cachekey.opam.binaries
         echo '${{ steps.full_matrix_vars.outputs.abi_pattern }}-${{ steps.full_matrix_vars.outputs.vsstudio_arch }}-${{ steps.full_matrix_vars.outputs.vsstudio_hostarch }}-${{ steps.full_matrix_vars.outputs.vsstudio_dir }}-${{ steps.full_matrix_vars.outputs.vsstudio_vcvarsver }}-${{ steps.full_matrix_vars.outputs.vsstudio_winsdkver }}-${{ steps.full_matrix_vars.outputs.vsstudio_msvspreference }}-${{ steps.full_matrix_vars.outputs.vsstudio_cmakegenerator }}' > .ci/sd4/cachekey.vsstudio
         echo '${{ inputs.OCAML_COMPILER }}-${{ inputs.DISKUV_OPAM_REPOSITORY }}-${{ inputs.DKML_COMPILER }}-${{ inputs.CONF_DKML_CROSS_TOOLCHAIN }}' > .ci/sd4/cachekey.ci.inputs
 
