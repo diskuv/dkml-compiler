@@ -421,7 +421,7 @@ genWrapper() {
 # [init_hostvars]
 #
 # Set host variables and creates files (see Outputs). Files are created here
-# so that there creation is _before_ Makefile outputs; many Makefile outputs
+# so that creation is _before_ Makefile outputs; many Makefile outputs
 # depend on the timestamp of the files created in this function ... creating
 # them early stops re-triggering of Makefile and possible
 # 'make inconsistent assumptions' errors.
