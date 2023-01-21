@@ -53,18 +53,21 @@ jobs:
         uses: ./ci/setup-dkml/gh-windows/pre
         with:
           DKML_COMPILER: ${{ env.DKML_COMPILER }}
+          PRIMARY_SWITCH_SKIP_INSTALL: "true" # we install dkml-base-compiler!
 
       - name: Setup DKML on a Darwin host
         if: startsWith(matrix.dkml_host_abi, 'darwin_')
         uses: ./ci/setup-dkml/gh-darwin/pre
         with:
           DKML_COMPILER: ${{ env.DKML_COMPILER }}
+          PRIMARY_SWITCH_SKIP_INSTALL: "true"
 
       - name: Setup DKML on a Linux host
         if: startsWith(matrix.dkml_host_abi, 'linux_')
         uses: ./ci/setup-dkml/gh-linux/pre
         with:
           DKML_COMPILER: ${{ env.DKML_COMPILER }}
+          PRIMARY_SWITCH_SKIP_INSTALL: "true"
 
       # BOILERPLATE START: setup-dkml for Opam Regular workflow
 
