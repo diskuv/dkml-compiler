@@ -1,3 +1,7 @@
+## Pending
+
+* Add `/DEBUG:FULL` to MSVC linker when `dkml-option-debuginfo` is present
+
 ## `4.14.0~v1.1.0`
 
 * OCaml 4.14.0

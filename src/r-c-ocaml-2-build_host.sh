@@ -51,6 +51,7 @@ usage() {
         printf "%s\n" "   -i OCAMLCARGS: Optional. Extra arguments passed to ocamlc like -g to save debugging"
         printf "%s\n" "   -j OCAMLOPTARGS: Optional. Extra arguments passed to ocamlopt like -g to save debugging"
         printf "%s\n" "   -k HOSTABISCRIPT: Optional. See r-c-ocaml-1-setup.sh"
+        printf "%s\n" "   -l FLEXLINKFLAGS: Options added to flexlink while building ocaml, ocamlc, etc. native Windows executables"
         printf "%s\n" "   -m CONFIGUREARGS: Optional. Extra arguments passed to OCaml's ./configure. --with-flexdll"
         printf "%s\n" "      and --host will have already been set appropriately, but you can override the --host heuristic by adding it"
         printf "%s\n" "      to -m CONFIGUREARGS"
@@ -71,8 +72,9 @@ RUNTIMEONLY=OFF
 HOSTSRC_SUBDIR=
 HOST_SUBDIR=
 HOST_ONLY=OFF
+FLEXLINKFLAGS=
 export MSVS_PREFERENCE=
-while getopts ":s:d:t:b:e:m:i:j:k:rf:p:o:h" opt; do
+while getopts ":s:d:t:b:e:m:i:j:k:l:rf:p:o:h" opt; do
     case ${opt} in
         h )
             usage
@@ -111,6 +113,7 @@ while getopts ":s:d:t:b:e:m:i:j:k:rf:p:o:h" opt; do
         k)
             HOSTABISCRIPT="$OPTARG"
             ;;
+        l ) FLEXLINKFLAGS="$OPTARG" ;;
         o ) HOST_ONLY="$OPTARG" ;;
         r)
             RUNTIMEONLY=ON
@@ -129,6 +132,9 @@ if [ -z "$_OCAMLVER" ] || [ -z "$DKMLDIR" ] || [ -z "$TARGETDIR" ] || [ -z "$DKM
     usage
     exit 1
 fi
+
+# Export to flexlink during build
+export FLEXLINKFLAGS
 
 # END Command line processing
 # ------------------

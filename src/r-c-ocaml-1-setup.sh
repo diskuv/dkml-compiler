@@ -165,6 +165,7 @@ usage() {
         printf "%s\n" "   -j OCAMLOPTARGS: Optional. Extra arguments passed to ocamlopt like -g to save debugging"
         printf "%s\n" "   -k HOSTABISCRIPT: Optional. A self-contained Posix shell script that can be sourced to set the"
         printf "%s\n" "      compiler environment variables for the host ABI. See '-a TARGETABIS' for the shell script semantics."
+        printf "%s\n" "   -l FLEXLINKFLAGS: Options added to flexlink while building ocaml, ocamlc, etc. native Windows executables"
         printf "%s\n" "   -m HOSTCONFIGUREARGS: Optional. Extra arguments passed to OCaml's ./configure for the host ABI. --with-flexdll"
         printf "%s\n" "      and --host will have already been set appropriately, but you can override the --host heuristic by adding it"
         printf "%s\n" "      to -m HOSTCONFIGUREARGS"
@@ -199,7 +200,7 @@ MSVS_PREFERENCE="$OPT_MSVS_PREFERENCE"
 RUNTIMEONLY=OFF
 TEMPLATEDIR=
 HOSTABISCRIPT=
-while getopts ":d:v:u:t:a:b:e:i:j:k:m:n:rf:p:g:o:xzh" opt; do
+while getopts ":d:v:u:t:a:b:e:i:j:k:l:m:n:rf:p:g:o:xzh" opt; do
     case ${opt} in
         h )
             usage
@@ -254,6 +255,10 @@ while getopts ":d:v:u:t:a:b:e:i:j:k:m:n:rf:p:g:o:xzh" opt; do
             SETUP_ARGS+=( -j "$OPTARG" )
             BUILD_HOST_ARGS+=( -j "$OPTARG" )
             BUILD_CROSS_ARGS+=( -j "$OPTARG" )
+        ;;
+        l )
+            BUILD_HOST_ARGS+=( -l "$OPTARG" )
+            BUILD_CROSS_ARGS+=( -l "$OPTARG" )
         ;;
         k )
             HOSTABISCRIPT=$OPTARG

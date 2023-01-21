@@ -66,6 +66,7 @@ usage() {
     printf "%s\n" "   -g CROSS_SUBDIR: Use CROSS_SUBDIR subdirectory of -t DIR to place target ABIs"
     printf "%s\n" "   -i OCAMLCARGS: Optional. Extra arguments passed to ocamlc like -g to save debugging"
     printf "%s\n" "   -j OCAMLOPTARGS: Optional. Extra arguments passed to ocamlopt like -g to save debugging"
+    printf "%s\n" "   -l FLEXLINKFLAGS: Options added to flexlink while building ocaml, ocamlc, etc. native Windows executables"
     printf "%s\n" "   -n CONFIGUREARGS: Optional. Extra arguments passed to OCaml's ./configure. --with-flexdll"
     printf "%s\n" "      and --host will have already been set appropriately, but you can override the --host heuristic by adding it"
     printf "%s\n" "      to -n CONFIGUREARGS"
@@ -82,7 +83,8 @@ OCAMLCARGS=
 OCAMLOPTARGS=
 HOSTSRC_SUBDIR=
 CROSS_SUBDIR=
-while getopts ":s:d:t:a:n:e:f:g:i:j:h" opt; do
+FLEXLINKFLAGS=
+while getopts ":s:d:t:a:n:e:f:g:i:j:l:h" opt; do
   case ${opt} in
   h)
     usage
@@ -120,6 +122,7 @@ while getopts ":s:d:t:a:n:e:f:g:i:j:h" opt; do
   j)
     OCAMLOPTARGS="$OPTARG"
     ;;
+  l ) FLEXLINKFLAGS="$OPTARG" ;;
   \?)
     printf "%s\n" "This is not an option: -$OPTARG" >&2
     usage
@@ -134,6 +137,9 @@ if [ -z "$_OCAMLVER" ] || [ -z "$DKMLDIR" ] || [ -z "$TARGETDIR" ] || [ -z "$DKM
   usage
   exit 1
 fi
+
+# Export to flexlink during build
+export FLEXLINKFLAGS
 
 # END Command line processing
 # ------------------

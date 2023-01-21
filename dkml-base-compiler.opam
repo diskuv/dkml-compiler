@@ -93,6 +93,11 @@ install: [
       "-g" "%{_:share}%/mlcross"
       "-v" "dl/ocaml"
       "-z"
+      #   Windows flexlink flags that affect the built ocaml.exe, ocamlc.opt.exe, etc.
+      #   It is nice with the toplevel ocaml.exe to be able to debug it when the toplevel
+      #   loads in other (stublib) DLLs, for example.
+      "-l"                  { os = "win32" & dkml-option-debuginfo:installed }
+      " -link /DEBUG:FULL"  { os = "win32" & dkml-option-debuginfo:installed }
       #   Host architectures
       "-ewindows_x86"     { os = "win32" & (arch = "x86_32" |  ocaml-option-32bit:installed) }
       "-ewindows_x86_64"  { os = "win32" & (arch = "x86_64" & !ocaml-option-32bit:installed) }      
@@ -126,20 +131,16 @@ install: [
 
   # Run r-c-ocaml-2-build_host-noargs.sh
   [
-    "sh" "-eufc"
-    """
-    cd '%{prefix}%'
-    share/dkml/repro/100co/vendor/dkml-compiler/src/r-c-ocaml-2-build_host-noargs.sh
-    """
+    "sh" "scripts/build.sh"
+    "-p" "%{prefix}%"
+    "-s" "r-c-ocaml-2-build_host-noargs.sh"
   ]
 
   # Run r-c-ocaml-3-build_cross-noargs.sh (typically a no-op unless we are cross-compiling)
   [
-    "sh" "-eufc"
-    """
-    cd '%{prefix}%'
-    share/dkml/repro/100co/vendor/dkml-compiler/src/r-c-ocaml-3-build_cross-noargs.sh
-    """
+    "sh" "scripts/build.sh"
+    "-p" "%{prefix}%"
+    "-s" "r-c-ocaml-3-build_cross-noargs.sh"
   ]
 ]
 dev-repo: "git+https://github.com/diskuv/dkml-compiler.git"
