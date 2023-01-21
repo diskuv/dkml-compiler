@@ -1,4 +1,4 @@
-name: Test compiler
+name: Test compiler with setup-ocaml
 
 on:
   pull_request:

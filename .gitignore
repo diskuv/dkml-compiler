@@ -19,6 +19,7 @@ _build/
 dist/
 _release/
 msys64/
+stage/
 
 # when developing patches with: opam install ./dkml-base-compiler.opam --inplace-build
 /dkmldir/
