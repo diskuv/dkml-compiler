@@ -11,6 +11,12 @@ shift
 OPAM_PACKAGE=$1
 shift
 
+if [ -x /usr/bin/cygpath ]; then
+    opamroot_unix=$(/usr/bin/cygpath -au "${opam_root}")
+else
+    opamroot_unix="${opam_root}"
+fi
+
 # shellcheck disable=SC2154
 echo "
 =============
@@ -29,6 +35,11 @@ dkml_host_abi=$dkml_host_abi
 abi_pattern=$abi_pattern
 opam_root=$opam_root
 exe_ext=${exe_ext:-}
+.
+-------
+Derived
+-------
+opamroot_unix=${opamroot_unix}
 .
 "
 
@@ -96,18 +107,12 @@ else
 fi
 install -d "${DIST}" "stage"
 #   Copy installation into stage/
-case "${dkml_host_abi}" in
-windows_*)
-    if command -v pacman; then
-        pacman -Sy --noconfirm --needed rsync
-    fi ;;
-esac
 for d in bin lib share/doc share/ocaml-config; do
     echo "Copying $d ..."
     ls -l "${opam_root}/dkml/$d/"
     rm -rf "stage/${d:?}/"
     install -d "stage/$d/"
-    rsync -a "${opam_root}/dkml/$d" "stage/"
+    rsync -a "${opamroot_unix}/dkml/$d/" "stage/$d"
 done
 #   For Windows you must ask your users to first install the vc_redist executable.
 #   Confer: https://github.com/diskuv/dkml-workflows#distributing-your-windows-executables
