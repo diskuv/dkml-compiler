@@ -140,6 +140,13 @@ windows_*)
 esac
 set -x
 cd "stage"
+  # .tar.gz on all platforms
   tar cfz "../${DIST}/dkml-compiler.tar.gz" .
-  zip -rq "../${DIST}/dkml-compiler.zip" .
+  # zip only on Windows (no need to waste GitHub/GitLab space)
+  case "${dkml_host_abi}" in
+  windows_*)
+    zip -rq "../${DIST}/dkml-compiler.zip" .
+  esac
+  # ocamlc.opt on all platforms, used to bootstrap compiling OCaml faster
+  install "bin/ocamlc.opt${exe_ext:-}" "../${DIST}/"
 cd ..
