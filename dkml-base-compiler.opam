@@ -65,19 +65,26 @@ build: [
   #   <dkmldir>/vendor/dkml-compiler/
   ["install" "-d" "dkmldir/vendor/dkml-compiler/src" "dkmldir/vendor/dkml-compiler/env"]
   #     only the standard compiler environment is needed for the base compiler. However options play a part.
-  ["sh" "-eufc"
-    # https://learn.microsoft.com/en-us/cpp/build/reference/z7-zi-zi-debug-information-format?view=msvc-170
-    "sed s/^INJECT_CFLAGS=$/INJECT_CFLAGS='-Z7'/ env/standard-compiler-env-to-ocaml-configure-env.sh > dkmldir/vendor/dkml-compiler/env/standard-compiler-env-to-ocaml-configure-env.sh"
-  ] {dkml-option-debuginfo:installed & os = "win32"}
-  ["sh" "-eufc"
-    # -Os optimizes for size. Useful for CPUs with small cache sizes. Confer https://wiki.gentoo.org/wiki/GCC_optimization
-    "sed s/^INJECT_CFLAGS=$/INJECT_CFLAGS='-Os'/ env/standard-compiler-env-to-ocaml-configure-env.sh > dkmldir/vendor/dkml-compiler/env/standard-compiler-env-to-ocaml-configure-env.sh"
-  ] {dkml-option-minsize:installed & os = "linux"}
   ["install"
     # default (unpatched) options
     "env/standard-compiler-env-to-ocaml-configure-env.sh"
     "dkmldir/vendor/dkml-compiler/env/"
-  ] { !dkml-option-debuginfo:installed & !dkml-option-minsize:installed }
+  ]
+  ["sh" "-eufc"
+    # https://learn.microsoft.com/en-us/cpp/build/reference/z7-zi-zi-debug-information-format?view=msvc-170
+    # https://learn.microsoft.com/en-us/cpp/assembler/masm/ml-and-ml64-command-line-reference?view=msvc-170
+    """
+    sed 's/^INJECT_CFLAGS=$/INJECT_CFLAGS=-Z7/; s/^INJECT_ASFLAGS=$/INJECT_ASFLAGS="-Zd -Zi"/' \
+      env/standard-compiler-env-to-ocaml-configure-env.sh > \
+      dkmldir/vendor/dkml-compiler/env/standard-compiler-env-to-ocaml-configure-env.sh
+    """
+  ] {dkml-option-debuginfo:installed & os = "win32"}
+  ["sh" "-eufc"
+    # -Os optimizes for size. Useful for CPUs with small cache sizes. Confer https://wiki.gentoo.org/wiki/GCC_optimization
+    "sed 's/^INJECT_CFLAGS=$/INJECT_CFLAGS=-Os/ \
+      env/standard-compiler-env-to-ocaml-configure-env.sh > \
+      dkmldir/vendor/dkml-compiler/env/standard-compiler-env-to-ocaml-configure-env.sh"
+  ] {dkml-option-minsize:installed & os = "linux"}
   #     tar through pipe is essentially an rsync (without requiring rsync)
   ["sh" "-eufc" "tar cCf src/ - . | tar xCf dkmldir/vendor/dkml-compiler/src/ -"]
 

@@ -45,12 +45,20 @@ disambiguate_filesystem_paths
 # Pre-adjustments
 
 #   This section can be replaced by outside actors like dkml-base-compiler.opam to inject
-#   custom options. Just replace: <start of line>INJECT_CFLAGS=<end of line>
+#   custom options. Just replace any or all of the following:
+#     <start of line>INJECT_CFLAGS=<end of line>
+#     <start of line>INJECT_ASFLAGS=<end of line>
 INJECT_CFLAGS=
 if [ -n "${CFLAGS:-}" ]; then
   CFLAGS="$INJECT_CFLAGS $CFLAGS"
 else
   CFLAGS="$INJECT_CFLAGS"
+fi
+INJECT_ASFLAGS=
+if [ -n "${ASFLAGS:-}" ]; then
+  ASFLAGS="$INJECT_ASFLAGS $ASFLAGS"
+else
+  ASFLAGS="$INJECT_ASFLAGS"
 fi
 
 #   CMake with Xcode will use a low-level compiler like
@@ -180,7 +188,7 @@ if cmake_flag_on "${DKML_COMPILE_CM_MSVC:-}"; then
     # Use the MASM compiler (ml/ml64) which is required for OCaml with MSVC.
     # See https://github.com/ocaml/ocaml/blob/4c52549642873f9f738dd89ab39cec614fb130b8/configure#L14585-L14588 for options
     if [ "${DKML_COMPILE_CM_CONFIG:-}" = "Debug" ]; then
-      _MLARG_EXTRA=" -Zi"
+      _MLARG_EXTRA=" -Zi -Zd"
     else
       _MLARG_EXTRA=
     fi

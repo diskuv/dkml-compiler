@@ -1,6 +1,7 @@
 ## Pending
 
-* Add `/DEBUG:FULL` to MSVC linker when `dkml-option-debuginfo` is present
+* Add `/DEBUG:FULL` to MSVC linker and `-Zi -Zd` to MSVC assembler, plus
+  existing `-Z7` in MSVC compiler, when `dkml-option-debuginfo` is present
 
 ## `4.14.0~v1.1.0`
 
