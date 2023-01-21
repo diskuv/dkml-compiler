@@ -11,8 +11,8 @@ on:
       - v*
       - feature-*
     tags:
-      - '[0-9]+.[0-9]+-prep.*'
-      - '[0-9]+.[0-9]+.[0-9]+-prep.*'
+      - '[0-9]+.[0-9]+-prep*'
+      - '[0-9]+.[0-9]+.[0-9]+-prep*'
   # ... or trigger manually from GitHub web interface
   workflow_dispatch:
 
