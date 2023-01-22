@@ -54,6 +54,10 @@ if [ -n "${CFLAGS:-}" ]; then
 else
   CFLAGS="$INJECT_CFLAGS"
 fi
+DEFAULT_AS=
+if [ -z "${AS:-}" ]; then
+  AS="$DEFAULT_AS"
+fi
 INJECT_ASFLAGS=
 if [ -n "${ASFLAGS:-}" ]; then
   ASFLAGS="$INJECT_ASFLAGS $ASFLAGS"
