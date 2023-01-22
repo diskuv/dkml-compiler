@@ -28,7 +28,6 @@ opam exec -- dune build '@gen-dkml' --auto-promote
 1. Make a `-prep` tag, and then wait for the CI to complete successfully
 2. Update `compiler.version.txt`
 3. Run: `dune build '@gen-opam' --auto-promote`
-4. Run: `dune build *.opam`
 
 ## Local Development
 
