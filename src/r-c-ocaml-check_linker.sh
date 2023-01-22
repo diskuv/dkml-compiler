@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/bin/bash
 # This is a clone of https://github.com/ocaml/opam/blob/012103bc52bfd4543f3d6f59edde91ac70acebc8/shell/check_linker,
 # with some shellcheck linting fixes applied.
 # Licensed under https://github.com/ocaml/opam/blob/012103bc52bfd4543f3d6f59edde91ac70acebc8/LICENSE - LGPL 2.1 with special linking exceptions

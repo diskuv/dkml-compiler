@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/bin/bash
 # ----------------------------
 # Copyright 2021 Diskuv, Inc.
 #
