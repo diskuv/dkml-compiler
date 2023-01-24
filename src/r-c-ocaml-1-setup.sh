@@ -756,8 +756,8 @@ apply_patches "$OCAMLSRC_UNIX"          ocaml    "$_OCAMLVER"    host
 apply_patches "$OCAMLSRC_UNIX/flexdll"  flexdll  "$_FLEXDLLVER"  host
 
 if [ -z "$TARGETABIS" ]; then
-    # Fast. Only support host builds.
-    BUILD_HOST_ARGS+=( -o ON )
+    # Quick. Only support host builds.
+    BUILD_HOST_ARGS+=( -q ON )
 else
     if [ -n "$TEMPLATEDIR" ]; then
         install -d "$TARGETDIR_UNIX/$CROSS_SUBDIR"

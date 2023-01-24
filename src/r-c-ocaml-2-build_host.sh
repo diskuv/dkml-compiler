@@ -56,7 +56,7 @@ usage() {
         printf "%s\n" "   -m CONFIGUREARGS: Optional. Extra arguments passed to OCaml's ./configure. --with-flexdll"
         printf "%s\n" "      and --host will have already been set appropriately, but you can override the --host heuristic by adding it"
         printf "%s\n" "      to -m CONFIGUREARGS"
-        printf "%s\n" "   -o [ON|OFF]: Optional. Defaults to OFF. Only support host builds, not cross-compiling. Much faster"
+        printf "%s\n" "   -q [ON|OFF]: Optional. Defaults to OFF. Only support host builds, not cross-compiling. Much quicker"
         printf "%s\n" "   -r Only build ocamlrun, Stdlib and the other libraries. Cannot be used with -a TARGETABIS"
     } >&2
 }
@@ -76,7 +76,7 @@ HOST_ONLY=OFF
 OCAMLC_OPT_EXE=
 FLEXLINKFLAGS=
 export MSVS_PREFERENCE=
-while getopts ":s:d:t:b:c:e:m:i:j:k:l:rf:p:o:h" opt; do
+while getopts ":s:d:t:b:c:e:m:i:j:k:l:rf:p:q:h" opt; do
     case ${opt} in
         h )
             usage
@@ -117,7 +117,7 @@ while getopts ":s:d:t:b:c:e:m:i:j:k:l:rf:p:o:h" opt; do
             HOSTABISCRIPT="$OPTARG"
             ;;
         l ) FLEXLINKFLAGS="$OPTARG" ;;
-        o ) HOST_ONLY="$OPTARG" ;;
+        q ) HOST_ONLY="$OPTARG" ;;
         r)
             RUNTIMEONLY=ON
             ;;
