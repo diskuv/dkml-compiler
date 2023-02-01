@@ -384,16 +384,14 @@ if cmake_flag_on "${DKML_COMPILE_CM_MSVC:-}"; then
         CFLAGS="$CFLAGS /FS"
     fi
 
-    # To avoid the following when /O2 is added by OCaml ./configure to the given "$DKML_COMPILE_CM_CMAKE_C_FLAGS $_CMAKE_C_FLAGS_FOR_CONFIG" = "/DWIN32 /D_WINDOWS /Zi /Ob0 /Od /RTC1" :
-    #   (cd _build/default/src && C:\DiskuvOCaml\BuildTools\VC\Tools\MSVC\14.26.28801\bin\HostX64\x86\cl.exe -nologo -O2 -Gy- -MD -DWIN32 -D_WINDOWS -Zi -Ob0 -Od -RTC1 -FS -D_CRT_SECURE_NO_DEPRECATE -nologo -O2 -Gy- -MD -DWIN32 -D_WINDOWS -Zi -Ob0 -Od -RTC1 -FS -D_LARGEFILE64_SOURCE -I Z:/build/windows_x86/Debug/dksdk/host-tools/_opam/lib/ocaml -I Z:\build\windows_x86\Debug\dksdk\system\_opam\lib\sexplib0 -I ../compiler-stdlib/src -I ../hash_types/src -I ../shadow-stdlib/src /Foexn_stubs.obj -c exn_stubs.c)
-    #   cl : Command line error D8016 : '/RTC1' and '/O2' command-line options are incompatible
-    # we remove any /RTC1 from the flags
-    CFLAGS=$(printf "%s" " ${CFLAGS:-} " | PATH=/usr/bin:/bin sed 's# /RTC1 # #g')
-
     # Always use dash (-) form of options rather than slash (/) options. Makes MSYS2 not try
     # to think the option is a filepath and try to translate it.
     CFLAGS=$(printf "%s" "${CFLAGS:-}" | PATH=/usr/bin:/bin sed 's# /# -#g')
     CC=$(printf "%s" "${CC:-}" | PATH=/usr/bin:/bin sed 's# /# -#g')
     ASPP=$(printf "%s" "${ASPP:-}" | PATH=/usr/bin:/bin sed 's# /# -#g')
     AS=$(printf "%s" "${AS:-}" | PATH=/usr/bin:/bin sed 's# /# -#g')
+
+    # Tell ./configure to not add /O2 and other flags that should be chosen by CFLAGS
+    CFLAGS_MSVC_SET=1
+    export CFLAGS_MSVC_SET
 fi
