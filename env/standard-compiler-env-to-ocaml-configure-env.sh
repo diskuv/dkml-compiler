@@ -25,10 +25,12 @@
 # a) find the compiler selected/validated in the Diskuv OCaml installation (Windows) or on first-use (Unix)
 # b) find the specific architecture that has been given to us in DKML_TARGET_ABI
 #
-# For Windows, this script is called _before_ the Microsoft compiler settings (INCLUDE, LIB, etc.)
-# are applied. So this script won't have much effect on MSVC itself.
+# This script takes as input `autodetect_compiler_VARNAME` variables, like
+# autodetect_compiler_CFLAGS.
 #
-# On exit the variables needed for github.com/ocaml/ocaml/configure will be set and exported.
+# On exit those same variables (possibly changed by this script) are used
+# for github.com/ocaml/ocaml/configure. The caller of this script must
+# set and export autodetect_compiler_CFLAGS as CFLAGS, etc.
 set -euf
 
 # shellcheck disable=SC1091

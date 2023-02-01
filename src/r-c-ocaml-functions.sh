@@ -267,6 +267,42 @@ ocaml_configure_options_for_abi() {
   esac
 }
 
+make_preconfigured_env_script() {
+  make_preconfigured_env_script_SRC=$1
+  shift
+  make_preconfigured_env_script_DEST=$1
+  shift
+  make_preconfigured_env_script_PRECONFIGURE="$1"
+  shift
+  {
+    printf "#!%s\n" "$DKML_POSIX_SHELL"
+    if [ "${DKML_BUILD_TRACE:-OFF}" = ON ] && [ "${DKML_BUILD_TRACE_LEVEL:-0}" -ge 2 ] ; then
+      printf "set -eufx\n"
+    else
+      printf "set -euf\n"
+    fi
+    if [ -n "$make_preconfigured_env_script_PRECONFIGURE" ]; then
+      printf "DKMLDIR='%s'\n" "$DKMLDIR"
+      printf "DKML_TARGET_ABI='%s'\n" "$ocaml_configure_ABI"
+      printf ". '%s'\n" "$make_preconfigured_env_script_PRECONFIGURE"
+    fi
+    $DKMLSYS_CAT "$make_preconfigured_env_script_SRC"
+  } > "$make_preconfigured_env_script_DEST".tmp
+  $DKMLSYS_CHMOD +x "$make_preconfigured_env_script_DEST".tmp
+  $DKMLSYS_MV "$make_preconfigured_env_script_DEST".tmp "$make_preconfigured_env_script_DEST"
+  log_script "$make_preconfigured_env_script_DEST"
+}
+
+# When we run OCaml's ./configure, the DKML compiler must be available.
+# Expects a $WORK/with-compiler.sh script is present.
+configure_environment_for_ocaml() {
+  if ! log_shell "$WORK"/with-compiler.sh "$@"; then
+    printf 'FATAL: ./configure failed\n' >&2
+    dump_logs_on_error
+    exit 107
+  fi
+}
+
 ocaml_configure() {
   ocaml_configure_PREFIX="$1"
   shift
@@ -277,30 +313,6 @@ ocaml_configure() {
   ocaml_configure_EXTRA_OPTS="$1"
   shift
 
-  make_preconfigured_env_script() {
-    make_preconfigured_env_script_SRC=$1
-    shift
-    make_preconfigured_env_script_DEST=$1
-    shift
-    {
-      printf "#!%s\n" "$DKML_POSIX_SHELL"
-      if [ "${DKML_BUILD_TRACE:-OFF}" = ON ] && [ "${DKML_BUILD_TRACE_LEVEL:-0}" -ge 2 ] ; then
-        printf "set -eufx\n"
-      else
-        printf "set -euf\n"
-      fi
-      if [ -n "$ocaml_configure_PRECONFIGURE" ]; then
-        printf "DKMLDIR='%s'\n" "$DKMLDIR"
-        printf "DKML_TARGET_ABI='%s'\n" "$ocaml_configure_ABI"
-        printf ". '%s'\n" "$ocaml_configure_PRECONFIGURE"
-      fi
-      $DKMLSYS_CAT "$make_preconfigured_env_script_SRC"
-    } > "$make_preconfigured_env_script_DEST".tmp
-    $DKMLSYS_CHMOD +x "$make_preconfigured_env_script_DEST".tmp
-    $DKMLSYS_MV "$make_preconfigured_env_script_DEST".tmp "$make_preconfigured_env_script_DEST"
-    log_script "$make_preconfigured_env_script_DEST"
-  }
-
   # Configure options
   # -----------------
 
@@ -308,31 +320,22 @@ ocaml_configure() {
   ocaml_configure_EXTRA_ABI_OPTS=$(ocaml_configure_options_for_abi "$ocaml_configure_ABI")
   ocaml_configure_EXTRA_OPTS=$(printf "%s %s" "$ocaml_configure_EXTRA_OPTS" "$ocaml_configure_EXTRA_ABI_OPTS")
 
+  # Detect the compiler matching the host ABI.
+  # * Exports OCAML_HOST_TRIPLET that corresponds to ocaml_configure_ABI as needed for Windows
+  # * Exports DKML_TARGET_SYSROOT as needed
+  # * Creates the specified script
+  DKML_TARGET_ABI="$ocaml_configure_ABI" autodetect_compiler \
+    --post-transform "$ocaml_configure_PRECONFIGURE" \
+    "$WORK"/with-compiler.sh
+  log_script "$WORK"/with-compiler.sh
+
   # ./configure and define make functions
   # -------------------------------------
 
   if is_abi_windows "$ocaml_configure_ABI"; then
-    # Detect the compiler matching the host ABI
-    # Sets OCAML_HOST_TRIPLET that corresponds to ocaml_configure_ABI, and creates the specified script
-    DKML_TARGET_ABI="$ocaml_configure_ABI" autodetect_compiler "$WORK"/env-with-compiler.sh
-
-    # When we run OCaml's ./configure, the DKML compiler must be available
-    make_preconfigured_env_script "$WORK"/env-with-compiler.sh "$WORK"/preconfigured-env-with-compiler.sh
-    configure_environment_for_ocaml() {
-      if ! log_shell "$WORK"/preconfigured-env-with-compiler.sh "$@"; then
-        printf 'FATAL: ./configure failed\n' >&2
-        dump_logs_on_error
-        exit 107
-      fi
-    }
-
     # do ./configure and define make using host triplet defined in compiler autodetection
     ocaml_configure_windows "$ocaml_configure_ABI" "$OCAML_HOST_TRIPLET" "$ocaml_configure_PREFIX" "$ocaml_configure_EXTRA_OPTS"
   else
-    # Detect compiler; exports DKML_TARGET_SYSROOT as needed
-    DKML_TARGET_ABI="$ocaml_configure_ABI" autodetect_compiler "$WORK"/with-compiler.sh
-    log_script "$WORK"/with-compiler.sh
-
     # sysroot
     if [ -n "${DKML_TARGET_SYSROOT:-}" ]; then
       if [ -x /usr/bin/cygpath ]; then
@@ -344,31 +347,15 @@ ocaml_configure() {
       ocaml_configure_SYSROOT=
     fi
 
-    # When we run OCaml's ./configure, the with-compiler.sh must be available
-    printf "exec %s %s\n" "$DKMLSYS_ENV" '"$@"' > "$WORK"/basic-env.sh
-    log_script "$WORK"/basic-env.sh
-    make_preconfigured_env_script "$WORK"/basic-env.sh "$WORK"/preconfigured-env.sh
-    run_script_and_then_configure_environment_for_ocaml() {
-      run_script_and_then_configure_environment_for_ocaml_SCRIPT=$1
-      shift
-      if ! log_shell "$run_script_and_then_configure_environment_for_ocaml_SCRIPT" "$WORK"/preconfigured-env.sh "$@"; then
-        printf 'FATAL: ./configure failed\n' >&2
-        dump_logs_on_error
-        exit 107
-      fi
-    }
-
     # do ./configure
     if [ -n "$ocaml_configure_SYSROOT" ]; then
       # shellcheck disable=SC2086
-      run_script_and_then_configure_environment_for_ocaml \
-        "$WORK"/with-compiler.sh \
+      configure_environment_for_ocaml \
         "$DKMLSYS_ENV" $ocaml_configure_no_ocaml_leak_environment \
         ./configure --prefix "$ocaml_configure_PREFIX" --with-sysroot="$ocaml_configure_SYSROOT" $ocaml_configure_EXTRA_OPTS
     else
       # shellcheck disable=SC2086
-      run_script_and_then_configure_environment_for_ocaml \
-        "$WORK"/with-compiler.sh \
+      configure_environment_for_ocaml \
         "$DKMLSYS_ENV" $ocaml_configure_no_ocaml_leak_environment \
         ./configure --prefix "$ocaml_configure_PREFIX" $ocaml_configure_EXTRA_OPTS
     fi
