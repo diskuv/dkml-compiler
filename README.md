@@ -73,6 +73,7 @@ The major version patches are applied first, and then the major+minor version
 patches are applied.
 
 The patches are all available in `src/p/`.
+
 * The OCaml source patched for the host ABI uses `ocaml-common-VER-*.patch` in lexographical order
   and `ocaml-host-VER-*.patch` in lexographical order.
 * The OCaml source patched for the target ABI uses `ocaml-common-VER-*.patch` in lexographical order

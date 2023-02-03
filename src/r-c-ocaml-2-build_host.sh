@@ -441,8 +441,27 @@ else
     build_for_host_only
 fi
 
+# Flexlink constants
+FLEXLINK_CHAIN=
+FLEXLINK_EXT=
+case "$DKMLHOSTABI" in
+    windows_x86_64) FLEXLINK_CHAIN=msvc64; FLEXLINK_EXT=.obj ;;
+    windows_x86)    FLEXLINK_CHAIN=msvc  ; FLEXLINK_EXT=.obj ;;
+esac
+
+# Windows errata
+# 1. <OCAMLHOME>/bin/flexlink.exe expects flexdll_initer_msvc[64].obj and
+#    flexdll_msvc[64].obj in the same directory as flexlink.exe, or else
+#    FLEXDIR environment variable needs to be set.
+#    It is in the build directory boot/.
+#    Confer: https://github.com/ocaml/flexdll/blob/f5ccd9730d0766d0eb002cbe35a183f627044291/reloc.ml#L1407-L1428
+if [ "${OCAML_BYTECODE_ONLY:-OFF}" = OFF ] && [ -n "$FLEXLINK_CHAIN" ]; then
+    log_trace install "boot/flexdll_initer_${FLEXLINK_CHAIN}${FLEXLINK_EXT}"   "$OCAMLHOST_UNIX"/bin/
+    log_trace install "boot/flexdll_${FLEXLINK_CHAIN}${FLEXLINK_EXT}"          "$OCAMLHOST_UNIX"/bin/
+fi
+
 # Test executables that they were properly linked
-if [ "${OCAML_BYTECODE_ONLY:-OFF}" = OFF ] && [ "$OCAML_CONFIGURE_NEEDS_MAKE_FLEXDLL" = ON ]; then
+if [ "${OCAML_BYTECODE_ONLY:-OFF}" = OFF ] && [ -n "$FLEXLINK_CHAIN" ]; then
     log_trace "$OCAMLHOST_UNIX"/bin/flexlink.exe --help >&2
 fi
 log_trace "$OCAMLHOST_UNIX"/bin/ocamlc -config >&2
