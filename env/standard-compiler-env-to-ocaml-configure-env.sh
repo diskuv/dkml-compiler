@@ -419,8 +419,15 @@ if cmake_flag_on "${DKML_COMPILE_CM_MSVC:-}"; then
     ASPP=$(printf "%s" "${ASPP:-}" | PATH=/usr/bin:/bin sed 's# /# -#g')
     autodetect_compiler_AS=$(printf "%s" "${autodetect_compiler_AS:-}" | PATH=/usr/bin:/bin sed 's# /# -#g')
 
-    # Tell ./configure to not add /O2 and other flags that should be chosen by CFLAGS
+    # Tell ./configure to not add /O2 and /MD (and future other flags) that should be chosen by CFLAGS
     CFLAGS_MSVC_SET=1
+
+    # Add -MD or -MDd
+    if [ "${DKML_COMPILE_CM_CONFIG:-}" = "Debug" ]; then
+      autodetect_compiler_CFLAGS="-MDd${autodetect_compiler_CFLAGS:+ $autodetect_compiler_CFLAGS}"
+    else
+      autodetect_compiler_CFLAGS="-MD${autodetect_compiler_CFLAGS:+ $autodetect_compiler_CFLAGS}"
+    fi
 fi
 
 # Bind non-standard variables into launcher scripts
