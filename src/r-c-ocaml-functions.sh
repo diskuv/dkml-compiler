@@ -200,7 +200,7 @@ ocaml_configure_windows() {
     LIB="${MSVS_LIB}${LIB:-}" \
     INCLUDE="${MSVS_INC}${INCLUDE:-}" \
     MSYS2_ARG_CONV_EXCL='*' \
-    DEP_CC="false" LD="link" \
+    DEP_CC="false" \
     TMP="$TMPDIR" \
     $ocaml_configure_no_ocaml_leak_environment \
     ./configure --prefix "$ocaml_configure_windows_WINPREFIX" \

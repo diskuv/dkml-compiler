@@ -22,13 +22,14 @@
 # following non-export variables:
 #
 # * DKML_TARGET_ABI. Always available
-# * autodetect_compiler_CFLAGS
 # * autodetect_compiler_CC
+# * autodetect_compiler_CFLAGS
 # * autodetect_compiler_CXX
 # * autodetect_compiler_CFLAGS
 # * autodetect_compiler_CXXFLAGS
 # * autodetect_compiler_AS
 # * autodetect_compiler_ASFLAGS
+# * autodetect_compiler_LD
 # * autodetect_compiler_LDFLAGS
 # * autodetect_compiler_LDLIBS
 # * autodetect_compiler_MSVS_NAME
