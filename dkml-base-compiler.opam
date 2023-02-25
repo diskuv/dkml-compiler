@@ -178,6 +178,13 @@ install: [
   ]
 ]
 dev-repo: "git+https://github.com/diskuv/dkml-compiler.git"
+pin-depends: [
+  [
+    "dkml-runtime-common-native.1.2.1~prerel1"
+    # 1.2.1-prerel1+
+    "git+https://github.com/diskuv/dkml-runtime-common.git#7d05b1598aaad1130c49ab1c01a8109e6309cc28"
+  ]
+]
 extra-source "dl/ocaml.tar.gz" {
   src: "https://github.com/ocaml/ocaml/archive/4.14.0.tar.gz"
   checksum: "sha256=39f44260382f28d1054c5f9d8bf4753cb7ad64027da792f7938344544da155e8"
