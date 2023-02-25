@@ -225,6 +225,7 @@ elif [ -n "${autodetect_compiler_AS:-}" ]; then
   autodetect_compiler_AS="${autodetect_compiler_AS:-}"
   if [ -n "${autodetect_compiler_AS:-}" ] && [ -n "${autodetect_compiler_ASFLAGS:-}" ]; then
     autodetect_compiler_AS="$autodetect_compiler_AS $autodetect_compiler_ASFLAGS"
+    autodetect_compiler_ASFLAGS=
   fi
   if [ -n "${DKML_COMPILE_CM_CMAKE_ASM_COMPILER_TARGET:-}" ]; then
     autodetect_compiler_AS="$autodetect_compiler_AS ${DKML_COMPILE_CM_CMAKE_ASM_COMPILE_OPTIONS_TARGET:-}${DKML_COMPILE_CM_CMAKE_ASM_COMPILER_TARGET:-}"
