@@ -74,21 +74,21 @@ build: [
     # https://learn.microsoft.com/en-us/cpp/build/reference/z7-zi-zi-debug-information-format?view=msvc-170
     # https://learn.microsoft.com/en-us/cpp/assembler/masm/ml-and-ml64-command-line-reference?view=msvc-170
     """
-    sed 's/^INJECT_CFLAGS=$/INJECT_CFLAGS=-Z7/; s/^DEFAULT_AS=$/DEFAULT_AS=ml/; s/^INJECT_ASFLAGS=$/INJECT_ASFLAGS="-nologo -Zd -Zi -Cp -c -Fo"/' \
+    sed 's/^INJECT_CFLAGS=$/INJECT_CFLAGS=-Z7/; s/^DEFAULT_AS=$/DEFAULT_AS=ml/; s/^INJECT_ASFLAGS=$/INJECT_ASFLAGS="-Zd -Zi"/' \
       env/standard-compiler-env-to-ocaml-configure-env.sh > \
       dkmldir/vendor/dkml-compiler/env/standard-compiler-env-to-ocaml-configure-env.sh
     """
   ] {dkml-option-debuginfo:installed & os = "win32" & arch = "x86_32"}
   ["sh" "-eufc"
     """
-    sed 's/^INJECT_CFLAGS=$/INJECT_CFLAGS=-Z7/; s/^DEFAULT_AS=$/DEFAULT_AS=ml64/; s/^INJECT_ASFLAGS=$/INJECT_ASFLAGS="-nologo -Zd -Zi -Cp -c -Fo"/' \
+    sed 's/^INJECT_CFLAGS=$/INJECT_CFLAGS=-Z7/; s/^DEFAULT_AS=$/DEFAULT_AS=ml64/; s/^INJECT_ASFLAGS=$/INJECT_ASFLAGS="-Zd -Zi"/' \
       env/standard-compiler-env-to-ocaml-configure-env.sh > \
       dkmldir/vendor/dkml-compiler/env/standard-compiler-env-to-ocaml-configure-env.sh
     """
   ] {dkml-option-debuginfo:installed & os = "win32" & arch = "x86_64"}
   ["sh" "-eufc"
     """
-    sed 's/^INJECT_CFLAGS=$/INJECT_CFLAGS=-Z7/; s/^DEFAULT_AS=$/DEFAULT_AS=armasm64/; s/^INJECT_ASFLAGS=$/INJECT_ASFLAGS="-nologo -Zd -Zi -Cp -c -Fo"/' \
+    sed 's/^INJECT_CFLAGS=$/INJECT_CFLAGS=-Z7/; s/^DEFAULT_AS=$/DEFAULT_AS=armasm64/; s/^INJECT_ASFLAGS=$/INJECT_ASFLAGS="-Zd -Zi"/' \
       env/standard-compiler-env-to-ocaml-configure-env.sh > \
       dkmldir/vendor/dkml-compiler/env/standard-compiler-env-to-ocaml-configure-env.sh
     """
@@ -181,8 +181,8 @@ dev-repo: "git+https://github.com/diskuv/dkml-compiler.git"
 pin-depends: [
   [
     "dkml-runtime-common-native.1.2.1~prerel1"
-    # 1.2.1-prerel1+
-    "git+https://github.com/diskuv/dkml-runtime-common.git#7d05b1598aaad1130c49ab1c01a8109e6309cc28"
+    # 1.2.1-prerel1 + some commits
+    "git+https://github.com/diskuv/dkml-runtime-common.git#24b08b08e03b3d1ba5177bf710962068b49a240d"
   ]
 ]
 extra-source "dl/ocaml.tar.gz" {

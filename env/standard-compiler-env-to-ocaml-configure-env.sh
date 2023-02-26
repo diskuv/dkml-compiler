@@ -73,21 +73,13 @@ disambiguate_filesystem_paths
 #     <start of line>DEFAULT_AS=<end of line>
 #     <start of line>INJECT_ASFLAGS=<end of line>
 INJECT_CFLAGS=
-if [ -n "${autodetect_compiler_CFLAGS:-}" ]; then
-  autodetect_compiler_CFLAGS="$INJECT_CFLAGS $autodetect_compiler_CFLAGS"
-else
-  autodetect_compiler_CFLAGS="$INJECT_CFLAGS"
-fi
+autodetect_compiler_CFLAGS="$INJECT_CFLAGS${autodetect_compiler_CFLAGS:+ $autodetect_compiler_CFLAGS}"
 DEFAULT_AS=
 if [ -z "${autodetect_compiler_AS:-}" ]; then
   autodetect_compiler_AS="$DEFAULT_AS"
 fi
 INJECT_ASFLAGS=
-if [ -n "${autodetect_compiler_ASFLAGS:-}" ]; then
-  autodetect_compiler_ASFLAGS="$INJECT_ASFLAGS $autodetect_compiler_ASFLAGS"
-else
-  autodetect_compiler_ASFLAGS="$INJECT_ASFLAGS"
-fi
+autodetect_compiler_ASFLAGS="$INJECT_ASFLAGS${autodetect_compiler_ASFLAGS:+ $autodetect_compiler_ASFLAGS}"
 
 #   CMake with Xcode will use a low-level compiler like
 #   /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/cc
@@ -215,38 +207,22 @@ if cmake_flag_on "${DKML_COMPILE_CM_MSVC:-}"; then
     else
       _MLARG_EXTRA=
     fi
-    if [ "$DKML_COMPILE_CM_CMAKE_SIZEOF_VOID_P" -eq 4 ]; then
-      autodetect_compiler_AS="${DKML_COMPILE_CM_CMAKE_ASM_MASM_COMPILER}${_MLARG_EXTRA} -nologo -coff -Cp -c -Fo"
-    else
-      autodetect_compiler_AS="${DKML_COMPILE_CM_CMAKE_ASM_MASM_COMPILER}${_MLARG_EXTRA} -nologo -Cp -c -Fo"
-    fi
-    ASPP="$autodetect_compiler_AS"
+    autodetect_compiler_ASFLAGS="${DKML_COMPILE_CM_CMAKE_ASM_MASM_COMPILER}${_MLARG_EXTRA}${autodetect_compiler_ASFLAGS:+ $autodetect_compiler_ASFLAGS}"
 elif [ -n "${autodetect_compiler_AS:-}" ]; then
-  autodetect_compiler_AS="${autodetect_compiler_AS:-}"
-  if [ -n "${autodetect_compiler_AS:-}" ] && [ -n "${autodetect_compiler_ASFLAGS:-}" ]; then
-    autodetect_compiler_AS="$autodetect_compiler_AS $autodetect_compiler_ASFLAGS"
-    autodetect_compiler_ASFLAGS=
-  fi
   if [ -n "${DKML_COMPILE_CM_CMAKE_ASM_COMPILER_TARGET:-}" ]; then
-    autodetect_compiler_AS="$autodetect_compiler_AS ${DKML_COMPILE_CM_CMAKE_ASM_COMPILE_OPTIONS_TARGET:-}${DKML_COMPILE_CM_CMAKE_ASM_COMPILER_TARGET:-}"
+    autodetect_compiler_ASFLAGS="${DKML_COMPILE_CM_CMAKE_ASM_COMPILE_OPTIONS_TARGET:-}${DKML_COMPILE_CM_CMAKE_ASM_COMPILER_TARGET:-}${autodetect_compiler_ASFLAGS:+ $autodetect_compiler_ASFLAGS}"
   fi
 
   # Some architectures need flags when compiling OCaml
   case "$DKML_TARGET_ABI" in
-    darwin_*) autodetect_compiler_AS="$autodetect_compiler_AS -Wno-trigraphs" ;;
+    darwin_*) autodetect_compiler_ASFLAGS="-Wno-trigraphs${autodetect_compiler_ASFLAGS:+ $autodetect_compiler_ASFLAGS}" ;;
   esac
   # Clang compilers from Xcode should use clang ... -arch XXXX; the -arch won't be exported in CMAKE variables
   if [ "${DKML_COMPILE_TYPE:-}" = CM ]; then
     case "$DKML_TARGET_ABI,${DKML_COMPILE_CM_CMAKE_ASM_COMPILER_ID:-}" in
-      darwin_arm64,AppleClang|darwin_arm64,Clang)   autodetect_compiler_AS="$autodetect_compiler_AS -arch arm64" ;;
-      darwin_x86_64,AppleClang|darwin_x86_64,Clang) autodetect_compiler_AS="$autodetect_compiler_AS -arch x86_64" ;;
+      darwin_arm64,AppleClang|darwin_arm64,Clang)   autodetect_compiler_ASFLAGS="-arch arm64${autodetect_compiler_ASFLAGS:+ $autodetect_compiler_ASFLAGS}" ;;
+      darwin_x86_64,AppleClang|darwin_x86_64,Clang) autodetect_compiler_ASFLAGS="-arch x86_64${autodetect_compiler_ASFLAGS:+ $autodetect_compiler_ASFLAGS}" ;;
     esac
-  fi
-
-  # A CMake-configured `AS` will be missing the `-c` option needed by OCaml; fix that
-  if printf "%s" " ${DKML_COMPILE_CM_CMAKE_ASM_COMPILE_OBJECT:-} " | PATH=/usr/bin:/bin grep -q -E -- ' -c '; then
-    # CMAKE_ASM_COMPILE_OBJECT contains '-c' as a single word. Ex: <CMAKE_ASM_COMPILER> <DEFINES> <INCLUDES> <FLAGS> -o <OBJECT> -c <SOURCE>
-    autodetect_compiler_AS="$autodetect_compiler_AS -c"
   fi
 
   # By default ASPP is the same as AS. But since ASPP involves preprocessing and many assemblers do not include
@@ -328,7 +304,7 @@ elif [ -n "${autodetect_compiler_AS:-}" ]; then
         autodetect_compiler_AS="$_gnu_as_compiler"
         ASPP="$DKML_COMPILE_CM_CMAKE_C_COMPILER ${DKML_COMPILE_CM_CMAKE_C_COMPILE_OPTIONS_TARGET:-}${DKML_COMPILE_CM_CMAKE_C_COMPILER_TARGET:-} ${autodetect_compiler_CFLAGS:-} -c"
         if [ "${DKML_COMPILE_CM_CONFIG:-}" = "Debug" ]; then
-          autodetect_compiler_AS="$autodetect_compiler_AS -g"
+          autodetect_compiler_ASFLAGS="-g${autodetect_compiler_ASFLAGS:+ $autodetect_compiler_ASFLAGS}"
           # CFLAGS will already include `-g` if the toolchain wanted it.
           # But we add -fdebug-macro since there are very useful macros in the runtime code (ex. runtime/arm.S) that should be expanded when in disassembly
           # or in lldb/gdb debugger.
@@ -403,6 +379,33 @@ fi
 # ------------
 # Precondition: All flags already set
 
+# MSVC:
+#   The AS must be `ml $ASFLAGS -coff -Cp -c -Fo` or `ml64 ... -Cp -c -Fo`
+#   ASFLAGS should be empty
+#   ASPP is the same as AS
+# Everybody else:
+#   Move ASFLAGS into AS, and include `-c` which is required by OCaml. Confer
+#   with https://github.com/ocaml/ocaml/blob/851b5b9a717000ba81813d3f2e213591ad4c2707/configure#L15665
+#   ASFLAGS should be empty
+case "$DKML_TARGET_ABI,${autodetect_compiler_AS:-}" in
+windows_*,ml|windows_*,ml.exe|windows_*,*/ml|windows_*,*/ml.exe|windows_*,*\\ml|windows_*,*\\ml.exe)
+  autodetect_compiler_AS="${autodetect_compiler_AS:-}${autodetect_compiler_ASFLAGS:+ $autodetect_compiler_ASFLAGS} -coff -Cp -c -Fo"
+  autodetect_compiler_ASFLAGS=
+  ASPP="$autodetect_compiler_AS"
+  ;;
+windows_*,ml64|windows_*,ml64.exe|windows_*,*/ml64|windows_*,*/ml64.exe|windows_*,*\\ml64|windows_*,*\\ml64.exe)
+  autodetect_compiler_AS="${autodetect_compiler_AS:-}${autodetect_compiler_ASFLAGS:+ $autodetect_compiler_ASFLAGS} -Cp -c -Fo"
+  autodetect_compiler_ASFLAGS=
+  ASPP="$autodetect_compiler_AS"
+  ;;
+*,*)
+  if [ -n "${autodetect_compiler_AS:-}" ]; then
+    autodetect_compiler_ASFLAGS="-c${autodetect_compiler_ASFLAGS:+ $autodetect_compiler_ASFLAGS}"
+  fi
+  autodetect_compiler_AS="${autodetect_compiler_AS:-}${autodetect_compiler_ASFLAGS:+ $autodetect_compiler_ASFLAGS}"
+  autodetect_compiler_ASFLAGS=
+esac
+
 if cmake_flag_on "${DKML_COMPILE_CM_MSVC:-}"; then
     # To avoid the following when /Zi or /ZI is enabled:
     #   2># major_gc.c : fatal error C1041: cannot open program database 'Z:\build\windows_x86\Debug\dksdk\system\_opam\.opam-switch\build\ocaml-variants.4.12.0+options+dkml+msvc32\runtime\vc140.pdb'; if multiple CL.EXE write to the same .PDB file, please use /FS
@@ -420,6 +423,7 @@ if cmake_flag_on "${DKML_COMPILE_CM_MSVC:-}"; then
     autodetect_compiler_CC=$(printf "%s" "${autodetect_compiler_CC:-}" | PATH=/usr/bin:/bin sed 's# /# -#g')
     ASPP=$(printf "%s" "${ASPP:-}" | PATH=/usr/bin:/bin sed 's# /# -#g')
     autodetect_compiler_AS=$(printf "%s" "${autodetect_compiler_AS:-}" | PATH=/usr/bin:/bin sed 's# /# -#g')
+    autodetect_compiler_ASFLAGS=$(printf "%s" "${autodetect_compiler_ASFLAGS:-}" | PATH=/usr/bin:/bin sed 's# /# -#g')
 
     # Tell ./configure to not add /O2 and /MD (and future other flags) that should be chosen by CFLAGS
     CFLAGS_MSVC_SET=1
