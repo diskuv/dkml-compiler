@@ -220,11 +220,12 @@ if cmake_flag_on "${DKML_COMPILE_CM_MSVC:-}"; then
     # Use the MASM compiler (ml/ml64) which is required for OCaml with MSVC.
     # See https://github.com/ocaml/ocaml/blob/4c52549642873f9f738dd89ab39cec614fb130b8/configure#L14585-L14588 for options
     if [ "${DKML_COMPILE_CM_CONFIG:-}" = "Debug" ]; then
-      _MLARG_EXTRA=" -Zi -Zd"
+      _MLARG_EXTRA="-Zi -Zd"
     else
       _MLARG_EXTRA=
     fi
-    autodetect_compiler_ASFLAGS="${DKML_COMPILE_CM_CMAKE_ASM_MASM_COMPILER}${_MLARG_EXTRA}${autodetect_compiler_ASFLAGS:+ $autodetect_compiler_ASFLAGS}"
+    autodetect_compiler_AS=${DKML_COMPILE_CM_CMAKE_ASM_MASM_COMPILER}
+    autodetect_compiler_ASFLAGS="${_MLARG_EXTRA}${autodetect_compiler_ASFLAGS:+ $autodetect_compiler_ASFLAGS}"
 elif [ -n "${autodetect_compiler_AS:-}" ]; then
   if [ -n "${DKML_COMPILE_CM_CMAKE_ASM_COMPILER_TARGET:-}" ]; then
     autodetect_compiler_ASFLAGS="${DKML_COMPILE_CM_CMAKE_ASM_COMPILE_OPTIONS_TARGET:-}${DKML_COMPILE_CM_CMAKE_ASM_COMPILER_TARGET:-}${autodetect_compiler_ASFLAGS:+ $autodetect_compiler_ASFLAGS}"
