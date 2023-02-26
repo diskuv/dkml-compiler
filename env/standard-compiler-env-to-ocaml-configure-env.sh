@@ -65,7 +65,7 @@ disambiguate_filesystem_paths
 # github.com/ocaml/ocaml/configure output
 # ---------------------------------------
 
-# Pre-adjustments
+# ---- Pre-adjustments ----
 
 #   This section can be replaced by outside actors like dkml-base-compiler.opam to inject
 #   custom options. Just replace any or all of the following:
@@ -80,6 +80,23 @@ if [ -z "${autodetect_compiler_AS:-}" ]; then
 fi
 INJECT_ASFLAGS=
 autodetect_compiler_ASFLAGS="$INJECT_ASFLAGS${autodetect_compiler_ASFLAGS:+ $autodetect_compiler_ASFLAGS}"
+
+# Windows:
+#   Use DOS 8.3 paths, with forward slashes not back slashes to prevent OCaml escaping problems
+if [ -x /usr/bin/cygpath ]; then
+  if [ -n "${autodetect_compiler_AS:-}" ] && [ -x "$autodetect_compiler_AS" ]; then
+    autodetect_compiler_AS=$(/usr/bin/cygpath -ad "$autodetect_compiler_AS" | sed 's#\\#/#g')
+  fi
+  if [ -n "${autodetect_compiler_CC:-}" ] && [ -x "$autodetect_compiler_CC" ]; then
+    autodetect_compiler_CC=$(/usr/bin/cygpath -ad "$autodetect_compiler_CC" | sed 's#\\#/#g')
+  fi
+  if [ -n "${autodetect_compiler_CXX:-}" ] && [ -x "$autodetect_compiler_CXX" ]; then
+    autodetect_compiler_CXX=$(/usr/bin/cygpath -ad "$autodetect_compiler_CXX" | sed 's#\\#/#g')
+  fi
+  if [ -n "${autodetect_compiler_LD:-}" ] && [ -x "$autodetect_compiler_LD" ]; then
+    autodetect_compiler_LD=$(/usr/bin/cygpath -ad "$autodetect_compiler_LD" | sed 's#\\#/#g')
+  fi
+fi
 
 #   CMake with Xcode will use a low-level compiler like
 #   /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/cc
