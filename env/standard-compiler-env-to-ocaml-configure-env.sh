@@ -225,7 +225,7 @@ if cmake_flag_on "${DKML_COMPILE_CM_MSVC:-}"; then
       _MLARG_EXTRA=
     fi
     autodetect_compiler_AS=${DKML_COMPILE_CM_CMAKE_ASM_MASM_COMPILER}
-    autodetect_compiler_ASFLAGS="${_MLARG_EXTRA}${autodetect_compiler_ASFLAGS:+ $autodetect_compiler_ASFLAGS}"
+    autodetect_compiler_ASFLAGS="-nologo${_MLARG_EXTRA:+ $_MLARG_EXTRA}${autodetect_compiler_ASFLAGS:+ $autodetect_compiler_ASFLAGS}"
 elif [ -n "${autodetect_compiler_AS:-}" ]; then
   if [ -n "${DKML_COMPILE_CM_CMAKE_ASM_COMPILER_TARGET:-}" ]; then
     autodetect_compiler_ASFLAGS="${DKML_COMPILE_CM_CMAKE_ASM_COMPILE_OPTIONS_TARGET:-}${DKML_COMPILE_CM_CMAKE_ASM_COMPILER_TARGET:-}${autodetect_compiler_ASFLAGS:+ $autodetect_compiler_ASFLAGS}"
