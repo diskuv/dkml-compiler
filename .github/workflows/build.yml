@@ -2,7 +2,7 @@ name: Build dkml-base-compiler
 
 env:
   OPAM_PACKAGE: "dkml-base-compiler"
-  DKML_COMPILER: "" # You can override the dkml-compiler package version used to build dkml-base-compiler! Example: 4.12.1-v1.0.2
+  DKML_COMPILER: "main" # Use the main branch of dkml-compiler
 
 on:
   push:
