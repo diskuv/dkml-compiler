@@ -215,6 +215,8 @@ if [ -n "${autodetect_compiler_CC:-}" ]; then
   esac
 fi
 
+candidate_ASPP=
+
 # https://github.com/ocaml/ocaml/blob/01c6f16cc69ce1d8cf157e66d5702fadaa18d247/configure.ac#L1213-L1240
 if cmake_flag_on "${DKML_COMPILE_CM_MSVC:-}"; then
     # Use the MASM compiler (ml/ml64) which is required for OCaml with MSVC.
@@ -245,10 +247,12 @@ elif [ -n "${autodetect_compiler_AS:-}" ]; then
 
   # By default ASPP is the same as AS. But since ASPP involves preprocessing and many assemblers do not include
   # preprocessing, we may need to look at the C compiler (ex. clang) and see if we should override ASPP.
-  ASPP="$autodetect_compiler_AS"
+  #
+  # We delay setting the default ASPP until we know for sure that ASFLAGS is complete.
+  # So this section is for non-default "candidate" ASPP, with possible adjustments to ASFLAGS.
   case "$ORIG_CC" in
     gcc|*-gcc|*/gcc)
-      ASPP="$autodetect_compiler_CC -c" # include -m32 by using $CC
+      candidate_ASPP="$autodetect_compiler_CC -c" # include -m32 by using $CC
       ;;
   esac
   case "${DKML_COMPILE_CM_CMAKE_C_COMPILER_ID:-}" in
@@ -320,17 +324,27 @@ elif [ -n "${autodetect_compiler_AS:-}" ]; then
           _gnu_as_compiler=$(/usr/bin/cygpath -am "$_gnu_as_compiler")
         fi
         autodetect_compiler_AS="$_gnu_as_compiler"
-        ASPP="$DKML_COMPILE_CM_CMAKE_C_COMPILER ${DKML_COMPILE_CM_CMAKE_C_COMPILE_OPTIONS_TARGET:-}${DKML_COMPILE_CM_CMAKE_C_COMPILER_TARGET:-} ${autodetect_compiler_CFLAGS:-} -c"
+        candidate_ASPP="$DKML_COMPILE_CM_CMAKE_C_COMPILER ${DKML_COMPILE_CM_CMAKE_C_COMPILE_OPTIONS_TARGET:-}${DKML_COMPILE_CM_CMAKE_C_COMPILER_TARGET:-} ${autodetect_compiler_CFLAGS:-} -c"
         if [ "${DKML_COMPILE_CM_CONFIG:-}" = "Debug" ]; then
           autodetect_compiler_ASFLAGS="-g${autodetect_compiler_ASFLAGS:+ $autodetect_compiler_ASFLAGS}"
           # CFLAGS will already include `-g` if the toolchain wanted it.
           # But we add -fdebug-macro since there are very useful macros in the runtime code (ex. runtime/arm.S) that should be expanded when in disassembly
           # or in lldb/gdb debugger.
-          ASPP="$ASPP -fdebug-macro"
+          candidate_ASPP="$candidate_ASPP -fdebug-macro"
         fi
       fi
       ;;
   esac
+fi
+
+# --- Done with autodetect_compiler_ASFLAGS ---
+
+# Set ASPP
+if [ -n "$candidate_ASPP" ]; then
+  ASPP="$candidate_ASPP"
+else
+  # By default ASPP is the same as AS
+  ASPP="$autodetect_compiler_AS${autodetect_compiler_ASFLAGS:+ $autodetect_compiler_ASFLAGS}"
 fi
 
 # https://github.com/ocaml/ocaml/blob/01c6f16cc69ce1d8cf157e66d5702fadaa18d247/configure#L3434-L3534
