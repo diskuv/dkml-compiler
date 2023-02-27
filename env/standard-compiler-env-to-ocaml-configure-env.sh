@@ -347,6 +347,8 @@ else
   ASPP="$autodetect_compiler_AS${autodetect_compiler_ASFLAGS:+ $autodetect_compiler_ASFLAGS}"
 fi
 
+# --- LDFLAGS ---
+
 # https://github.com/ocaml/ocaml/blob/01c6f16cc69ce1d8cf157e66d5702fadaa18d247/configure#L3434-L3534
 # https://github.com/ocaml/ocaml/blob/01c6f16cc69ce1d8cf157e66d5702fadaa18d247/configure.ac#L1158-L1175
 #
@@ -382,7 +384,10 @@ elif [ -n "${autodetect_compiler_LD:-}" ]; then
   autodetect_compiler_LD="$autodetect_compiler_LD${autodetect_compiler_LDFLAGS:+ $autodetect_compiler_LDFLAGS}"
   DIRECT_LD=$autodetect_compiler_LD
   autodetect_compiler_LDFLAGS=
-  # Xcode linkers should use ld -arch XXXX
+fi
+
+# Xcode linkers should use ld -arch XXXX
+if [ -n "${autodetect_compiler_LD:-}" ] && [ -n "${DIRECT_LD:-}" ]; then
   case "$DKML_TARGET_ABI" in
     darwin_arm64)  autodetect_compiler_LD="$autodetect_compiler_LD -arch arm64"  ; DIRECT_LD="$DIRECT_LD -arch arm64" ;;
     darwin_x86_64) autodetect_compiler_LD="$autodetect_compiler_LD -arch x86_64" ; DIRECT_LD="$DIRECT_LD -arch x86_64" ;;
