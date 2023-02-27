@@ -622,6 +622,15 @@ get_ocaml_source() {
 
         # Make it git patchable if it is not a git repository already
 
+        if [ -e "$get_ocaml_source_SRCUNIX"/flexdll/Makefile ] && [ ! -e "$get_ocaml_source_SRCUNIX"/flexdll/.git ]; then
+            log_trace git -C "$get_ocaml_source_SRCMIXED/flexdll" init
+            log_trace git -C "$get_ocaml_source_SRCMIXED/flexdll" config user.email "nobody+autocommitter@diskuv.ocaml.org"
+            log_trace git -C "$get_ocaml_source_SRCMIXED/flexdll" config user.name  "Auto Committer"
+            log_trace git -C "$get_ocaml_source_SRCMIXED/flexdll" add -A
+            log_trace git -C "$get_ocaml_source_SRCMIXED/flexdll" commit -m "Commit from source tree"
+            log_trace git -C "$get_ocaml_source_SRCMIXED/flexdll" tag r-c-ocaml-1-setup-srctree
+        fi
+
         if [ ! -e "$get_ocaml_source_SRCUNIX/.git" ]; then
             log_trace git -C "$get_ocaml_source_SRCMIXED" init
             log_trace git -C "$get_ocaml_source_SRCMIXED" config user.email "nobody+autocommitter@diskuv.ocaml.org"
@@ -629,15 +638,6 @@ get_ocaml_source() {
             log_trace git -C "$get_ocaml_source_SRCMIXED" add -A
             log_trace git -C "$get_ocaml_source_SRCMIXED" commit -m "Commit from source tree"
             log_trace git -C "$get_ocaml_source_SRCMIXED" tag r-c-ocaml-1-setup-srctree
-        fi
-
-        if [ -e "$get_ocaml_source_SRCUNIX"/flexdll ] && [ ! -e "$get_ocaml_source_SRCUNIX"/flexdll/.git ]; then
-            log_trace git -C "$get_ocaml_source_SRCMIXED/flexdll" init
-            log_trace git -C "$get_ocaml_source_SRCMIXED/flexdll" config user.email "nobody+autocommitter@diskuv.ocaml.org"
-            log_trace git -C "$get_ocaml_source_SRCMIXED/flexdll" config user.name  "Auto Committer"
-            log_trace git -C "$get_ocaml_source_SRCMIXED/flexdll" add -A
-            log_trace git -C "$get_ocaml_source_SRCMIXED/flexdll" commit -m "Commit from source tree"
-            log_trace git -C "$get_ocaml_source_SRCMIXED/flexdll" tag r-c-ocaml-1-setup-srctree
         fi
 
         # Move the repository to the expected tag
@@ -745,7 +745,10 @@ install vendor/dkml-compiler/src/r-c-ocaml-get_sak.make "$OCAMLSRC_UNIX"/runtime
 
 # Get source code versions from the source code
 _OCAMLVER=$(awk 'NR==1{print}' "$OCAMLSRC_UNIX"/VERSION)
-_FLEXDLLVER=$(awk '$1=="VERSION"{print $NF; exit 0}' "$OCAMLSRC_UNIX"/flexdll/Makefile)
+#   flexdll is only required for Windows; other OS-es can skip having it
+if [ -e "$OCAMLSRC_UNIX"/flexdll/Makefile ]; then
+    _FLEXDLLVER=$(awk '$1=="VERSION"{print $NF; exit 0}' "$OCAMLSRC_UNIX"/flexdll/Makefile)
+fi
 
 # Pass versions to build scripts
 BUILD_HOST_ARGS+=( -s "$_OCAMLVER" )
@@ -753,7 +756,9 @@ BUILD_CROSS_ARGS+=( -s "$_OCAMLVER" )
 
 # Find and apply patches to the host ABI
 apply_patches "$OCAMLSRC_UNIX"          ocaml    "$_OCAMLVER"    host
-apply_patches "$OCAMLSRC_UNIX/flexdll"  flexdll  "$_FLEXDLLVER"  host
+if [ -e "$OCAMLSRC_UNIX"/flexdll/Makefile ]; then
+    apply_patches "$OCAMLSRC_UNIX/flexdll"  flexdll  "$_FLEXDLLVER"  host
+fi
 
 if [ -z "$TARGETABIS" ]; then
     # Quick. Only support host builds.
@@ -776,7 +781,9 @@ else
             get_ocaml_source "$GIT_COMMITID_TAG_OR_DIR" "$_srcabidir_unix" "$TARGETDIR_MIXED/$CROSS_SUBDIR/$_targetabi/$HOSTSRC_SUBDIR" "$_targetabi"
             # Find and apply patches to the target ABI
             apply_patches "$_srcabidir_unix"            ocaml    "$_OCAMLVER"    cross
-            apply_patches "$_srcabidir_unix/flexdll"    flexdll  "$_FLEXDLLVER"  cross
+            if [ -e "$_srcabidir_unix"/flexdll/Makefile ]; then
+                apply_patches "$_srcabidir_unix/flexdll"    flexdll  "$_FLEXDLLVER"  cross
+            fi
         done < "$WORK"/tabi
     fi
 fi
