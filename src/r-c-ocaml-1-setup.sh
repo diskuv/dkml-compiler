@@ -623,22 +623,22 @@ get_ocaml_source() {
         # Make it git patchable if it is not a git repository already
 
         if [ -e "$get_ocaml_source_SRCUNIX"/flexdll/Makefile ] && [ ! -e "$get_ocaml_source_SRCUNIX"/flexdll/.git ]; then
-            log_trace git -C "$get_ocaml_source_SRCMIXED/flexdll" init
+            log_trace git -C "$get_ocaml_source_SRCMIXED/flexdll" -c init.defaultBranch=main init
             log_trace git -C "$get_ocaml_source_SRCMIXED/flexdll" config user.email "nobody+autocommitter@diskuv.ocaml.org"
             log_trace git -C "$get_ocaml_source_SRCMIXED/flexdll" config user.name  "Auto Committer"
             log_trace git -C "$get_ocaml_source_SRCMIXED/flexdll" config core.safecrlf false
             log_trace git -C "$get_ocaml_source_SRCMIXED/flexdll" add -A
-            log_trace git -C "$get_ocaml_source_SRCMIXED/flexdll" commit -m "Commit from source tree"
+            log_trace git -C "$get_ocaml_source_SRCMIXED/flexdll" commit --quiet -m "Commit from source tree"
             log_trace git -C "$get_ocaml_source_SRCMIXED/flexdll" tag r-c-ocaml-1-setup-srctree
         fi
 
         if [ ! -e "$get_ocaml_source_SRCUNIX/.git" ]; then
-            log_trace git -C "$get_ocaml_source_SRCMIXED" init
+            log_trace git -C "$get_ocaml_source_SRCMIXED" -c init.defaultBranch=main init
             log_trace git -C "$get_ocaml_source_SRCMIXED" config user.email "nobody+autocommitter@diskuv.ocaml.org"
             log_trace git -C "$get_ocaml_source_SRCMIXED" config user.name  "Auto Committer"
             log_trace git -C "$get_ocaml_source_SRCMIXED" config core.safecrlf false
             log_trace git -C "$get_ocaml_source_SRCMIXED" add -A
-            log_trace git -C "$get_ocaml_source_SRCMIXED" commit -m "Commit from source tree"
+            log_trace git -C "$get_ocaml_source_SRCMIXED" commit --quiet -m "Commit from source tree"
             log_trace git -C "$get_ocaml_source_SRCMIXED" tag r-c-ocaml-1-setup-srctree
         fi
 
