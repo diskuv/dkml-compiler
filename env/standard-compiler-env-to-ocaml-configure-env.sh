@@ -422,7 +422,7 @@ fi
 #   ASFLAGS should be empty
 #   ASPP is the same as AS
 # Everybody else:
-#   Move ASFLAGS into AS, and include `-c` which is required by OCaml. Confer
+#   Move ASFLAGS into AS, and include `-c` which is required by OCaml if using a C compiler. Confer
 #   with https://github.com/ocaml/ocaml/blob/851b5b9a717000ba81813d3f2e213591ad4c2707/configure#L15665
 #   ASFLAGS should be empty
 case "$DKML_TARGET_ABI,${autodetect_compiler_AS:-}" in
@@ -436,8 +436,14 @@ windows_*,ml64|windows_*,ml64.exe|windows_*,*/ml64|windows_*,*/ml64.exe|windows_
   autodetect_compiler_ASFLAGS=
   ASPP="$autodetect_compiler_AS"
   ;;
+*,*/as|*,*/gas|*,as|*,gas)
+  # A real assembler, not just a C compiler
+  autodetect_compiler_AS="${autodetect_compiler_AS:-}${autodetect_compiler_ASFLAGS:+ $autodetect_compiler_ASFLAGS}"
+  autodetect_compiler_ASFLAGS=
+  ;;
 *,*)
   if [ -n "${autodetect_compiler_AS:-}" ]; then
+    # A C compiler, so add [-c]
     autodetect_compiler_ASFLAGS="-c${autodetect_compiler_ASFLAGS:+ $autodetect_compiler_ASFLAGS}"
   fi
   autodetect_compiler_AS="${autodetect_compiler_AS:-}${autodetect_compiler_ASFLAGS:+ $autodetect_compiler_ASFLAGS}"
