@@ -250,10 +250,13 @@ elif [ -n "${autodetect_compiler_AS:-}" ]; then
   #
   # We delay setting the default ASPP until we know for sure that ASFLAGS is complete.
   # So this section is for non-default "candidate" ASPP, with possible adjustments to ASFLAGS.
-  # [ "${DKML_COMPILE_CM_CMAKE_C_COMPILER_ID:-}" = GNU ]
   case "$ORIG_CC,${DKML_COMPILE_CM_CMAKE_C_COMPILER_ID:-Unknown}" in
     gcc,*|*-gcc,*|*/gcc,*|*,GNU)
       candidate_ASPP="$autodetect_compiler_CC -c" # include -m32 by using $CC
+      ;;
+    *,AppleClang|*,Clang)
+      # includes -arch ARCH by using $CC
+      candidate_ASPP="$autodetect_compiler_CC -c"
       ;;
   esac
   case "${DKML_COMPILE_CM_CMAKE_C_COMPILER_ID:-}" in
