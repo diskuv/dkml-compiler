@@ -428,6 +428,7 @@ fi
 #   Move ASFLAGS into AS, and include `-c` which is required by OCaml if using a C compiler. Confer
 #   with https://github.com/ocaml/ocaml/blob/851b5b9a717000ba81813d3f2e213591ad4c2707/configure#L15665
 #   ASFLAGS should be empty
+#   Add PIC options so static libraries (ex. output-obj-complete from ocaml) can be used with shared libraries (ex. Redis module)
 case "$DKML_TARGET_ABI,${autodetect_compiler_AS:-}" in
 windows_*,ml|windows_*,ml.exe|windows_*,*/ml|windows_*,*/ml.exe|windows_*,*\\ml|windows_*,*\\ml.exe)
   autodetect_compiler_AS="${autodetect_compiler_AS:-}${autodetect_compiler_ASFLAGS:+ $autodetect_compiler_ASFLAGS} -coff -Cp -c -Fo"
@@ -443,11 +444,21 @@ windows_*,ml64|windows_*,ml64.exe|windows_*,*/ml64|windows_*,*/ml64.exe|windows_
   # A real assembler, not just a C compiler
   autodetect_compiler_AS="${autodetect_compiler_AS:-}${autodetect_compiler_ASFLAGS:+ $autodetect_compiler_ASFLAGS}"
   autodetect_compiler_ASFLAGS=
+  if [ -n "${DKML_COMPILE_CM_CMAKE_ASM_COMPILE_OPTIONS_PIC:-}" ]; then
+    autodetect_compiler_ASFLAGS="${DKML_COMPILE_CM_CMAKE_ASM_COMPILE_OPTIONS_PIC}${autodetect_compiler_ASFLAGS:+ $autodetect_compiler_ASFLAGS}"
+  fi
   ;;
 *,*)
   if [ -n "${autodetect_compiler_AS:-}" ]; then
     # A C compiler, so add [-c]
     autodetect_compiler_ASFLAGS="-c${autodetect_compiler_ASFLAGS:+ $autodetect_compiler_ASFLAGS}"
+    if [ -n "${DKML_COMPILE_CM_CMAKE_C_COMPILE_OPTIONS_PIC:-}" ]; then
+      autodetect_compiler_ASFLAGS="${DKML_COMPILE_CM_CMAKE_C_COMPILE_OPTIONS_PIC}${autodetect_compiler_ASFLAGS:+ $autodetect_compiler_ASFLAGS}"
+    fi
+  else
+    if [ -n "${DKML_COMPILE_CM_CMAKE_ASM_COMPILE_OPTIONS_PIC:-}" ]; then
+      autodetect_compiler_ASFLAGS="${DKML_COMPILE_CM_CMAKE_ASM_COMPILE_OPTIONS_PIC}${autodetect_compiler_ASFLAGS:+ $autodetect_compiler_ASFLAGS}"
+    fi
   fi
   autodetect_compiler_AS="${autodetect_compiler_AS:-}${autodetect_compiler_ASFLAGS:+ $autodetect_compiler_ASFLAGS}"
   autodetect_compiler_ASFLAGS=
