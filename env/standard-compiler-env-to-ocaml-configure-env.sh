@@ -447,6 +447,9 @@ windows_*,ml64|windows_*,ml64.exe|windows_*,*/ml64|windows_*,*/ml64.exe|windows_
   if [ -n "${DKML_COMPILE_CM_CMAKE_ASM_COMPILE_OPTIONS_PIC:-}" ]; then
     autodetect_compiler_ASFLAGS="${DKML_COMPILE_CM_CMAKE_ASM_COMPILE_OPTIONS_PIC}${autodetect_compiler_ASFLAGS:+ $autodetect_compiler_ASFLAGS}"
   fi
+  if [ -n "${DKML_COMPILE_CM_CMAKE_ASM_COMPILE_OPTIONS_PIE:-}" ]; then
+    autodetect_compiler_ASFLAGS="${DKML_COMPILE_CM_CMAKE_ASM_COMPILE_OPTIONS_PIE}${autodetect_compiler_ASFLAGS:+ $autodetect_compiler_ASFLAGS}"
+  fi
   ;;
 *,*)
   if [ -n "${autodetect_compiler_AS:-}" ]; then
@@ -465,6 +468,9 @@ windows_*,ml64|windows_*,ml64.exe|windows_*,*/ml64|windows_*,*/ml64.exe|windows_
   else
     if [ -n "${DKML_COMPILE_CM_CMAKE_ASM_COMPILE_OPTIONS_PIC:-}" ]; then
       autodetect_compiler_ASFLAGS="${DKML_COMPILE_CM_CMAKE_ASM_COMPILE_OPTIONS_PIC}${autodetect_compiler_ASFLAGS:+ $autodetect_compiler_ASFLAGS}"
+    fi
+    if [ -n "${DKML_COMPILE_CM_CMAKE_ASM_COMPILE_OPTIONS_PIE:-}" ]; then
+      autodetect_compiler_ASFLAGS="${DKML_COMPILE_CM_CMAKE_ASM_COMPILE_OPTIONS_PIE}${autodetect_compiler_ASFLAGS:+ $autodetect_compiler_ASFLAGS}"
     fi
   fi
   autodetect_compiler_AS="${autodetect_compiler_AS:-}${autodetect_compiler_ASFLAGS:+ $autodetect_compiler_ASFLAGS}"
