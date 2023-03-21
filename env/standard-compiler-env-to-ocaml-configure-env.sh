@@ -452,9 +452,16 @@ windows_*,ml64|windows_*,ml64.exe|windows_*,*/ml64|windows_*,*/ml64.exe|windows_
   if [ -n "${autodetect_compiler_AS:-}" ]; then
     # A C compiler, so add [-c]
     autodetect_compiler_ASFLAGS="-c${autodetect_compiler_ASFLAGS:+ $autodetect_compiler_ASFLAGS}"
-    if [ -n "${DKML_COMPILE_CM_CMAKE_C_COMPILE_OPTIONS_PIC:-}" ]; then
-      autodetect_compiler_ASFLAGS="${DKML_COMPILE_CM_CMAKE_C_COMPILE_OPTIONS_PIC}${autodetect_compiler_ASFLAGS:+ $autodetect_compiler_ASFLAGS}"
-    fi
+    #   Adding -fPIC and -fPIE (C code generation options) to `gcc -c` when compiling `.S` code is useless.
+    #   The assembly .S code must have been already position independent code.
+    #   If, and only if, there is a platform where adding PIC and PIE options makes sense ... we can add it
+    #   in then.
+    # if [ -n "${DKML_COMPILE_CM_CMAKE_C_COMPILE_OPTIONS_PIC:-}" ]; then
+    #   autodetect_compiler_ASFLAGS="${DKML_COMPILE_CM_CMAKE_C_COMPILE_OPTIONS_PIC}${autodetect_compiler_ASFLAGS:+ $autodetect_compiler_ASFLAGS}"
+    # fi
+    # if [ -n "${DKML_COMPILE_CM_CMAKE_C_COMPILE_OPTIONS_PIE:-}" ]; then
+    #   autodetect_compiler_ASFLAGS="${DKML_COMPILE_CM_CMAKE_C_COMPILE_OPTIONS_PIE}${autodetect_compiler_ASFLAGS:+ $autodetect_compiler_ASFLAGS}"
+    # fi
   else
     if [ -n "${DKML_COMPILE_CM_CMAKE_ASM_COMPILE_OPTIONS_PIC:-}" ]; then
       autodetect_compiler_ASFLAGS="${DKML_COMPILE_CM_CMAKE_ASM_COMPILE_OPTIONS_PIC}${autodetect_compiler_ASFLAGS:+ $autodetect_compiler_ASFLAGS}"
