@@ -358,11 +358,17 @@ fi
 #
 # OCaml uses LDFLAGS for both $CC (ex. gcc) and $LD, so we have to zero out
 # LDFLAGS and push LDFLAGS into LD directly
-if [ "${DKML_COMPILE_CM_CMAKE_SYSTEM_NAME:-}" = "Android" ]; then
+if [ "${DKML_COMPILE_CM_CMAKE_SYSTEM_NAME:-}" = "Android" ] || [ "${DKML_COMPILE_CM_CMAKE_SYSTEM_NAME:-}" = "Linux" ]; then
   #   For Android we'll use clang for the linker which is what the recommended options in
   #   https://developer.android.com/ndk/guides/standalone_toolchain#building_open_source_projects_using_standalone_toolchains
   #   imply. Also we get CMAKE_C_LINK_OPTIONS_PIE so C compiler is best (no equivalent
   #   CMAKE_LINKER_OPTIONS_PIE variable for the standalone linker)
+  #
+  #   For Linux, the situation for PIE/PIC depends on the recency of the Linux distribution. Newer Linux distros enable PIE
+  #   by default, while older ones (like the dockcross ones used by DkSDK/setup-dkml for portability) do not enable PIE.
+  #   See https://stackoverflow.com/questions/43367427/32-bit-absolute-addresses-no-longer-allowed-in-x86-64-linux
+  #
+  #   Either way, use the add PIE like Android recommends.
   autodetect_compiler_LD="$DKML_COMPILE_CM_CMAKE_C_COMPILER"
   if [ -n "${DKML_COMPILE_CM_CMAKE_C_COMPILER_TARGET:-}" ]; then
     autodetect_compiler_LD="$autodetect_compiler_LD${DKML_COMPILE_CM_CMAKE_C_COMPILE_OPTIONS_TARGET:+ $DKML_COMPILE_CM_CMAKE_C_COMPILE_OPTIONS_TARGET}${DKML_COMPILE_CM_CMAKE_C_COMPILER_TARGET:-}"
@@ -372,7 +378,7 @@ if [ "${DKML_COMPILE_CM_CMAKE_SYSTEM_NAME:-}" = "Android" ]; then
   fi
   #   Translate `-fPIE;-pie` into `-fPIE -pie`
   autodetect_compiler_LD=$(printf "%s\n" "$autodetect_compiler_LD${DKML_COMPILE_CM_CMAKE_C_LINK_OPTIONS_PIE:+ $DKML_COMPILE_CM_CMAKE_C_LINK_OPTIONS_PIE}" | PATH=/usr/bin:/bin sed 's/;/ /g')
-  #   Since we are using clang as the linker, we need to prefix every word in LDFLAGS with -Wl, to pass it to linker
+  #   Since we are using Clang or GCC as the linker, we need to prefix every word in LDFLAGS with -Wl, to pass it to linker
   for _ldflag in ${autodetect_compiler_LDFLAGS:-}; do
     autodetect_compiler_LD="$autodetect_compiler_LD -Wl,$_ldflag"
   done
