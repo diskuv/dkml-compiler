@@ -171,6 +171,7 @@ else
 fi
 
 # CFLAGS
+#
 # The value of this *does* appear in `ocamlc -config` so it is
 # similar to CC. However CFLAGS is not used when building a shared
 # library for github.com/ocaml/ocaml. So options that are agnostic
@@ -206,6 +207,16 @@ if [ -n "${autodetect_compiler_CC:-}" ]; then
     _OSX_VMIN=$(printf "%s" " $autodetect_compiler_CFLAGS " | PATH=/usr/bin:/bin sed 's/.* -mmacosx-version-min=//; s/\([0-9.]*\) .*/\1/ ')
     autodetect_compiler_CC="$autodetect_compiler_CC -mmacosx-version-min=$_OSX_VMIN"
     autodetect_compiler_CFLAGS=$(printf "%s" " $autodetect_compiler_CFLAGS " | PATH=/usr/bin:/bin sed 's/ -mmacosx-version-min=[0-9.]* / /g')
+  fi
+
+  # -fPIC and -fPIE
+  if printf "%s" " ${autodetect_compiler_CFLAGS:-} " | PATH=/usr/bin:/bin grep -q ' -fPIC '; then
+      autodetect_compiler_CC="$autodetect_compiler_CC -fPIC"
+      autodetect_compiler_CFLAGS=$(printf "%s" " $autodetect_compiler_CFLAGS " | PATH=/usr/bin:/bin sed 's/ -fPIC / /g')
+  fi
+  if printf "%s" " ${autodetect_compiler_CFLAGS:-} " | PATH=/usr/bin:/bin grep -q ' -fPIE '; then
+      autodetect_compiler_CC="$autodetect_compiler_CC -fPIE"
+      autodetect_compiler_CFLAGS=$(printf "%s" " $autodetect_compiler_CFLAGS " | PATH=/usr/bin:/bin sed 's/ -fPIE / /g')
   fi
 
   # For OCaml 5.00 there is an error with GCC:
