@@ -429,7 +429,7 @@ if [ -z "${RANLIB:-}" ]; then
   if [ -n "${DKML_COMPILE_CM_CMAKE_ASM_COMPILER_RANLIB:-}" ] && ! cmake_flag_notfound "${DKML_COMPILE_CM_CMAKE_ASM_COMPILER_RANLIB:-}"; then
     # Android's CMake toolchain has correct llvm-ranlib rather than system's /usr/bin/ranlib in CMAKE_RANLIB.
     RANLIB="${DKML_COMPILE_CM_CMAKE_ASM_COMPILER_RANLIB:-}"
-  elif ! cmake_flag_notfound "${DKML_COMPILE_CM_CMAKE_RANLIB:-}" && ! [ "$DKML_COMPILE_CM_CMAKE_RANLIB" = : ]; then
+  elif [ -n "${DKML_COMPILE_CM_CMAKE_RANLIB:-}" ] && ! cmake_flag_notfound "${DKML_COMPILE_CM_CMAKE_RANLIB:-}" && ! [ "${DKML_COMPILE_CM_CMAKE_RANLIB:-}" = : ]; then
     # On Windows CMAKE_RANLIB can be ":", which we skip over
     RANLIB="${DKML_COMPILE_CM_CMAKE_RANLIB:-}"
   fi
