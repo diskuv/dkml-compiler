@@ -334,19 +334,6 @@ build_world() {
 
   # check if we'll build native toplevel
   case "$_OCAMLVER,$build_world_TARGET_ABI" in
-    *,android_arm64v8a)
-        # No native toplevel to avoid:
-        #  /usr/bin/env /xxx/build_android_arm64v8a/DkSDKFiles/o/s/o/opt/mlcross/android_arm64v8a/src/ocaml/support/ocamloptTarget.wrapper  -linkall -I toplevel/native -o ocamlnat compilerlibs/ocamlcommon.cmxa compilerlibs/ocamloptcomp.cmxa compilerlibs/ocamlbytecomp.cmxa otherlibs/dynlink/dynlink.cmxa compilerlibs/ocamltoplevel.cmxa toplevel/topstart.cmx
-        #  ld: error: undefined symbol: main
-        #  >>> referenced by crtbegin.c
-        #  >>>               /xxx/.ci/local/share/ndk/toolchains/llvm/prebuilt/darwin-x86_64/sysroot/usr/lib/aarch64-linux-android/21/crtbegin_dynamic.o:(_start_main)
-        #  >>> referenced by crtbegin.c
-        #  >>>               /xxx/.ci/local/share/ndk/toolchains/llvm/prebuilt/darwin-x86_64/sysroot/usr/lib/aarch64-linux-android/21/crtbegin_dynamic.o:(_start_main)
-        #
-        #  ld: error: undefined symbol: camlCamlinternalFormatBasics__entry
-        #  >>> referenced by /var/folders/8z/_n2pwgb92fx3sbkgkzhb484m0000gn/T/dkmlw.xT9kE/camlstartup508af9.o:(caml_program)
-        # However we still need the toplevel native cmx files for the [installoptop] target.
-        native_toplevel=compile ;;
     4.14.*,*|5.*,*)
         # Install native toplevel
         native_toplevel=full
