@@ -459,13 +459,13 @@ init_hostvars() {
 
   # Determine ext_exe from compiler (although the filename extensions on the host should be the same as well)
   if [ -e "$OCAMLSRC_MIXED/ocamlc.exe" ]; then
-    "$OCAMLRUN" "$OCAMLSRC_MIXED/ocamlc.exe" -config > "$OCAMLSRC_MIXED/tmp.ocamlc.config.$$"
+    "$OCAMLRUN" "$OCAMLSRC_MIXED/ocamlc.exe" -config-var ext_exe > "$OCAMLSRC_MIXED/tmp.ocamlc.ext_exe.$$"
   else
-    "$OCAMLRUN" "$OCAMLSRC_MIXED/ocamlc" -config > "$OCAMLSRC_MIXED/tmp.ocamlc.config.$$"
+    "$OCAMLRUN" "$OCAMLSRC_MIXED/ocamlc" -config-var ext_exe > "$OCAMLSRC_MIXED/tmp.ocamlc.ext_exe.$$"
   fi
   # shellcheck disable=SC2016
-  HOST_EXE_EXT=$($DKMLSYS_AWK '$1=="ext_exe:"{print $2}' "$OCAMLSRC_MIXED/tmp.ocamlc.config.$$")
-  rm -f "$OCAMLSRC_MIXED/tmp.ocamlc.config.$$"
+  HOST_EXE_EXT=$(cat "$OCAMLSRC_MIXED/tmp.ocamlc.ext_exe.$$")
+  rm -f "$OCAMLSRC_MIXED/tmp.ocamlc.ext_exe.$$"
   export HOST_EXE_EXT
 
   export OCAMLLEX="$OCAMLRUN $OCAMLSRC_MIXED/lex/ocamllex$HOST_EXE_EXT"

@@ -194,6 +194,17 @@ export OCAMLSRC_MIXED
 # Probe the artifacts from ./configure already done by the host ABI and host ABI's ./ocamlc
 init_hostvars
 
+# Probe host config variables that force target config variables.
+# For example, if host has disabled function sections (done automatically by host ./configure
+# usually based on detected platform), then target must also disable function sections or
+# else get:
+#  /xxx/build_android_arm64v8a/DkSDKFiles/o/s/o/src/ocaml/ocamlopt.opt: OCaml has been configured without support for -function-sections.
+# when trying to compile the target cross-compiler with the host compiler.
+HOST_FUNCTION_SECTIONS=$("$OCAMLSRC_MIXED/ocamlc$HOST_EXE_EXT" -config-var function_sections)
+case $HOST_FUNCTION_SECTIONS in
+false) CONFIGUREARGS="--disable-function-sections${CONFIGUREARGS:+ $CONFIGUREARGS}" ;;
+esac
+
 # Get the variables for runtime/sak
 #       shellcheck disable=SC1091
 . "$OCAMLSRC_MIXED/runtime/sak.source.sh"
@@ -265,8 +276,12 @@ build_world() {
   fi
 
   case "$build_world_TARGET_ABI" in
-  windows_*) build_world_TARGET_EXE_EXT=.exe ;;
-  *) build_world_TARGET_EXE_EXT= ;;
+  windows_*)
+    build_world_TARGET_EXE_OBJ=.obj
+    build_world_TARGET_EXE_EXT=.exe ;;
+  *)
+    build_world_TARGET_EXE_OBJ=.o
+    build_world_TARGET_EXE_EXT= ;;
   esac
 
   # Are we consistently Win32 host->target or consistently Unix host->target? If not we will
@@ -319,13 +334,32 @@ build_world() {
     ;;
   esac
 
-  # ./configure
-  case "$_OCAMLVER" in
-    4.14.*|5.*)
-      # Install native toplevel
-      CONFIGUREARGS="$CONFIGUREARGS --enable-native-toplevel"
-      ;;
+  # check if we'll build native toplevel
+  case "$_OCAMLVER,$build_world_TARGET_ABI" in
+    *,android_arm64v8a)
+        # No native toplevel to avoid:
+        #  /usr/bin/env /xxx/build_android_arm64v8a/DkSDKFiles/o/s/o/opt/mlcross/android_arm64v8a/src/ocaml/support/ocamloptTarget.wrapper  -linkall -I toplevel/native -o ocamlnat compilerlibs/ocamlcommon.cmxa compilerlibs/ocamloptcomp.cmxa compilerlibs/ocamlbytecomp.cmxa otherlibs/dynlink/dynlink.cmxa compilerlibs/ocamltoplevel.cmxa toplevel/topstart.cmx
+        #  ld: error: undefined symbol: main
+        #  >>> referenced by crtbegin.c
+        #  >>>               /xxx/.ci/local/share/ndk/toolchains/llvm/prebuilt/darwin-x86_64/sysroot/usr/lib/aarch64-linux-android/21/crtbegin_dynamic.o:(_start_main)
+        #  >>> referenced by crtbegin.c
+        #  >>>               /xxx/.ci/local/share/ndk/toolchains/llvm/prebuilt/darwin-x86_64/sysroot/usr/lib/aarch64-linux-android/21/crtbegin_dynamic.o:(_start_main)
+        #
+        #  ld: error: undefined symbol: camlCamlinternalFormatBasics__entry
+        #  >>> referenced by /var/folders/8z/_n2pwgb92fx3sbkgkzhb484m0000gn/T/dkmlw.xT9kE/camlstartup508af9.o:(caml_program)
+        # However we still need the toplevel native cmx files for the [installoptop] target.
+        native_toplevel=compile ;;
+    4.14.*,*|5.*,*)
+        # Install native toplevel
+        native_toplevel=full
+        CONFIGUREARGS="--enable-native-toplevel${CONFIGUREARGS:+ $CONFIGUREARGS}"
+        ;;
+    *)
+        native_toplevel=off ;;
   esac
+
+
+  # ./configure
   log_trace ocaml_configure "$build_world_PREFIX" "$build_world_TARGET_ABI" "$build_world_PRECONFIGURE" "--host=$build_world_HOST_TRIPLET $CONFIGUREARGS --disable-ocamldoc"
 
   # Build
@@ -354,8 +388,11 @@ build_world() {
   log_trace make_host -final ocamlopt.opt
 
   # Tools we want that we can compile using the OCaml compiler to run on the host.
-  log_trace make_host -final ocaml ocamldebugger ocamllex.opt ocamltoolsopt
-  
+  # Separate ocaml from the others to avoid race condition `Could not finding .cmi file
+  # for interface .../genprintval.mli` (Apple M1 -> android_arm64v8a; 4.14.0)
+  log_trace make_host -final ocaml
+  log_trace make_host -final ocamldebugger ocamllex.opt ocamltoolsopt
+
   # Tools we don't need but are needed by `install` target
   log_trace make_host -final expunge
 
@@ -369,7 +406,18 @@ build_world() {
     log_trace make_host -compile-stdlib flexdll
   fi
   printf "+ INFO: Compiling host stdlib in pass 1\n" >&2
-  log_trace make_host -final  -C stdlib all allopt
+  # Race condition on Apple M1 -> android_arm64v8a:
+  #   /usr/bin/env /xxx/build_android_arm64v8a/DkSDKFiles/o/s/o/opt/mlcross/android_arm64v8a/src/ocaml/support/ocamloptTarget.wrapper -strict-sequence -absname -w +a-4-9-41-42-44-45-48-70 -g -warn-error +A -bin-annot -nostdlib -principal -safe-string -strict-formats   -nopervasives -c camlinternalFormatBasics.ml
+  #   Assembler messages:
+  #   Error: can't open aarch64-none-linux-android21 for reading: No such file or directory
+  #   File "/xxx/build_android_arm64v8a/DkSDKFiles/o/s/o/opt/mlcross/android_arm64v8a/src/ocaml/stdlib/camlinternalFormatBasics.ml", line 1:
+  #   Error: Assembler error, input left in file /var/folders/8z/_n2pwgb92fx3sbkgkzhb484m0000gn/T/dkmlw.cL1uC/camlasm657bd8.s
+  #   make: *** [camlinternalFormatBasics.cmx] Error 2
+  #   make: INTERNAL: Exiting with 9 jobserver tokens available; should be 8!
+  #   FATAL: make CAMLDEP=/xxx/build_android_arm64v8a/DkSDKFiles/o/s/o/src/ocaml/runtime/ocamlrun /xxx/build_android_arm64v8a/DkSDKFiles/o/s/o/src/ocaml/ocamlc -depend CAMLLEX=/xxx/build_android_arm64v8a/DkSDKFiles/o/s/o/src/ocaml/runtime/ocamlrun /xxx/build_android_arm64v8a/DkSDKFiles/o/s/o/src/ocaml/lex/ocamllex OCAMLLEX=/xxx/build_android_arm64v8a/DkSDKFiles/o/s/o/src/ocaml/runtime/ocamlrun /xxx/build_android_arm64v8a/DkSDKFiles/o/s/o/src/ocaml/lex/ocamllex CAMLYACC=/xxx/build_android_arm64v8a/DkSDKFiles/o/s/o/src/ocaml/yacc/ocamlyacc OCAMLYACC=/xxx/build_android_arm64v8a/DkSDKFiles/o/s/o/src/ocaml/yacc/ocamlyacc CAMLRUN=/xxx/build_android_arm64v8a/DkSDKFiles/o/s/o/src/ocaml/runtime/ocamlrun OCAMLRUN=/xxx/build_android_arm64v8a/DkSDKFiles/o/s/o/src/ocaml/runtime/ocamlrun CAMLC=/usr/bin/env /xxx/build_android_arm64v8a/DkSDKFiles/o/s/o/opt/mlcross/android_arm64v8a/src/ocaml/support/ocamlcTarget.wrapper OCAMLC=/usr/bin/env /xxx/build_android_arm64v8a/DkSDKFiles/o/s/o/opt/mlcross/android_arm64v8a/src/ocaml/support/ocamlcTarget.wrapper CAMLOPT=/usr/bin/env /xxx/build_android_arm64v8a/DkSDKFiles/o/s/o/opt/mlcross/android_arm64v8a/src/ocaml/support/ocamloptTarget.wrapper OCAMLOPT=/usr/bin/env /xxx/build_android_arm64v8a/DkSDKFiles/o/s/o/opt/mlcross/android_arm64v8a/src/ocaml/support/ocamloptTarget.wrapper OCAMLDOC_RUN=/usr/bin/env CAML_LD_LIBRARY_PATH=/xxx/build_android_arm64v8a/DkSDKFiles/o/s/o/src/ocaml/otherlibs/unix:/xxx/build_android_arm64v8a/DkSDKFiles/o/s/o/src/ocaml/otherlibs/str /xxx/build_android_arm64v8a/DkSDKFiles/o/s/o/src/ocaml/ocamldoc/ocamldoc BUILD_ROOT=/xxx/build_android_arm64v8a/DkSDKFiles/o/s/o/opt/mlcross/android_arm64v8a/src/ocaml SAK_CC=/usr/bin/clang -arch arm64 SAK_CFLAGS=-O2 -fno-strict-aliasing -fwrapv -pthread -Wall -Wdeclaration-after-statement -fno-common -g -arch arm64 -D_FILE_OFFSET_BITS=64 -DCAML_NAME_SPACE  -DCAMLDLLIMPORT=  SAK_LINK=/usr/bin/clang -arch arm64 -O2 -fno-strict-aliasing -fwrapv -pthread -Wall -Wdeclaration-after-statement -fno-common -g -arch arm64   -o $(1) $(2) -C stdlib all allopt -j8 -l8 failed
+  # Split up ... may need to lower concurrency below 8 to reduce occurrence
+  log_trace make_host -final  -C stdlib all
+  log_trace make_host -final  -C stdlib allopt
   printf "+ INFO: Recompiling host ocamlc in pass 1\n" >&2
   log_trace make_host -final  ocamlc
   printf "+ INFO: Recompiling host ocamlopt in pass 1\n" >&2
@@ -409,11 +457,17 @@ build_world() {
   log_trace make_target "$build_world_TARGET_ABI" "$build_world_BUILD_ROOT" otherlibraries
   log_trace make_target "$build_world_TARGET_ABI" "$build_world_BUILD_ROOT" otherlibrariesopt
   log_trace make_target "$build_world_TARGET_ABI" "$build_world_BUILD_ROOT" ocamltoolsopt
-  case "$_OCAMLVER" in
-    4.14.*|5.*)
+  case "$native_toplevel" in
+    compile)
+        # Install compiled objects needed for [installoptopt] target
+        log_trace make_target "$build_world_TARGET_ABI" "$build_world_BUILD_ROOT" \
+          toplevel/toploop.cmx toplevel/native/tophooks.cmi toplevel/native/topmain.cmx \
+          toplevel/topstart.cmx
+        ;;
+    full)
         # Install native toplevel
         log_trace make_target "$build_world_TARGET_ABI" "$build_world_BUILD_ROOT" \
-          "ocamlnat${build_world_TARGET_EXE_EXT}" \
+          "ocamlnat$build_world_TARGET_EXE_EXT" \
           toplevel/toploop.cmx
         ;;
   esac
