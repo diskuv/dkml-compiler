@@ -415,21 +415,32 @@ if [ -n "${autodetect_compiler_LD:-}" ] && [ -n "${DIRECT_LD:-}" ]; then
   esac
 fi
 
-# CMake: AR, STRIP, RANLIB, NM, OBJDUMP
-if [ -z "${AR:-}" ] && ! cmake_flag_off "${DKML_COMPILE_CM_CMAKE_AR:-}"; then
-  AR="${DKML_COMPILE_CM_CMAKE_AR:-}"
+# --- CMake: AR, STRIP, RANLIB, NM, OBJDUMP ---
+
+if [ -z "${AR:-}" ]; then
+  if [ -n "${DKML_COMPILE_CM_CMAKE_ASM_COMPILER_AR:-}" ] && ! cmake_flag_notfound "${DKML_COMPILE_CM_CMAKE_ASM_COMPILER_AR:-}"; then
+    # Android's CMake toolchain has correct llvm-ar rather than system's /usr/bin/ar in CMAKE_AR.
+    AR="${DKML_COMPILE_CM_CMAKE_ASM_COMPILER_AR:-}"
+  elif ! cmake_flag_notfound "${DKML_COMPILE_CM_CMAKE_AR:-}"; then
+    AR="${DKML_COMPILE_CM_CMAKE_AR:-}"
+  fi
 fi
-if [ -z "${RANLIB:-}" ] && ! cmake_flag_off "${DKML_COMPILE_CM_CMAKE_RANLIB:-}" && ! [ "$DKML_COMPILE_CM_CMAKE_RANLIB" = : ]; then
-  # On Windows CMAKE_RANLIB can be ":", which we skip over
-  RANLIB="${DKML_COMPILE_CM_CMAKE_RANLIB:-}"
+if [ -z "${RANLIB:-}" ]; then
+  if [ -n "${DKML_COMPILE_CM_CMAKE_ASM_COMPILER_RANLIB:-}" ] && ! cmake_flag_notfound "${DKML_COMPILE_CM_CMAKE_ASM_COMPILER_RANLIB:-}"; then
+    # Android's CMake toolchain has correct llvm-ranlib rather than system's /usr/bin/ranlib in CMAKE_RANLIB.
+    RANLIB="${DKML_COMPILE_CM_CMAKE_ASM_COMPILER_RANLIB:-}"
+  elif ! cmake_flag_notfound "${DKML_COMPILE_CM_CMAKE_RANLIB:-}" && ! [ "$DKML_COMPILE_CM_CMAKE_RANLIB" = : ]; then
+    # On Windows CMAKE_RANLIB can be ":", which we skip over
+    RANLIB="${DKML_COMPILE_CM_CMAKE_RANLIB:-}"
+  fi
 fi
-if [ -z "${STRIP:-}" ] && ! cmake_flag_off "${DKML_COMPILE_CM_CMAKE_STRIP:-}"; then
+if [ -z "${STRIP:-}" ] && ! cmake_flag_notfound "${DKML_COMPILE_CM_CMAKE_STRIP:-}"; then
   STRIP="${DKML_COMPILE_CM_CMAKE_STRIP:-}"
 fi
-if [ -z "${NM:-}" ] && ! cmake_flag_off "${DKML_COMPILE_CM_CMAKE_NM:-}"; then
+if [ -z "${NM:-}" ] && ! cmake_flag_notfound "${DKML_COMPILE_CM_CMAKE_NM:-}"; then
   NM="${DKML_COMPILE_CM_CMAKE_NM:-}";
 fi
-if [ -z "${OBJDUMP:-}" ] && ! cmake_flag_off "${DKML_COMPILE_CM_CMAKE_OBJDUMP:-}"; then
+if [ -z "${OBJDUMP:-}" ] && ! cmake_flag_notfound "${DKML_COMPILE_CM_CMAKE_OBJDUMP:-}"; then
   OBJDUMP="${DKML_COMPILE_CM_CMAKE_OBJDUMP:-}"
 fi
 
