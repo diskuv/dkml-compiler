@@ -48,7 +48,8 @@ dump_logs_on_error() {
     printf '@ERR+ utils/config.ml\n' >&2
     "$DKMLSYS_SED" 's/^/@config.ml+| /' utils/config.ml | "$DKMLSYS_AWK" '{print}' >&2
   fi
-  if [ -e config.log ]; then
+  #   config.log is huge. Only dump if ./configure failed
+  if [ -e config.log ] && ! [ -e Makefile.config ]; then
     printf '@ERR+ config.log\n' >&2
     "$DKMLSYS_SED" 's/^/@config.log+| /' config.log | "$DKMLSYS_AWK" '{print}' >&2
   fi
