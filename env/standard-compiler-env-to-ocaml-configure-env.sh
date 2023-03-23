@@ -226,6 +226,8 @@ if [ -n "${autodetect_compiler_CC:-}" ]; then
   esac
 fi
 
+# --- Candidate ASPP, and AS and ASFLAGS --
+
 candidate_ASPP=
 
 # https://github.com/ocaml/ocaml/blob/01c6f16cc69ce1d8cf157e66d5702fadaa18d247/configure.ac#L1213-L1240
@@ -333,13 +335,20 @@ elif [ -n "${autodetect_compiler_AS:-}" ]; then
           fi
         fi
       done
-      if [ -n "$_gnu_as_compiler" ]; then
-        # Found GNU AS assembler
+      if [ -n "$_gnu_as_compiler" ] && ! [ "$_gnu_as_compiler" = "${DKML_COMPILE_CM_CMAKE_ASM_COMPILER:-}" ]; then
+        # Found GNU AS assembler, and it was NOT configured as the CMAKE_ASM_COMPILER!
+        #
+        # We no longer consider ASFLAGS to be safe since we will change the ASM_COMPILER
+        # to the GNU `as` compiler from whatever it was before (not `as`).
+        autodetect_compiler_ASFLAGS=
+
+        # Switch over to GNU AS assembler
         if [ -x /usr/bin/cygpath ]; then
           _gnu_as_compiler=$(/usr/bin/cygpath -am "$_gnu_as_compiler")
         fi
         autodetect_compiler_AS="$_gnu_as_compiler"
 
+        # ASPP needs to use the C compiler because it has C preprocessing.
         candidate_ASPP="$DKML_COMPILE_CM_CMAKE_C_COMPILER"
         if [ -n "${DKML_COMPILE_CM_CMAKE_C_COMPILE_OPTIONS_TARGET:-}" ] && [ -n "${DKML_COMPILE_CM_CMAKE_C_COMPILER_TARGET:-}" ]; then
           candidate_ASPP="${candidate_ASPP:+$candidate_ASPP }${DKML_COMPILE_CM_CMAKE_C_COMPILE_OPTIONS_TARGET:-}${DKML_COMPILE_CM_CMAKE_C_COMPILER_TARGET:-}"
