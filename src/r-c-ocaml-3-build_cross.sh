@@ -404,18 +404,7 @@ build_world() {
     log_trace make_host -compile-stdlib flexdll
   fi
   printf "+ INFO: Compiling host stdlib in pass 1\n" >&2
-  # Race condition on Apple M1 -> android_arm64v8a:
-  #   /usr/bin/env /xxx/build_android_arm64v8a/DkSDKFiles/o/s/o/opt/mlcross/android_arm64v8a/src/ocaml/support/ocamloptTarget.wrapper -strict-sequence -absname -w +a-4-9-41-42-44-45-48-70 -g -warn-error +A -bin-annot -nostdlib -principal -safe-string -strict-formats   -nopervasives -c camlinternalFormatBasics.ml
-  #   Assembler messages:
-  #   Error: can't open aarch64-none-linux-android21 for reading: No such file or directory
-  #   File "/xxx/build_android_arm64v8a/DkSDKFiles/o/s/o/opt/mlcross/android_arm64v8a/src/ocaml/stdlib/camlinternalFormatBasics.ml", line 1:
-  #   Error: Assembler error, input left in file /var/folders/8z/_n2pwgb92fx3sbkgkzhb484m0000gn/T/dkmlw.cL1uC/camlasm657bd8.s
-  #   make: *** [camlinternalFormatBasics.cmx] Error 2
-  #   make: INTERNAL: Exiting with 9 jobserver tokens available; should be 8!
-  #   FATAL: make CAMLDEP=/xxx/build_android_arm64v8a/DkSDKFiles/o/s/o/src/ocaml/runtime/ocamlrun /xxx/build_android_arm64v8a/DkSDKFiles/o/s/o/src/ocaml/ocamlc -depend CAMLLEX=/xxx/build_android_arm64v8a/DkSDKFiles/o/s/o/src/ocaml/runtime/ocamlrun /xxx/build_android_arm64v8a/DkSDKFiles/o/s/o/src/ocaml/lex/ocamllex OCAMLLEX=/xxx/build_android_arm64v8a/DkSDKFiles/o/s/o/src/ocaml/runtime/ocamlrun /xxx/build_android_arm64v8a/DkSDKFiles/o/s/o/src/ocaml/lex/ocamllex CAMLYACC=/xxx/build_android_arm64v8a/DkSDKFiles/o/s/o/src/ocaml/yacc/ocamlyacc OCAMLYACC=/xxx/build_android_arm64v8a/DkSDKFiles/o/s/o/src/ocaml/yacc/ocamlyacc CAMLRUN=/xxx/build_android_arm64v8a/DkSDKFiles/o/s/o/src/ocaml/runtime/ocamlrun OCAMLRUN=/xxx/build_android_arm64v8a/DkSDKFiles/o/s/o/src/ocaml/runtime/ocamlrun CAMLC=/usr/bin/env /xxx/build_android_arm64v8a/DkSDKFiles/o/s/o/opt/mlcross/android_arm64v8a/src/ocaml/support/ocamlcTarget.wrapper OCAMLC=/usr/bin/env /xxx/build_android_arm64v8a/DkSDKFiles/o/s/o/opt/mlcross/android_arm64v8a/src/ocaml/support/ocamlcTarget.wrapper CAMLOPT=/usr/bin/env /xxx/build_android_arm64v8a/DkSDKFiles/o/s/o/opt/mlcross/android_arm64v8a/src/ocaml/support/ocamloptTarget.wrapper OCAMLOPT=/usr/bin/env /xxx/build_android_arm64v8a/DkSDKFiles/o/s/o/opt/mlcross/android_arm64v8a/src/ocaml/support/ocamloptTarget.wrapper OCAMLDOC_RUN=/usr/bin/env CAML_LD_LIBRARY_PATH=/xxx/build_android_arm64v8a/DkSDKFiles/o/s/o/src/ocaml/otherlibs/unix:/xxx/build_android_arm64v8a/DkSDKFiles/o/s/o/src/ocaml/otherlibs/str /xxx/build_android_arm64v8a/DkSDKFiles/o/s/o/src/ocaml/ocamldoc/ocamldoc BUILD_ROOT=/xxx/build_android_arm64v8a/DkSDKFiles/o/s/o/opt/mlcross/android_arm64v8a/src/ocaml SAK_CC=/usr/bin/clang -arch arm64 SAK_CFLAGS=-O2 -fno-strict-aliasing -fwrapv -pthread -Wall -Wdeclaration-after-statement -fno-common -g -arch arm64 -D_FILE_OFFSET_BITS=64 -DCAML_NAME_SPACE  -DCAMLDLLIMPORT=  SAK_LINK=/usr/bin/clang -arch arm64 -O2 -fno-strict-aliasing -fwrapv -pthread -Wall -Wdeclaration-after-statement -fno-common -g -arch arm64   -o $(1) $(2) -C stdlib all allopt -j8 -l8 failed
-  # Split up ... may need to lower concurrency below 8 to reduce occurrence
-  log_trace make_host -final  -C stdlib all
-  log_trace make_host -final  -C stdlib allopt
+  log_trace make_host -final  -C stdlib all allopt
   printf "+ INFO: Recompiling host ocamlc in pass 1\n" >&2
   log_trace make_host -final  ocamlc
   printf "+ INFO: Recompiling host ocamlopt in pass 1\n" >&2

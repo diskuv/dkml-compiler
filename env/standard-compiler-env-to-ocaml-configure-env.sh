@@ -142,7 +142,7 @@ if [ -n "${autodetect_compiler_CC:-}" ]; then
   fi
 
   # Add --target if necessary
-  if [ -n "${DKML_COMPILE_CM_CMAKE_C_COMPILER_TARGET:-}" ]; then
+  if [ -n "${DKML_COMPILE_CM_CMAKE_C_COMPILE_OPTIONS_TARGET:-}" ] && [ -n "${DKML_COMPILE_CM_CMAKE_C_COMPILER_TARGET:-}" ]; then
     autodetect_compiler_CC="$autodetect_compiler_CC ${DKML_COMPILE_CM_CMAKE_C_COMPILE_OPTIONS_TARGET:-}${DKML_COMPILE_CM_CMAKE_C_COMPILER_TARGET:-}"
   fi
   # clang and perhaps other compilers need --sysroot=C:/Users/beckf/AppData/Local/Android/Sdk/ndk/21.4.7075529/toolchains/llvm/prebuilt/windows-x86_64/sysroot for example
@@ -240,7 +240,7 @@ if cmake_flag_on "${DKML_COMPILE_CM_MSVC:-}"; then
     autodetect_compiler_AS=${DKML_COMPILE_CM_CMAKE_ASM_MASM_COMPILER}
     autodetect_compiler_ASFLAGS="-nologo${_MLARG_EXTRA:+ $_MLARG_EXTRA}${autodetect_compiler_ASFLAGS:+ $autodetect_compiler_ASFLAGS}"
 elif [ -n "${autodetect_compiler_AS:-}" ]; then
-  if [ -n "${DKML_COMPILE_CM_CMAKE_ASM_COMPILER_TARGET:-}" ]; then
+  if [ -n "${DKML_COMPILE_CM_CMAKE_ASM_COMPILE_OPTIONS_TARGET:-}" ] && [ -n "${DKML_COMPILE_CM_CMAKE_ASM_COMPILER_TARGET:-}" ]; then
     autodetect_compiler_ASFLAGS="${DKML_COMPILE_CM_CMAKE_ASM_COMPILE_OPTIONS_TARGET:-}${DKML_COMPILE_CM_CMAKE_ASM_COMPILER_TARGET:-}${autodetect_compiler_ASFLAGS:+ $autodetect_compiler_ASFLAGS}"
   fi
 
@@ -299,7 +299,7 @@ elif [ -n "${autodetect_compiler_AS:-}" ]; then
       #
       # The GNU AS assembler (https://sourceware.org/binutils/docs/as/index.html) does not support preprocessing
       # so it cannot be used as the `ASPP` ./configure variable.
-      
+
       # XCode (macOS/iOS)
       # -----------------
       #
@@ -339,7 +339,12 @@ elif [ -n "${autodetect_compiler_AS:-}" ]; then
           _gnu_as_compiler=$(/usr/bin/cygpath -am "$_gnu_as_compiler")
         fi
         autodetect_compiler_AS="$_gnu_as_compiler"
-        candidate_ASPP="$DKML_COMPILE_CM_CMAKE_C_COMPILER ${DKML_COMPILE_CM_CMAKE_C_COMPILE_OPTIONS_TARGET:-}${DKML_COMPILE_CM_CMAKE_C_COMPILER_TARGET:-} ${autodetect_compiler_CFLAGS:-} -c"
+
+        candidate_ASPP="$DKML_COMPILE_CM_CMAKE_C_COMPILER"
+        if [ -n "${DKML_COMPILE_CM_CMAKE_C_COMPILE_OPTIONS_TARGET:-}" ] && [ -n "${DKML_COMPILE_CM_CMAKE_C_COMPILER_TARGET:-}" ]; then
+          candidate_ASPP="${candidate_ASPP:+$candidate_ASPP }${DKML_COMPILE_CM_CMAKE_C_COMPILE_OPTIONS_TARGET:-}${DKML_COMPILE_CM_CMAKE_C_COMPILER_TARGET:-}"
+        fi
+        candidate_ASPP="${candidate_ASPP:+$candidate_ASPP }${autodetect_compiler_CFLAGS:+$autodetect_compiler_CFLAGS }-c"
         if [ "${DKML_COMPILE_CM_CONFIG:-}" = "Debug" ]; then
           autodetect_compiler_ASFLAGS="-g${autodetect_compiler_ASFLAGS:+ $autodetect_compiler_ASFLAGS}"
           # CFLAGS will already include `-g` if the toolchain wanted it.
