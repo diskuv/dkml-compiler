@@ -277,10 +277,8 @@ build_world() {
 
   case "$build_world_TARGET_ABI" in
   windows_*)
-    build_world_TARGET_EXE_OBJ=.obj
     build_world_TARGET_EXE_EXT=.exe ;;
   *)
-    build_world_TARGET_EXE_OBJ=.o
     build_world_TARGET_EXE_EXT= ;;
   esac
 
