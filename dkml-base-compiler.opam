@@ -182,7 +182,7 @@ pin-depends: [
   [
     "dkml-runtime-common-native.1.2.1~prerel1"
     # 1.2.1-prerel1 + some commits
-    "git+https://github.com/diskuv/dkml-runtime-common.git#15624578c44eed35ebc30679797de69b87563864"
+    "git+https://github.com/diskuv/dkml-runtime-common.git#b9c5dbe003e000bfd48f9cac876a726e6c20a4f4"
   ]
 ]
 extra-source "dl/ocaml.tar.gz" {
