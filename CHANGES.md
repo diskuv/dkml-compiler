@@ -6,6 +6,8 @@
   `flexlink.exe` so that flexlink can run standalone without setting
   FLEXDIR environment variable. Bug report at
   <https://github.com/diskuv/dkml-installer-ocaml/issues/40>
+* Fix ARM32 bug from ocaml/ocaml PR8936 that flipped a GOT relocation
+  label with a PIC relocation label.
 
 ## `4.14.0~v1.2.0`
 
