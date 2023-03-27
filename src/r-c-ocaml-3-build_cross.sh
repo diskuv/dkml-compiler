@@ -234,11 +234,15 @@ ocaml_android_triplet() {
   shift
 
   if [ "${DKML_COMPILE_TYPE:-}" = CM ] && [ -n "${DKML_COMPILE_CM_CMAKE_C_COMPILER_TARGET:-}" ]; then
-    # Use CMAKE_C_COMPILER_TARGET=armv7-none-linux-androideabi16 (etc.)
-    # Reference: https://android.googlesource.com/platform/ndk/+/master/meta/abis.json
+    # CMAKE_C_COMPILER_TARGET=armv7-none-linux-androideabi16 (etc.)
+    # However, the LLVM triple should not include the Android API level as a suffix.
+    # Confer https://developer.android.com/ndk/guides/other_build_systems or
+    # https://android.googlesource.com/platform/ndk/+/master/meta/abis.json.
+    # So strip the Android API level from CMAKE_C_COMPILER_TARGET.
     case "$DKML_COMPILE_CM_CMAKE_C_COMPILER_TARGET" in
     arm*-none-linux-android* | aarch64*-none-linux-android* | i686*-none-linux-android* | x86_64*-none-linux-android*)
-      printf "%s\n" "$DKML_COMPILE_CM_CMAKE_C_COMPILER_TARGET"
+      # armv7-none-linux-androideabi16 -> armv7-none-linux-androideabi
+      printf "%s" "$DKML_COMPILE_CM_CMAKE_C_COMPILER_TARGET" | $DKML_SED 's/[0-9]*$//'
       return
       ;;
     esac
