@@ -242,7 +242,7 @@ ocaml_android_triplet() {
     case "$DKML_COMPILE_CM_CMAKE_C_COMPILER_TARGET" in
     arm*-none-linux-android* | aarch64*-none-linux-android* | i686*-none-linux-android* | x86_64*-none-linux-android*)
       # armv7-none-linux-androideabi16 -> armv7-none-linux-androideabi
-      printf "%s" "$DKML_COMPILE_CM_CMAKE_C_COMPILER_TARGET" | $DKML_SED 's/[0-9]*$//'
+      printf "%s" "$DKML_COMPILE_CM_CMAKE_C_COMPILER_TARGET" | $DKMLSYS_SED 's/[0-9]*$//'
       return
       ;;
     esac
