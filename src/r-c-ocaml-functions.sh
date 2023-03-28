@@ -329,7 +329,13 @@ ocaml_configure() {
     --post-transform "$ocaml_configure_PRECONFIGURE" \
     "$WORK"/with-compiler.sh
   log_script "$WORK"/with-compiler.sh
-
+  #   To save a lot of troubleshooting time, we'll dump details into the PREFIX
+  $DKMLSYS_INSTALL -d "$ocaml_configure_PREFIX/share/dkml/detect"
+  $DKMLSYS_INSTALL "$ocaml_configure_PRECONFIGURE" "$ocaml_configure_PREFIX/share/dkml/detect/preconfigure.sh"
+  $DKMLSYS_INSTALL "$WORK"/with-compiler.sh "$ocaml_configure_PREFIX/share/dkml/detect/with-compiler.sh"
+  echo "$ocaml_configure_ABI" > "$ocaml_configure_PREFIX/share/dkml/detect/abi.txt"
+  (set | grep "^DKML_COMPILE_" || true) > "$ocaml_configure_PREFIX/share/dkml/detect/compile-vars.txt"
+  
   # ./configure and define make functions
   # -------------------------------------
 
