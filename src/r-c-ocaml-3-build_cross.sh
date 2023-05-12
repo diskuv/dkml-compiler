@@ -452,7 +452,12 @@ build_world() {
   "$DKMLSYS_INSTALL" -v "runtime/ocamlrun$build_world_TARGET_EXE_EXT" "$build_world_PREFIX/bin/"
   log_trace make_host -final            install
   log_trace make_host -final            -C debugger install
-  "$DKMLSYS_INSTALL" -v "$OCAMLSRC_MIXED/runtime/ocamlrund" "$OCAMLSRC_MIXED/runtime/ocamlruni" "$build_world_PREFIX/bin/"
+  if [ -x "$OCAMLSRC_MIXED/runtime/ocamlrund" ]; then
+    "$DKMLSYS_INSTALL" -v "$OCAMLSRC_MIXED/runtime/ocamlrund" "$build_world_PREFIX/bin/"
+  fi
+  if [ -x "$OCAMLSRC_MIXED/runtime/ocamlruni" ]; then
+    "$DKMLSYS_INSTALL" -v "$OCAMLSRC_MIXED/runtime/ocamlruni" "$build_world_PREFIX/bin/"
+  fi
   "$DKMLSYS_INSTALL" -v "$OCAMLSRC_MIXED/yacc/ocamlyacc" "$build_world_PREFIX/bin/"
 }
 
