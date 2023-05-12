@@ -1,0 +1,12 @@
+diff --git a/Makefile.common b/Makefile.common
+index 4306815..e6e512b 100644
+--- a/Makefile.common
++++ b/Makefile.common
+@@ -175,3 +175,7 @@ $(ROOTDIR)/%/sak$(EXE):
+ ifneq "$(REQUIRES_CONFIGURATION)" ""
+ $(ROOTDIR)/%/StdlibModules: $(SAK) ;
+ endif
++
++ifeq "$(RUNTIMED)" "true"
++OPTCOMPFLAGS += -dstartup -S
++endif
