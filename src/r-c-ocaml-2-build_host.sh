@@ -49,8 +49,6 @@ usage() {
         printf "%s\n" "   -e DKMLHOSTABI: Uses the Diskuv OCaml compiler detector find a host ABI compiler"
         printf "%s\n" "   -f HOSTSRC_SUBDIR: Use HOSTSRC_SUBDIR subdirectory of -t DIR to place the source code of the host ABI"
         printf "%s\n" "   -p HOST_SUBDIR: Optional. Use HOST_SUBDIR subdirectory of -t DIR to place the host ABI"
-        printf "%s\n" "   -i OCAMLCARGS: Optional. Extra arguments passed to ocamlc like -g to save debugging"
-        printf "%s\n" "   -j OCAMLOPTARGS: Optional. Extra arguments passed to ocamlopt like -g to save debugging"
         printf "%s\n" "   -k HOSTABISCRIPT: Optional. See r-c-ocaml-1-setup.sh"
         printf "%s\n" "   -l FLEXLINKFLAGS: Options added to flexlink while building ocaml, ocamlc, etc. native Windows executables"
         printf "%s\n" "   -m CONFIGUREARGS: Optional. Extra arguments passed to OCaml's ./configure. --with-flexdll"
@@ -66,8 +64,6 @@ DKMLDIR=
 TARGETDIR=
 DKMLHOSTABI=
 CONFIGUREARGS=
-OCAMLCARGS=
-OCAMLOPTARGS=
 HOSTABISCRIPT=
 RUNTIMEONLY=OFF
 HOSTSRC_SUBDIR=
@@ -76,7 +72,7 @@ HOST_ONLY=OFF
 OCAMLC_OPT_EXE=
 FLEXLINKFLAGS=
 export MSVS_PREFERENCE=
-while getopts ":s:d:t:b:c:e:m:i:j:k:l:rf:p:q:h" opt; do
+while getopts ":s:d:t:b:c:e:m:k:l:rf:p:q:h" opt; do
     case ${opt} in
         h )
             usage
@@ -107,12 +103,6 @@ while getopts ":s:d:t:b:c:e:m:i:j:k:l:rf:p:q:h" opt; do
         m )
             CONFIGUREARGS="$OPTARG"
         ;;
-        i)
-            OCAMLCARGS="$OPTARG"
-            ;;
-        j)
-            OCAMLOPTARGS="$OPTARG"
-            ;;
         k)
             HOSTABISCRIPT="$OPTARG"
             ;;
@@ -338,17 +328,17 @@ build_with_support_for_cross_compiling() {
     create_ocamlc_wrapper() {
         create_ocamlc_wrapper_PASS=$1 ; shift
         # shellcheck disable=SC2086
-        log_trace genWrapper "$OCAMLSRC_MIXED/support/ocamlcHost$create_ocamlc_wrapper_PASS.wrapper"     "$OCAMLSRC_MIXED"/support/with-host-c-compiler.sh "$OCAMLSRC_MIXED"/support/with-linking-on-host.sh "$OCAMLSRC_MIXED/ocamlc.opt$HOST_EXE_EXT" $OCAMLCARGS "$@"
+        log_trace genWrapper "$OCAMLSRC_MIXED/support/ocamlcHost$create_ocamlc_wrapper_PASS.wrapper"     "$OCAMLSRC_MIXED"/support/with-host-c-compiler.sh "$OCAMLSRC_MIXED"/support/with-linking-on-host.sh "$OCAMLSRC_MIXED/ocamlc.opt$HOST_EXE_EXT" "$@"
     }
     create_ocamlopt_wrapper() {
         create_ocamlopt_wrapper_PASS=$1 ; shift
         # shellcheck disable=SC2086
-        log_trace genWrapper "$OCAMLSRC_MIXED/support/ocamloptHost$create_ocamlopt_wrapper_PASS.wrapper" "$OCAMLSRC_MIXED"/support/with-host-c-compiler.sh "$OCAMLSRC_MIXED"/support/with-linking-on-host.sh "$OCAMLSRC_MIXED/ocamlopt.opt$HOST_EXE_EXT" $OCAMLOPTARGS "$@"
+        log_trace genWrapper "$OCAMLSRC_MIXED/support/ocamloptHost$create_ocamlopt_wrapper_PASS.wrapper" "$OCAMLSRC_MIXED"/support/with-host-c-compiler.sh "$OCAMLSRC_MIXED"/support/with-linking-on-host.sh "$OCAMLSRC_MIXED/ocamlopt.opt$HOST_EXE_EXT" "$@"
     }
     create_ocamlrun_ocamlopt_wrapper() {
         create_ocamlrun_ocamlopt_wrapper_PASS=$1 ; shift
         # shellcheck disable=SC2086
-        log_trace genWrapper "$OCAMLSRC_MIXED/support/ocamloptHost$create_ocamlrun_ocamlopt_wrapper_PASS.wrapper" "$OCAMLSRC_MIXED"/support/with-host-c-compiler.sh "$OCAMLSRC_MIXED"/support/with-linking-on-host.sh "$OCAMLSRC_MIXED/runtime/ocamlrun$HOST_EXE_EXT" "$OCAMLSRC_MIXED/ocamlopt$HOST_EXE_EXT" $OCAMLOPTARGS "$@"
+        log_trace genWrapper "$OCAMLSRC_MIXED/support/ocamloptHost$create_ocamlrun_ocamlopt_wrapper_PASS.wrapper" "$OCAMLSRC_MIXED"/support/with-host-c-compiler.sh "$OCAMLSRC_MIXED"/support/with-linking-on-host.sh "$OCAMLSRC_MIXED/runtime/ocamlrun$HOST_EXE_EXT" "$OCAMLSRC_MIXED/ocamlopt$HOST_EXE_EXT" "$@"
     }
     #   Since the Makefile is sensitive to timestamps, we must make sure the wrappers have timestamps
     #   before any generated code (or else it will recompile).

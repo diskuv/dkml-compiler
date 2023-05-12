@@ -64,8 +64,6 @@ usage() {
     printf "%s\n" "   -e DKMLHOSTABI: Uses the Diskuv OCaml compiler detector find a host ABI compiler"
     printf "%s\n" "   -f HOSTSRC_SUBDIR: Use HOSTSRC_SUBDIR subdirectory of -t DIR to place the source code of the host ABI"
     printf "%s\n" "   -g CROSS_SUBDIR: Use CROSS_SUBDIR subdirectory of -t DIR to place target ABIs"
-    printf "%s\n" "   -i OCAMLCARGS: Optional. Extra arguments passed to ocamlc like -g to save debugging"
-    printf "%s\n" "   -j OCAMLOPTARGS: Optional. Extra arguments passed to ocamlopt like -g to save debugging"
     printf "%s\n" "   -l FLEXLINKFLAGS: Options added to flexlink while building ocaml, ocamlc, etc. native Windows executables"
     printf "%s\n" "   -n CONFIGUREARGS: Optional. Extra arguments passed to OCaml's ./configure. --with-flexdll"
     printf "%s\n" "      and --host will have already been set appropriately, but you can override the --host heuristic by adding it"
@@ -79,12 +77,10 @@ TARGETDIR=
 TARGETABIS=
 CONFIGUREARGS=
 DKMLHOSTABI=
-OCAMLCARGS=
-OCAMLOPTARGS=
 HOSTSRC_SUBDIR=
 CROSS_SUBDIR=
 FLEXLINKFLAGS=
-while getopts ":s:d:t:a:n:e:f:g:i:j:l:h" opt; do
+while getopts ":s:d:t:a:n:e:f:g:l:h" opt; do
   case ${opt} in
   h)
     usage
@@ -116,12 +112,6 @@ while getopts ":s:d:t:a:n:e:f:g:i:j:l:h" opt; do
     ;;
   f ) HOSTSRC_SUBDIR=$OPTARG ;;
   g ) CROSS_SUBDIR=$OPTARG ;;
-  i)
-    OCAMLCARGS="$OPTARG"
-    ;;
-  j)
-    OCAMLOPTARGS="$OPTARG"
-    ;;
   l ) FLEXLINKFLAGS="$OPTARG" ;;
   \?)
     printf "%s\n" "This is not an option: -$OPTARG" >&2
@@ -314,9 +304,9 @@ build_world() {
 
   # Target wrappers
   # shellcheck disable=SC2086
-  log_trace genWrapper "$build_world_BUILD_ROOT/support/ocamlcTarget.wrapper" "$build_world_BUILD_ROOT"/support/with-target-c-compiler.sh "$OCAMLSRC_MIXED"/support/with-linking-on-host.sh "$build_world_BUILD_ROOT/ocamlc.opt$build_world_TARGET_EXE_EXT" $OCAMLCARGS -I "$build_world_BUILD_ROOT/stdlib" -I "$build_world_BUILD_ROOT/otherlibs/unix" -nostdlib
+  log_trace genWrapper "$build_world_BUILD_ROOT/support/ocamlcTarget.wrapper" "$build_world_BUILD_ROOT"/support/with-target-c-compiler.sh "$OCAMLSRC_MIXED"/support/with-linking-on-host.sh "$build_world_BUILD_ROOT/ocamlc.opt$build_world_TARGET_EXE_EXT" -I "$build_world_BUILD_ROOT/stdlib" -I "$build_world_BUILD_ROOT/otherlibs/unix" -nostdlib
   # shellcheck disable=SC2086
-  log_trace genWrapper "$build_world_BUILD_ROOT/support/ocamloptTarget.wrapper" "$build_world_BUILD_ROOT"/support/with-target-c-compiler.sh "$OCAMLSRC_MIXED"/support/with-linking-on-host.sh "$build_world_BUILD_ROOT/ocamlopt.opt$build_world_TARGET_EXE_EXT" $OCAMLOPTARGS -I "$build_world_BUILD_ROOT/stdlib" -I "$build_world_BUILD_ROOT/otherlibs/unix" -nostdlib
+  log_trace genWrapper "$build_world_BUILD_ROOT/support/ocamloptTarget.wrapper" "$build_world_BUILD_ROOT"/support/with-target-c-compiler.sh "$OCAMLSRC_MIXED"/support/with-linking-on-host.sh "$build_world_BUILD_ROOT/ocamlopt.opt$build_world_TARGET_EXE_EXT" -I "$build_world_BUILD_ROOT/stdlib" -I "$build_world_BUILD_ROOT/otherlibs/unix" -nostdlib
 
   # macOS, and probably Windows, don't like the way the next `make clean` removes read-only files.
   # would get ... rm: Debug/dksdk/ocaml/opt/mlcross/darwin_x86_64: Permission denied

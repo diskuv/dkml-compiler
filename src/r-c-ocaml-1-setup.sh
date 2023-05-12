@@ -163,8 +163,6 @@ usage() {
         printf "%s\n" "      Values include: windows_x86, windows_x86_64, android_arm64v8a, darwin_x86_64, etc."
         printf "%s\n" "      Others are/will be documented on https://diskuv.gitlab.io/diskuv-ocaml. Defaults to an"
         printf "%s\n" "      the environment variable DKML_HOST_ABI, or if not defined then an autodetection of the host architecture."
-        printf "%s\n" "   -i OCAMLCARGS: Optional. Extra arguments passed to ocamlc like -g to save debugging"
-        printf "%s\n" "   -j OCAMLOPTARGS: Optional. Extra arguments passed to ocamlopt like -g to save debugging"
         printf "%s\n" "   -k HOSTABISCRIPT: Optional. A self-contained Posix shell script relative to [-d DIR] that can be sourced to"
         printf "%s\n" "      set the compiler environment variables for the host ABI. See '-a TARGETABIS' for the shell script semantics."
         printf "%s\n" "   -l FLEXLINKFLAGS: Options added to flexlink while building ocaml, ocamlc, etc. native Windows executables"
@@ -203,7 +201,7 @@ RUNTIMEONLY=OFF
 TEMPLATEDIR=
 HOSTABISCRIPT=
 OCAMLC_OPT_EXE=
-while getopts ":d:v:u:t:a:b:c:e:i:j:k:l:m:n:rf:p:g:o:xzh" opt; do
+while getopts ":d:v:u:t:a:b:c:e:k:l:m:n:rf:p:g:o:xzh" opt; do
     case ${opt} in
         h )
             usage
@@ -250,16 +248,6 @@ while getopts ":d:v:u:t:a:b:c:e:i:j:k:l:m:n:rf:p:g:o:xzh" opt; do
         f ) HOSTSRC_SUBDIR=$OPTARG ;;
         p ) HOST_SUBDIR=$OPTARG ;;
         g ) CROSS_SUBDIR=$OPTARG ;;
-        i )
-            SETUP_ARGS+=( -i "$OPTARG" )
-            BUILD_HOST_ARGS+=( -i "$OPTARG" )
-            BUILD_CROSS_ARGS+=( -i "$OPTARG" )
-        ;;
-        j )
-            SETUP_ARGS+=( -j "$OPTARG" )
-            BUILD_HOST_ARGS+=( -j "$OPTARG" )
-            BUILD_CROSS_ARGS+=( -j "$OPTARG" )
-        ;;
         l )
             BUILD_HOST_ARGS+=( -l "$OPTARG" )
             BUILD_CROSS_ARGS+=( -l "$OPTARG" )

@@ -132,6 +132,11 @@ install: [
       #   loads in other (stublib) DLLs, for example.
       "-l"                  { os = "win32" & dkml-option-debuginfo:installed }
       " -link /DEBUG:FULL"  { os = "win32" & dkml-option-debuginfo:installed }
+      #   No debug/instrumented runtime when dkml-option-debuginfo not installed
+      "-m"                                                      { !dkml-option-debuginfo:installed }
+      "--disable-debug-runtime --disable-instrumented-runtime"  { !dkml-option-debuginfo:installed }
+      "-n"                                                      { !dkml-option-debuginfo:installed }
+      "--disable-debug-runtime --disable-instrumented-runtime"  { !dkml-option-debuginfo:installed }
       #   Host architectures
       "-ewindows_x86"     { os = "win32" & (arch = "x86_32" |  ocaml-option-32bit:installed) }
       "-ewindows_x86_64"  { os = "win32" & (arch = "x86_64" & !ocaml-option-32bit:installed) }

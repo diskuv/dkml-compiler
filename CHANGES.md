@@ -9,7 +9,11 @@
 * Fix ARM32 bug from ocaml/ocaml PR8936 that flipped a GOT relocation
   label with a PIC relocation label.
 * When `dkml-option-debuginfo` is installed, keep assembly code available
-  for any debug involving Stdlib and Runtime.
+  for any debug involving Stdlib and Runtime. When not installed,
+  don't generate the `ocamlrund` and `ocamlruni` executables
+* Remove `-i` and `-j` options for `r-c-ocaml-1-setup.sh` which were only
+  active during cross-compilation, and unused except for now redundant
+  debug options.
 
 ## `4.14.0~v1.2.0`
 
