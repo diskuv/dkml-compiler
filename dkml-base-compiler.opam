@@ -195,8 +195,9 @@ extra-source "dl/ocaml.tar.gz" {
   checksum: "sha256=39f44260382f28d1054c5f9d8bf4753cb7ad64027da792f7938344544da155e8"
 }
 extra-source "dl/flexdll.tar.gz" {
-  src: "https://github.com/alainfrisch/flexdll/archive/0.42.tar.gz"
-  checksum: "sha256=a2dce0a0d2f2c5c9f52f65e281db7405f51ff22dc71cdbf494eb241c8a4bdf0f"
+  # https://github.com/ocaml/flexdll/pull/118
+  src: "https://github.com/dra27/flexdll/archive/aeb00bae25a036be5fd645b5e4f570c0b7e2643c.tar.gz"
+  checksum: "sha256=43586636f278f098840c86127796d0b3d175f538cf7eabe4baf612c78a1ea2c1"
 }
 extra-source "dl/homebrew-bundle.tar.gz" {
   src: "https://github.com/Homebrew/homebrew-bundle/archive/4756e4c4cf95485c5ea4da27375946c1dac2c71d.tar.gz"
