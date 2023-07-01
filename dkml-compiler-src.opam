@@ -1,0 +1,17 @@
+opam-version: "2.0"
+version: "v1.2.1~prerel10"
+synopsis: "Source code used to build the DkML compiler"
+maintainer: ["opensource+diskuv-ocaml@support.diskuv.com"]
+authors: ["Diskuv, Inc. <opensource+diskuv-ocaml@support.diskuv.com>"]
+license: "Apache-2.0"
+homepage: "https://github.com/diskuv/dkml-compiler"
+bug-reports: "https://github.com/diskuv/dkml-compiler/issues"
+depends: [
+  "diskuvbox" {>= "0.1.0"}
+]
+build: []
+install: [
+  ["diskuvbox" "copy-dir" "src" "%{_:lib}%/src/src"]
+  ["diskuvbox" "copy-dir" "env" "%{_:lib}%/src/env"]
+]
+dev-repo: "git+https://github.com/diskuv/dkml-compiler.git"

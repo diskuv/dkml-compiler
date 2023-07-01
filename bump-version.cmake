@@ -7,5 +7,6 @@ endif()
 include(${DKML_BUMP_VERSION_PARTICIPANT_MODULE})
 
 DkMLBumpVersionParticipant_OpamReplace(dkml-compiler-env.opam)
+DkMLBumpVersionParticipant_OpamReplace(dkml-compiler-src.opam)
 DkMLBumpVersionParticipant_DkmlBaseCompilerReplace(dkml-base-compiler.opam)
 DkMLBumpVersionParticipant_GitAddAndCommit()
