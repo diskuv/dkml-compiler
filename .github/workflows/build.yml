@@ -2,8 +2,13 @@ name: Build dkml-base-compiler
 
 env:
   OPAM_PACKAGE: "dkml-base-compiler"
-  DKML_COMPILER: "main" # Use the main branch of dkml-compiler
-  DISKUV_OPAM_REPOSITORY: "main" # Use the main branch of diskuv-opam-repository
+  # Use the main branch of dkml-compiler because we are testing changes
+  # to [dkml-compiler]
+  DKML_COMPILER: "main"
+  # Use the main branch of [diskuv-opam-repository], so versions can
+  # be bumped by [dkml] project with bump-version.cmake (and
+  # diskuv-opam-repository bump-repository.cmake) without CI failing.
+  DISKUV_OPAM_REPOSITORY: "main"
 
 on:
   push:
@@ -55,6 +60,7 @@ jobs:
         uses: ./ci/setup-dkml/gh-windows/pre
         with:
           DKML_COMPILER: ${{ env.DKML_COMPILER }}
+          DISKUV_OPAM_REPOSITORY: ${{ env.DISKUV_OPAM_REPOSITORY }}
           PRIMARY_SWITCH_SKIP_INSTALL: "true" # we install dkml-base-compiler!
 
       - name: Setup DKML on a Darwin host
@@ -62,6 +68,7 @@ jobs:
         uses: ./ci/setup-dkml/gh-darwin/pre
         with:
           DKML_COMPILER: ${{ env.DKML_COMPILER }}
+          DISKUV_OPAM_REPOSITORY: ${{ env.DISKUV_OPAM_REPOSITORY }}
           PRIMARY_SWITCH_SKIP_INSTALL: "true"
 
       - name: Setup DKML on a Linux host
@@ -69,6 +76,7 @@ jobs:
         uses: ./ci/setup-dkml/gh-linux/pre
         with:
           DKML_COMPILER: ${{ env.DKML_COMPILER }}
+          DISKUV_OPAM_REPOSITORY: ${{ env.DISKUV_OPAM_REPOSITORY }}
           PRIMARY_SWITCH_SKIP_INSTALL: "true"
 
       # BOILERPLATE START: setup-dkml for Opam Regular workflow
