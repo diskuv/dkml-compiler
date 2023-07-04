@@ -29,6 +29,10 @@ opam exec -- dune build '@gen-dkml' --auto-promote
 2. Update `compiler.version.txt`
 3. Run: `dune build '@gen-opam' --auto-promote`
 
+> TODO: This is an outdated way to do binary assets. There is an
+> `DkMLPublish_PublishAssetsTarget` function in the `dkml` project
+> that can upload assets each `dkml` release.
+
 ## Local Development
 
 ### Windows
