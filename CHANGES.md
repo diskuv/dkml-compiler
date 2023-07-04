@@ -1,7 +1,8 @@
 # Changes
 
-## Pending
+## Pending (1.2.1)
 
+* Upgraded from `flexdll.0.42` to `flexdll.0.43`
 * Install `flexdll[_initer]_msvc[64].obj` to `bin/` alongside existing
   `flexlink.exe` so that flexlink can run standalone without setting
   FLEXDIR environment variable. Bug report at
