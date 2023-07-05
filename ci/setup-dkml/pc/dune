@@ -2,11 +2,11 @@
 ; Typical upgrade steps:
 ;   opam upgrade dkml-workflows && opam exec -- generate-setup-dkml-scaffold && dune build '@gen-dkml' --auto-promote
 
-
 ; windows_x86
 
 (rule
  (target setup-dkml-windows_x86-gen.ps1)
+ (enabled_if %{bin-available:pc-setup-dkml})
  (action
   (setenv
    OCAMLRUNPARAM
@@ -15,6 +15,7 @@
 
 (rule
  (alias gen-dkml)
+ (enabled_if %{bin-available:pc-setup-dkml})
  (action
   (diff setup-dkml-windows_x86.ps1 setup-dkml-windows_x86-gen.ps1)))
 
@@ -22,6 +23,7 @@
 
 (rule
  (target setup-dkml-windows_x86_64-gen.ps1)
+ (enabled_if %{bin-available:pc-setup-dkml})
  (action
   (setenv
    OCAMLRUNPARAM
@@ -30,6 +32,7 @@
 
 (rule
  (alias gen-dkml)
+ (enabled_if %{bin-available:pc-setup-dkml})
  (action
   (diff setup-dkml-windows_x86_64.ps1 setup-dkml-windows_x86_64-gen.ps1)))
 
@@ -37,6 +40,7 @@
 
 (rule
  (target setup-dkml-darwin_x86_64-gen.sh)
+ (enabled_if %{bin-available:pc-setup-dkml})
  (action
   (setenv
    OCAMLRUNPARAM
@@ -45,6 +49,7 @@
 
 (rule
  (alias gen-dkml)
+ (enabled_if %{bin-available:pc-setup-dkml})
  (action
   (diff setup-dkml-darwin_x86_64.sh setup-dkml-darwin_x86_64-gen.sh)))
 
@@ -52,6 +57,7 @@
 
 (rule
  (target setup-dkml-linux_x86-gen.sh)
+ (enabled_if %{bin-available:pc-setup-dkml})
  (action
   (setenv
    OCAMLRUNPARAM
@@ -60,6 +66,7 @@
 
 (rule
  (alias gen-dkml)
+ (enabled_if %{bin-available:pc-setup-dkml})
  (action
   (diff setup-dkml-linux_x86.sh setup-dkml-linux_x86-gen.sh)))
 
@@ -67,6 +74,7 @@
 
 (rule
  (target setup-dkml-linux_x86_64-gen.sh)
+ (enabled_if %{bin-available:pc-setup-dkml})
  (action
   (setenv
    OCAMLRUNPARAM
@@ -75,5 +83,6 @@
 
 (rule
  (alias gen-dkml)
+ (enabled_if %{bin-available:pc-setup-dkml})
  (action
   (diff setup-dkml-linux_x86_64.sh setup-dkml-linux_x86_64-gen.sh)))
