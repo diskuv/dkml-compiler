@@ -505,29 +505,9 @@ runs:
         ----
         Pins
         ----
-        PIN_ALCOTEST=${PIN_ALCOTEST}
-        PIN_ALCOTEST_ASYNC=${PIN_ALCOTEST_ASYNC}
-        PIN_ALCOTEST_JS=${PIN_ALCOTEST_JS}
-        PIN_ALCOTEST_LWT=${PIN_ALCOTEST_LWT}
-        PIN_ALCOTEST_MIRAGE=${PIN_ALCOTEST_MIRAGE}
-        PIN_BASE=${PIN_BASE}
-        PIN_BASE_BIGSTRING=${PIN_BASE_BIGSTRING}
-        PIN_BIGSTRINGAF=${PIN_BIGSTRINGAF}
-        PIN_CORE=${PIN_CORE}
-        PIN_CORE_KERNEL=${PIN_CORE_KERNEL}
-        PIN_CTYPES_FOREIGN=${PIN_CTYPES_FOREIGN}
-        PIN_CTYPES=${PIN_CTYPES}
-        PIN_CURLY=${PIN_CURLY}
-        PIN_DKML_APPS=${PIN_DKML_APPS}
-        PIN_DKML_EXE=${PIN_DKML_EXE}
-        PIN_DUNE=${PIN_DUNE}
-        PIN_FEATHER=${PIN_FEATHER}
-        PIN_OCAMLBUILD=${PIN_OCAMLBUILD}
-        PIN_OCAMLFIND=${PIN_OCAMLFIND}
-        PIN_OCP_INDENT=${PIN_OCP_INDENT}
-        PIN_PPX_EXPECT=${PIN_PPX_EXPECT}
-        PIN_WITH_DKML=${PIN_WITH_DKML}
-        .
+        "
+        set | grep ^PIN_
+        echo ".
         "
         case "$dkml_host_abi" in
         windows_*)
@@ -1992,7 +1972,7 @@ runs:
       shell: bash
       run: |
         set -x
-        echo 'ffb08b-${{ inputs.FDOPEN_OPAMEXE_BOOTSTRAP }}-${{ steps.full_matrix_vars.outputs.dkml_host_abi }}-${{ steps.full_matrix_vars.outputs.opam_abi }}-${{ steps.full_matrix_vars.outputs.bootstrap_opam_version }}' > .ci/sd4/cachekey.opam.binaries
+        echo '003325-${{ inputs.FDOPEN_OPAMEXE_BOOTSTRAP }}-${{ steps.full_matrix_vars.outputs.dkml_host_abi }}-${{ steps.full_matrix_vars.outputs.opam_abi }}-${{ steps.full_matrix_vars.outputs.bootstrap_opam_version }}' > .ci/sd4/cachekey.opam.binaries
         echo '${{ steps.full_matrix_vars.outputs.abi_pattern }}-${{ steps.full_matrix_vars.outputs.vsstudio_arch }}-${{ steps.full_matrix_vars.outputs.vsstudio_hostarch }}-${{ steps.full_matrix_vars.outputs.vsstudio_dir }}-${{ steps.full_matrix_vars.outputs.vsstudio_vcvarsver }}-${{ steps.full_matrix_vars.outputs.vsstudio_winsdkver }}-${{ steps.full_matrix_vars.outputs.vsstudio_msvspreference }}-${{ steps.full_matrix_vars.outputs.vsstudio_cmakegenerator }}' > .ci/sd4/cachekey.vsstudio
         echo '${{ inputs.OCAML_COMPILER }}-${{ inputs.DISKUV_OPAM_REPOSITORY }}-${{ inputs.DKML_COMPILER }}-${{ inputs.CONF_DKML_CROSS_TOOLCHAIN }}' > .ci/sd4/cachekey.ci.inputs
 
@@ -2149,7 +2129,7 @@ runs:
         PIN_DKML_RUNTIME_DISTRIBUTION: '1.2.1~prerel10'
         PIN_DKML_RUNTIMELIB: '1.2.1~prerel10'
         PIN_DKML_RUNTIMESCRIPTS: '1.2.1~prerel10'
-        PIN_DKML_WORKFLOWS: '1.2.0'
+        PIN_DKML_WORKFLOWS: '1.2.1~prerel10'
         PIN_DUNE_ACTION_PLUGIN: '3.8.3'
         PIN_DUNE_BUILD_INFO: '3.8.3'
         PIN_DUNE_CONFIGURATOR: '3.8.3'

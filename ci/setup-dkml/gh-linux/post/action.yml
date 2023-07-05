@@ -124,7 +124,7 @@ runs:
         PIN_DKML_RUNTIME_DISTRIBUTION: '1.2.1~prerel10'
         PIN_DKML_RUNTIMELIB: '1.2.1~prerel10'
         PIN_DKML_RUNTIMESCRIPTS: '1.2.1~prerel10'
-        PIN_DKML_WORKFLOWS: '1.2.0'
+        PIN_DKML_WORKFLOWS: '1.2.1~prerel10'
         PIN_DUNE_ACTION_PLUGIN: '3.8.3'
         PIN_DUNE_BUILD_INFO: '3.8.3'
         PIN_DUNE_CONFIGURATOR: '3.8.3'
