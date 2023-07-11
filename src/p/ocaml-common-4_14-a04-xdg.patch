@@ -1,0 +1,119 @@
+commit 33c95fbbc95ae6d19fb56f085b11e48d5c019f6d
+Author: Nicolás Ojeda Bär <n.oje.bar@gmail.com>
+Date:   Sat Jul 8 07:14:25 2023 +0200
+
+    Win32: XDG_CONFIG_HOME => LOCALAPPDATA, HOME => USERPROFILE
+
+diff --git a/man/ocaml.1 b/man/ocaml.1
+index 9d19f1b3c5..67a5c1d9d9 100644
+--- a/man/ocaml.1
++++ b/man/ocaml.1
+@@ -305,12 +305,17 @@ giving control to the user. The default file is
+ .B .ocamlinit
+ in the current directory if it exists, otherwise
+ .B XDG_CONFIG_HOME/ocaml/init.ml
+-according to the XDG base directory specification lookup if it exists (on
+-Windows this is skipped), otherwise
+-.B .ocamlinit
+-in the user's home directory (
+-.B HOME
+-variable).
++according to the XDG base directory specification lookup if it exists
++(on Windows, if
++.B XDG_CONFIG_HOME
++is not set then
++.B LOCALAPPDATA
++is used in its place),
++otherwise
++.B HOME/.ocamlinit
++(on Windows,
++.B USERPROFILE/.ocamlinit
++is used instead).
+ You can specify a different initialization file
+ by using the
+ .BI \-init \ file
+@@ -339,6 +344,16 @@ and look up its capabilities in the terminal database.
+ .B XDG_CONFIG_HOME HOME
+ .B .ocamlinit
+ lookup procedure (see above).
++.TP
++.B LOCALAPPDATA
++used if
++.B XDG_CONFIG_HOME
++is not set (Windows only).
++.TP
++.B USERPROFILE
++used instead of
++.B HOME
++(Windows only).
+ .SH SEE ALSO
+ .BR ocamlc (1), \ ocamlopt (1), \ ocamlrun (1).
+ .br
+diff --git a/manual/src/cmds/top.etex b/manual/src/cmds/top.etex
+index f8b3b1f206..0928ed7ac2 100644
+--- a/manual/src/cmds/top.etex
++++ b/manual/src/cmds/top.etex
+@@ -68,10 +68,10 @@ described in section~\ref{s:toplevel-directives}.
+ The evaluation outcode for each phrase are not displayed.
+ If the current directory does not contain an ".ocamlinit" file,
+ the file "XDG_CONFIG_HOME/ocaml/init.ml" is looked up according
+-to the XDG base directory specification and used instead (on Windows
+-this is skipped). If that file doesn't exist then an [.ocamlinit] file
+-in the users' home directory (determined via environment variable "HOME") is
+-used if existing.
++to the XDG base directory specification and used instead (on Windows,
++if "XDG_CONFIG_HOME" is not set then "LOCALAPPDATA" is used in its place).
++If that file does not exist then "HOME/.ocamlinit" is used
++if it exists (on Windows, "USERPROFILE/.ocamlinit" is used instead).
+ 
+ The toplevel system does not perform line editing, but it can
+ easily be used in conjunction with an external line editor such as
+diff --git a/manual/src/cmds/unified-options.etex b/manual/src/cmds/unified-options.etex
+index ef90a2cf95..cf018b6d13 100644
+--- a/manual/src/cmds/unified-options.etex
++++ b/manual/src/cmds/unified-options.etex
+@@ -284,8 +284,10 @@ the toplevel is running with the "#directory" directive
+ \item["-init" \var{file}]
+ Load the given file instead of the default initialization file.
+ The default file is ".ocamlinit" in the current directory if it
+-exists, otherwise "XDG_CONFIG_HOME/ocaml/init.ml" or
+-".ocamlinit" in the user's home directory.
++exists, otherwise "XDG_CONFIG_HOME/ocaml/init.ml"
++(on Windows, if "XDG_CONFIG_HOME" is not set then "LOCALAPPDATA" is
++used in its place) or "HOME/.ocamlinit" (on Windows, "USERPROFILE/.ocamlinit"
++is used instead).
+ }%top
+ 
+ \notop{%
+diff --git a/toplevel/toploop.ml b/toplevel/toploop.ml
+index 62a5b0023e..cb868629a3 100644
+--- a/toplevel/toploop.ml
++++ b/toplevel/toploop.ml
+@@ -153,20 +153,21 @@ let find_ocamlinit () =
+         let file = Filename.concat dir file in
+         if Sys.file_exists file then Some file else None
+   in
+-  let home_dir () = getenv "HOME" in
+   let config_dir () =
+-    if Sys.win32 then None else
+     match getenv "XDG_CONFIG_HOME" with
+     | Some _ as v -> v
+     | None ->
+-        match home_dir () with
+-        | None -> None
+-        | Some dir -> Some (Filename.concat dir ".config")
++        if Sys.win32 then
++          getenv "LOCALAPPDATA"
++        else
++          match getenv "HOME" with
++          | None -> None
++          | Some dir -> Some (Filename.concat dir ".config")
+   in
+   let init_ml = Filename.concat "ocaml" "init.ml" in
+   match exists_in_dir (config_dir ()) init_ml with
+   | Some _ as v -> v
+-  | None -> exists_in_dir (home_dir ()) ocamlinit
++  | None -> exists_in_dir (getenv (if Sys.win32 then "USERPROFILE" else "HOME")) ocamlinit
+ 
+ let load_ocamlinit ppf =
+   if !Clflags.noinit then ()
