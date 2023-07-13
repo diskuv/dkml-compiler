@@ -50,6 +50,24 @@ build: [
   ["tar" "xCfz" "dl/ocaml"          "dl/ocaml.tar.gz"   "--strip-components=1"]
   ["tar" "xCfz" "dl/ocaml/flexdll"  "dl/flexdll.tar.gz" "--strip-components=1"]
 
+  # Debugging for 4.14.0 `Env.Error(_)` and `Persistent_env.Error(_)`
+  # Example:
+  #   Fatal error: exception Persistent_env.Error(_)
+  #   Raised at Persistent_env.error in file "typing/persistent_env.ml", line 33, characters 16-33
+  #   Called from Persistent_env.acknowledge_pers_struct in file "typing/persistent_env.ml", line 196, characters 2-109
+  #   Called from Persistent_env.find_pers_struct in file "typing/persistent_env.ml", line 227, characters 17-64
+  #   Called from Persistent_env.find in file "typing/persistent_env.ml", line 266, characters 6-41
+  #   Called from Env.lookup_ident_module in file "typing/env.ml", line 2764, characters 16-31
+  #   Called from Env.lookup_module_path in file "typing/env.ml", line 3045, characters 12-62
+  #   Called from Typemod.type_open_ in file "typing/typemod.ml", line 108, characters 13-71
+  #   Called from Typemod.initial_env.open_module in file "typing/typemod.ml", line 130, characters 12-51
+  #   Called from Typemod.initial_env in file "typing/typemod.ml", line 165, characters 9-26
+  #   Called from Topcommon.initialize_toplevel_env in file "toplevel/topcommon.ml", line 281, characters 18-40
+  #   Called from UTop_main.common_init in file "src/lib/uTop_main.ml", line 1384, characters 2-1921
+  #   Called from UTop_main.main_aux in file "src/lib/uTop_main.ml", line 1476, characters 6-30
+  #   Called from UTop_main.main_internal in file "src/lib/uTop_main.ml", line 1497, characters 4-25  
+  ["install" "debug/env.ml" "debug/persistent_env.ml" "dl/ocaml/typing/"] {dkml-debug-env-failures & version > "4.14.0~v1.2.1~" & version <= "4.14.0"}
+
   # Create a DKMLDIR. Its structure mimics a git submodule setup.
   #   <dkmldir>/.dkmlroot
   ["install" "-d" "dkmldir"]
