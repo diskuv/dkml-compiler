@@ -1,5 +1,4 @@
 opam-version: "2.0"
-name: "dkml-base-compiler"
 # Composite version format is M.N.O~vA.B.C[~prelP]
 # where:
 # - M.N.O is OCaml compiler version
