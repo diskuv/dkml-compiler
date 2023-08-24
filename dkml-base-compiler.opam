@@ -134,7 +134,7 @@ install: [
   [
     "env" "TOPDIR=dkmldir/vendor/drc/all/emptytop"
       "DKML_REPRODUCIBLE_SYSTEM_BREWFILE=%{_:build}%/Brewfile"
-      "sh"
+      "bash"
       "dkmldir/vendor/dkml-compiler/src/r-c-ocaml-1-setup.sh"
       "-d" "dkmldir"
       "-t" "%{prefix}%"
