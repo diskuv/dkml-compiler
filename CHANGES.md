@@ -1,6 +1,6 @@
 # Changes
 
-## Pending (1.2.1)
+## Pending (2.0.3)
 
 * Upgraded from `flexdll.0.42` to `flexdll.0.43`
 * Install `flexdll[_initer]_msvc[64].obj` to `bin/` alongside existing
@@ -15,6 +15,7 @@
 * Remove `-i` and `-j` options for `r-c-ocaml-1-setup.sh` which were only
   active during cross-compilation, and unused except for now redundant
   debug options.
+* Add `-g -O0` for Linux when `dkml-option-debuginfo` is present
 
 ## `4.14.0~v1.2.0`
 
