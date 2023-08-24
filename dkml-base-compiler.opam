@@ -112,7 +112,7 @@ build: [
   ] {dkml-option-debuginfo:installed & os = "win32" & arch = "arm64"}
   ["sh" "-eufc"
     """
-    sed 's/^INJECT_CFLAGS=$/INJECT_CFLAGS=-g -O0/; s/^INJECT_ASFLAGS=$/INJECT_ASFLAGS=-g -O0/' \
+    sed 's/^INJECT_CFLAGS=$/INJECT_CFLAGS="-g -O0"/; s/^INJECT_ASFLAGS=$/INJECT_ASFLAGS="-g -O0"/' \
       env/standard-compiler-env-to-ocaml-configure-env.sh > \
       dkmldir/vendor/dkml-compiler/env/standard-compiler-env-to-ocaml-configure-env.sh
     """
