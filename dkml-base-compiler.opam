@@ -42,7 +42,9 @@ available: [
 ]
 build: [
   # Dump Homebrew, which is needed for reproducible build auditing in drc's crossplatform-functions.sh.
-  ["sh" "scripts/macos-bundle-dump.sh"] {os = "macos"}
+  # TODO: Move the brewbundle.sh to drc, or in drc skip reproducible build auditing if bundle tap is not installable
+  # WAS: ["sh" "scripts/macos-bundle-dump.sh"] {os = "macos"}
+  ["touch" "Brewfile"] {os = "macos"}
 
   # OCaml source code
   ["install" "-d" "dl/ocaml/flexdll"]
