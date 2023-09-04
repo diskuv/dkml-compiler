@@ -1,15 +1,7 @@
 #!/bin/sh
 set -euf
 
-usage() {
-    echo "'--opam-package OPAM_PACKAGE.opam'" >&2
-    exit 3
-}
-OPTION=$1
-shift
-[ "$OPTION" = "--opam-package" ] || usage
-OPAM_PACKAGE=$1
-shift
+OPAM_PACKAGE=dkml-base-compiler.opam
 
 if [ -x /usr/bin/cygpath ]; then
     # shellcheck disable=SC2154

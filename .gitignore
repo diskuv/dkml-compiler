@@ -15,10 +15,8 @@ _build/
 .envrc
 
 # CI
-.ci/
 dist/
 _release/
-msys64/
 stage/
 
 # when developing patches with: opam install ./dkml-base-compiler.opam --inplace-build
@@ -28,3 +26,13 @@ stage/
 /Brewfile
 .vscode/c_cpp_properties.json
 /change*.log
+
+# CI using dkml-workflows' DkML compilers.
+#   DkML compilers populate the .opam folder.
+/.opam/
+#   GitHub, unlike GitLab, does not need its CI files to exist
+#   before referencing them. That means the GitHub scripts do not need
+#   to be checked in.
+/.ci/dkml-compilers/gh-*
+#   Desktop testing on Windows uses MSYS2.
+/msys64/
