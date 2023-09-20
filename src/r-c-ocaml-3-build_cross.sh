@@ -452,13 +452,37 @@ build_world() {
   "$DKMLSYS_INSTALL" -v "runtime/ocamlrun$build_world_TARGET_EXE_EXT" "$build_world_PREFIX/bin/"
   log_trace make_host -final            install
   log_trace make_host -final            -C debugger install
-  if [ -x "$OCAMLSRC_MIXED/runtime/ocamlrund" ]; then
-    "$DKMLSYS_INSTALL" -v "$OCAMLSRC_MIXED/runtime/ocamlrund" "$build_world_PREFIX/bin/"
+
+  # Some binaries may not be compiled (depends on the version), and should just be
+  # the host standard binaries.
+  if [ -x "$OCAMLSRC_MIXED/runtime/ocamlrund$build_world_TARGET_EXE_EXT" ]; then
+    "$DKMLSYS_INSTALL" -v "$OCAMLSRC_MIXED/runtime/ocamlrund$build_world_TARGET_EXE_EXT" "$build_world_PREFIX/bin/"
   fi
-  if [ -x "$OCAMLSRC_MIXED/runtime/ocamlruni" ]; then
-    "$DKMLSYS_INSTALL" -v "$OCAMLSRC_MIXED/runtime/ocamlruni" "$build_world_PREFIX/bin/"
+  if [ -x "$OCAMLSRC_MIXED/runtime/ocamlruni$build_world_TARGET_EXE_EXT" ]; then
+    "$DKMLSYS_INSTALL" -v "$OCAMLSRC_MIXED/runtime/ocamlruni$build_world_TARGET_EXE_EXT" "$build_world_PREFIX/bin/"
   fi
-  "$DKMLSYS_INSTALL" -v "$OCAMLSRC_MIXED/yacc/ocamlyacc" "$build_world_PREFIX/bin/"
+  "$DKMLSYS_INSTALL" -v "$OCAMLSRC_MIXED/yacc/ocamlyacc$build_world_TARGET_EXE_EXT" "$build_world_PREFIX/bin/"
+
+  # Cross-compilation of [dkml-component-staging-opam64] broke when opam upgraded to [dose3.7.0.0]:
+  #   File "src_ext/dose3/src/common/dune", line 16, characters 0-255:
+  #   16 | (rule
+  #   17 |  (targets gitVersionInfo.ml)
+  #   18 |  ; Ensures the hash update whenever a source file is modified ;
+  #   19 |  (deps
+  #   20 |   (source_tree %{workspace_root}/.git)
+  #   21 |   (:script get-git-info.mlt))
+  #   22 |  (action
+  #   23 |   (with-stdout-to
+  #   24 |    %{targets}
+  #   25 |    (run %{ocaml} unix.cma %{script}))))
+  #   (cd _build/default.darwin_arm64/src_ext/dose3/src/common && /Users/runner/.opam/dkml/share/dkml-base-compiler/mlcross/darwin_arm64/bin/ocaml unix.cma get-git-info.mlt) > _build/default.darwin_arm64/src_ext/dose3/src/common/gitVersionInfo.ml
+  #   Cannot load required shared library dllunix.
+  #   Reason: /Users/runner/.opam/dkml/share/dkml-base-compiler/mlcross/darwin_arm64/lib/ocaml/stublibs/dllunix.so: dlopen(/Users/runner/.opam/dkml/share/dkml-base-compiler/mlcross/darwin_arm64/lib/ocaml/stublibs/dllunix.so, 0x000A): tried: '/Users/runner/.opam/dkml/share/dkml-base-compiler/mlcross/darwin_arm64/lib/ocaml/stublibs/dllunix.so' (mach-o file, but is an incompatible architecture (have (arm64), need (x86_64))).
+  # That is because `mlcross/darwin_arm64/bin/ocaml` must be compiled with the standard library
+  # location of the host compiler. Compiling it with the host compiler is not enough ...
+  # the ocaml executable will still be hardcoded to use the stdlib of `mlcross/darwin_arm64`.
+  # Just re-use the host standard ocaml.
+  "$DKMLSYS_INSTALL" -v "$OCAMLSRC_MIXED/bin/ocaml$build_world_TARGET_EXE_EXT" "$build_world_PREFIX/bin/"
 }
 
 # Loop over each target abi script file; each file separated by semicolons, and each term with an equals

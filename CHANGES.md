@@ -1,6 +1,11 @@
 # Changes
 
-## Pending (2.0.3)
+## Pending
+
+* Fix bug where the cross-compiler `ocaml` interpreter was hardcoded to the
+  cross-compiled standard library rather than the host standard library.
+
+## 2.0.3
 
 * Upgraded from `flexdll.0.42` to `flexdll.0.43`
 * Install `flexdll[_initer]_msvc[64].obj` to `bin/` alongside existing
