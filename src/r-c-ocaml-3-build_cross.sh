@@ -482,7 +482,7 @@ build_world() {
   # location of the host compiler. Compiling it with the host compiler is not enough ...
   # the ocaml executable will still be hardcoded to use the stdlib of `mlcross/darwin_arm64`.
   # Just re-use the host standard ocaml.
-  "$DKMLSYS_INSTALL" -v "$OCAMLSRC_MIXED/bin/ocaml$build_world_TARGET_EXE_EXT" "$build_world_PREFIX/bin/"
+  "$DKMLSYS_INSTALL" -v "$OCAMLSRC_MIXED/ocaml$build_world_TARGET_EXE_EXT" "$build_world_PREFIX/bin/"
 }
 
 # Loop over each target abi script file; each file separated by semicolons, and each term with an equals
