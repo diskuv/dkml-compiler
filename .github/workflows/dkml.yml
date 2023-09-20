@@ -117,6 +117,12 @@ jobs:
         if: "!startsWith(matrix.dkml_host_abi, 'windows_')"
         run: ci/build-test.sh
 
+      # Capture the dist/ folder for the release job
+      - uses: actions/upload-artifact@v3
+        with:
+          name: ${{ matrix.dkml_host_abi }}
+          path: dist/
+
       # The .ci/dkml-compilers "post" actions will finalize caching, etc.
 
       - name: Teardown DkML compilers on a Windows host
