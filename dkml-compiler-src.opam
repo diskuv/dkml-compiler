@@ -6,12 +6,10 @@ authors: ["Diskuv, Inc. <opensource+diskuv-ocaml@support.diskuv.com>"]
 license: "Apache-2.0"
 homepage: "https://github.com/diskuv/dkml-compiler"
 bug-reports: "https://github.com/diskuv/dkml-compiler/issues"
-depends: [
-  "diskuvbox" {>= "0.1.0"}
-]
+depends: []
+dev-repo: "git+https://github.com/diskuv/dkml-compiler.git"
 build: []
 install: [
-  ["diskuvbox" "copy-dir" "src" "%{_:lib}%/src/src"]
-  ["diskuvbox" "copy-dir" "env" "%{_:lib}%/src/env"]
+  [".\\install-src.cmd"  "%{_:lib}%"] {os = "win32"}
+  ["sh" "./install-src.sh" "%{_:lib}%"]  {!(os = "win32")}
 ]
-dev-repo: "git+https://github.com/diskuv/dkml-compiler.git"

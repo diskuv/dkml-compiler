@@ -81,8 +81,10 @@ The patches are all available in `src/p/`.
 
 It is important to realize that patches are applied in a particular order, and
 to structure the patches so they are more or less independent of each other.
+
 **When you make a patch**, you should consult the [Opam directory structure table](#opam-directories)
-and do a `git log` in the `OCaml source patched ...` directories.
+and do a `git log` in the `OCaml source patched ...` directories. You must also run
+`./dk user.reindex` in a Unix shell or PowerShell.
 
 ## Status
 

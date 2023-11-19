@@ -1,7 +1,6 @@
 opam-version: "2.0"
 version: "2.1.0"
-synopsis: "Scripts to configure DKML compilation in various environments"
-description: "Scripts to configure DKML compilation in various environments"
+synopsis: "DEPRECATED; use dkml-compiler-src instead. Scripts to configure DKML compilation in various environments"
 maintainer: ["opensource+diskuv-ocaml@support.diskuv.com"]
 authors: ["Diskuv, Inc. <opensource+diskuv-ocaml@support.diskuv.com>"]
 license: "Apache-2.0"
