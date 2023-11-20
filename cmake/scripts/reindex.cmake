@@ -94,6 +94,7 @@ SET TARGETDIR=%1
 
 IF NOT EXIST "%TARGETDIR%" MKDIR %TARGETDIR%
 COPY /Y /B dkml-compiler-src.META %TARGETDIR%\META
+IF %ERRORLEVEL% NEQ 0 (ECHO Error during COPY &EXIT /B 1)
 
 IF NOT EXIST "%TARGETDIR%\src" MKDIR %TARGETDIR%\src
 @INSTALL_SRC@
@@ -113,10 +114,10 @@ IF NOT EXIST "%TARGETDIR%\env" MKDIR %TARGETDIR%\env
         list(TRANSFORM ${listing_VARNAME} PREPEND "COPY /Y /B ")
     endforeach()
 
-    list(TRANSFORM listing_src APPEND " %TARGETDIR%\\src\n")
-    list(TRANSFORM listing_src_f APPEND " %TARGETDIR%\\src\\f\n")
-    list(TRANSFORM listing_src_p APPEND " %TARGETDIR%\\src\\p\n")
-    list(TRANSFORM listing_env APPEND " %TARGETDIR%\\env\n")
+    list(TRANSFORM listing_src APPEND " %TARGETDIR%\\src\nIF %ERRORLEVEL% NEQ 0 (ECHO Error during COPY &EXIT /B 1)\n")
+    list(TRANSFORM listing_src_f APPEND " %TARGETDIR%\\src\\f\nIF %ERRORLEVEL% NEQ 0 (ECHO Error during COPY &EXIT /B 1)\n")
+    list(TRANSFORM listing_src_p APPEND " %TARGETDIR%\\src\\p\nIF %ERRORLEVEL% NEQ 0 (ECHO Error during COPY &EXIT /B 1)\n")
+    list(TRANSFORM listing_env APPEND " %TARGETDIR%\\env\nIF %ERRORLEVEL% NEQ 0 (ECHO Error during COPY &EXIT /B 1)\n")
 
     string(CONCAT INSTALL_SRC ${listing_src})
     string(CONCAT INSTALL_SRC_F ${listing_src_f})
