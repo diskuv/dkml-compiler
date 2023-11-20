@@ -44,8 +44,7 @@ Run the following inside a `with-dkml bash` shell:
 ```sh
 rm -rf _build/prefix
 
-env TOPDIR=dkmldir/vendor/drc/all/emptytop \
-    DKML_REPRODUCIBLE_SYSTEM_BREWFILE=./Brewfile \
+env DKML_REPRODUCIBLE_SYSTEM_BREWFILE=./Brewfile \
     src/r-c-ocaml-1-setup.sh \
     -d dkmldir \
     -t "$PWD/_build/prefix" \
@@ -66,8 +65,7 @@ env TOPDIR=dkmldir/vendor/drc/all/emptytop \
 ```sh
 rm -rf _build/prefix
 
-env TOPDIR=dkmldir/vendor/drc/all/emptytop \
-    DKML_REPRODUCIBLE_SYSTEM_BREWFILE=./Brewfile \
+env DKML_REPRODUCIBLE_SYSTEM_BREWFILE=./Brewfile \
     src/r-c-ocaml-1-setup.sh \
     -d dkmldir \
     -t "$PWD/_build/prefix" \
