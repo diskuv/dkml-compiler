@@ -6,7 +6,7 @@
 (rule
  (alias gen-opam)
  (target dkml-base-compiler.opam.gen-opam)
- (deps ci/src/checksum.sh compiler.version.txt)
+ (deps ci/src/checksum.sh src/version.semver.txt)
  (action
   (progn
    (run
@@ -24,7 +24,7 @@
      sh
      ci/src/checksum.sh
      %{lib:dkml-runtime-common:unix/crossplatform-functions.sh}
-     %{read:compiler.version.txt}
+     %{read:src/version.semver.txt}
      windows_x86-ocamlc.opt.exe))
    (with-stdout-to
     %{target}.a
@@ -33,7 +33,7 @@
      --opam-file
      %{target}.b
      --version-file
-     compiler.version.txt
+     src/version.semver.txt
      --download-file
      dl/windows_x86-ocamlc.opt.exe
      --artifact
@@ -48,7 +48,7 @@
      sh
      ci/src/checksum.sh
      %{lib:dkml-runtime-common:unix/crossplatform-functions.sh}
-     %{read:compiler.version.txt}
+     %{read:src/version.semver.txt}
      windows_x86_64-ocamlc.opt.exe))
    (with-stdout-to
     %{target}.a
@@ -57,7 +57,7 @@
      --opam-file
      %{target}.b
      --version-file
-     compiler.version.txt
+     src/version.semver.txt
      --download-file
      dl/windows_x86_64-ocamlc.opt.exe
      --artifact
@@ -72,7 +72,7 @@
      sh
      ci/src/checksum.sh
      %{lib:dkml-runtime-common:unix/crossplatform-functions.sh}
-     %{read:compiler.version.txt}
+     %{read:src/version.semver.txt}
      linux_x86-ocamlc.opt))
    (with-stdout-to
     %{target}.a
@@ -81,7 +81,7 @@
      --opam-file
      %{target}.b
      --version-file
-     compiler.version.txt
+     src/version.semver.txt
      --download-file
      dl/linux_x86-ocamlc.opt
      --artifact
@@ -96,7 +96,7 @@
      sh
      ci/src/checksum.sh
      %{lib:dkml-runtime-common:unix/crossplatform-functions.sh}
-     %{read:compiler.version.txt}
+     %{read:src/version.semver.txt}
      linux_x86_64-ocamlc.opt))
    (with-stdout-to
     %{target}.a
@@ -105,7 +105,7 @@
      --opam-file
      %{target}.b
      --version-file
-     compiler.version.txt
+     src/version.semver.txt
      --download-file
      dl/linux_x86_64-ocamlc.opt
      --artifact
@@ -120,7 +120,7 @@
      sh
      ci/src/checksum.sh
      %{lib:dkml-runtime-common:unix/crossplatform-functions.sh}
-     %{read:compiler.version.txt}
+     %{read:src/version.semver.txt}
      darwin_x86_64-ocamlc.opt))
    (with-stdout-to
     %{target}.a
@@ -129,7 +129,7 @@
      --opam-file
      %{target}.b
      --version-file
-     compiler.version.txt
+     src/version.semver.txt
      --download-file
      dl/darwin_x86_64-ocamlc.opt
      --artifact

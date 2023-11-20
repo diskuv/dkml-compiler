@@ -142,7 +142,10 @@ function(run)
     # Gather source code listings
     file(GLOB listing_src LIST_DIRECTORIES false RELATIVE ${CMAKE_SOURCE_DIR}
         ${CMAKE_SOURCE_DIR}/src/*.sh
-        ${CMAKE_SOURCE_DIR}/src/*.make)
+        ${CMAKE_SOURCE_DIR}/src/*.make
+        ${CMAKE_SOURCE_DIR}/src/r-c-ocaml-README.md
+        ${CMAKE_SOURCE_DIR}/src/version.ocaml.txt
+        ${CMAKE_SOURCE_DIR}/src/version.semver.txt)
     file(GLOB listing_src_f LIST_DIRECTORIES false RELATIVE ${CMAKE_SOURCE_DIR}
         ${CMAKE_SOURCE_DIR}/src/f/*.asm)
     file(GLOB listing_src_p LIST_DIRECTORIES false RELATIVE ${CMAKE_SOURCE_DIR}

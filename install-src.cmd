@@ -17,9 +17,12 @@ COPY /Y /B src\r-c-ocaml-1-setup.sh %TARGETDIR%\src
 COPY /Y /B src\r-c-ocaml-2-build_host.sh %TARGETDIR%\src
 COPY /Y /B src\r-c-ocaml-3-build_cross.sh %TARGETDIR%\src
 COPY /Y /B src\r-c-ocaml-9-trim.sh %TARGETDIR%\src
+COPY /Y /B src\r-c-ocaml-README.md %TARGETDIR%\src
 COPY /Y /B src\r-c-ocaml-check_linker.sh %TARGETDIR%\src
 COPY /Y /B src\r-c-ocaml-functions.sh %TARGETDIR%\src
 COPY /Y /B src\r-c-ocaml-get_sak.make %TARGETDIR%\src
+COPY /Y /B src\version.ocaml.txt %TARGETDIR%\src
+COPY /Y /B src\version.semver.txt %TARGETDIR%\src
 
 
 IF NOT EXIST "%TARGETDIR%\src\f" MKDIR %TARGETDIR%\src\f

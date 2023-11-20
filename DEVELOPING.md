@@ -26,12 +26,14 @@ opam exec -- dune build '@gen-dkml' --auto-promote
 ## Upgrading binary assets
 
 1. Make a `-prep` tag, and then wait for the CI to complete successfully
-2. Update `compiler.version.txt`
+2. Update `src/version.semver.txt`
 3. Run: `dune build '@gen-opam' --auto-promote`
 
 > TODO: This is an outdated way to do binary assets. There is an
 > `DkMLPublish_PublishAssetsTarget` function in the `dkml` project
 > that can upload assets each `dkml` release.
+> And `DkMLBumpVersionParticipant_PlainReplace(src/version.semver.txt)` already
+> updates `src/version.semver.txt`.
 
 ## Local Development
 

@@ -17,9 +17,12 @@ install -v \
     src/r-c-ocaml-2-build_host.sh \
     src/r-c-ocaml-3-build_cross.sh \
     src/r-c-ocaml-9-trim.sh \
+    src/r-c-ocaml-README.md \
     src/r-c-ocaml-check_linker.sh \
     src/r-c-ocaml-functions.sh \
     src/r-c-ocaml-get_sak.make \
+    src/version.ocaml.txt \
+    src/version.semver.txt \
     "$targetdir/src"
 
 install -d "$targetdir/src/f"

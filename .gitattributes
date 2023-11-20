@@ -30,6 +30,7 @@ opam text eol=lf
 LICENSE text eol=lf
 
 # Declare files that will always have CRLF line endings on checkout.
+*.cmd text eol=crlf
 *.sln text eol=crlf
 
 # https://docs.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_character_encoding?view=powershell-7.1
