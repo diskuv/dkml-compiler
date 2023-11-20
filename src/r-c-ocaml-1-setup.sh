@@ -587,6 +587,42 @@ clean_ocaml_install() {
     log_trace rm -rf "${clean_ocaml_install_DIR:?}/lib/ocaml"
 }
 
+# [is_git_corrupt_or_missing <source code mixed Unix/Dos path>]
+#
+# Yes, [.git] can be corrupt if aborted during an operation. Ex.:
+#       git status >>> fatal: bad object HEAD
+#       git stash >>> BUG: diff-lib.c:612: run_diff_index must be passed exactly one tree
+is_git_corrupt_or_missing() {
+    is_git_present_but_corrupt_DIR=$1
+    shift
+    if [ ! -d "$is_git_present_but_corrupt_DIR/.git" ]; then
+        return 0 # true. missing
+    fi
+    if log_trace --return-error-code git -C "$is_git_present_but_corrupt_DIR" fsck --strict --no-dangling --no-progress; then
+        return 1 # false. valid
+    fi
+    return 0 # true
+}
+
+# Make a directory git patchable if it is not a git repository already
+gitize() {
+    gitize_DIR=$1
+    shift
+
+    if [ -e "$gitize_DIR/.git" ]; then
+        return
+    fi
+
+    log_trace git -C "$gitize_DIR" -c init.defaultBranch=main init
+    log_trace git -C "$gitize_DIR" config user.email "nobody+autocommitter@diskuv.ocaml.org"
+    log_trace git -C "$gitize_DIR" config user.name  "Auto Committer"
+    log_trace git -C "$gitize_DIR" config core.safecrlf false
+    log_trace git -C "$gitize_DIR" config core.fsmonitor false # unneeded, and avoid "error: daemon terminated"
+    log_trace git -C "$gitize_DIR" add -A
+    log_trace git -C "$gitize_DIR" commit --quiet -m "Commit from source tree"
+    log_trace git -C "$gitize_DIR" tag r-c-ocaml-1-setup-srctree
+}
+
 get_ocaml_source() {
     get_ocaml_source_COMMIT_TAG_OR_DIR=$1
     shift
@@ -600,55 +636,38 @@ get_ocaml_source() {
     # Get the unpatched ocaml/ocaml source code ...
 
     if [ -d "$get_ocaml_source_COMMIT_TAG_OR_DIR" ]; then
-        # If there is a directory of the source code, use that
+        # If there is a directory of the source code, use that.
 
-        if [ ! -e "$get_ocaml_source_SRCUNIX/Makefile" ]; then
+        # Want idempotency, so remove source code if not present, or git is missing (that means
+        # we have no idea whether commits have been applied) or git is corrupt
+        if [ ! -e "$get_ocaml_source_SRCUNIX/Makefile" ] || is_git_corrupt_or_missing "$get_ocaml_source_SRCMIXED"; then
             log_trace install -d "$get_ocaml_source_SRCUNIX"
             log_trace rm -rf "$get_ocaml_source_SRCUNIX" # clean any partial downloads
             log_trace cp -rp "$get_ocaml_source_COMMIT_TAG_OR_DIR" "$get_ocaml_source_SRCUNIX"
+            #   we do not want complicated submodules for a local directory copy
+            log_trace rm -f "$get_ocaml_source_SRCUNIX/.gitmodules" "$get_ocaml_source_SRCUNIX/flexdll/.git"
         fi
 
-        # Make it git patchable if it is not a git repository already
-
-        if [ -e "$get_ocaml_source_SRCUNIX"/flexdll/Makefile ] && [ ! -e "$get_ocaml_source_SRCUNIX"/flexdll/.git ]; then
-            log_trace git -C "$get_ocaml_source_SRCMIXED/flexdll" -c init.defaultBranch=main init
-            log_trace git -C "$get_ocaml_source_SRCMIXED/flexdll" config user.email "nobody+autocommitter@diskuv.ocaml.org"
-            log_trace git -C "$get_ocaml_source_SRCMIXED/flexdll" config user.name  "Auto Committer"
-            log_trace git -C "$get_ocaml_source_SRCMIXED/flexdll" config core.safecrlf false
-            log_trace git -C "$get_ocaml_source_SRCMIXED/flexdll" add -A
-            log_trace git -C "$get_ocaml_source_SRCMIXED/flexdll" commit --quiet -m "Commit from source tree"
-            log_trace git -C "$get_ocaml_source_SRCMIXED/flexdll" tag r-c-ocaml-1-setup-srctree
-        fi
-
-        if [ ! -e "$get_ocaml_source_SRCUNIX/.git" ]; then
-            log_trace git -C "$get_ocaml_source_SRCMIXED" -c init.defaultBranch=main init
-            log_trace git -C "$get_ocaml_source_SRCMIXED" config user.email "nobody+autocommitter@diskuv.ocaml.org"
-            log_trace git -C "$get_ocaml_source_SRCMIXED" config user.name  "Auto Committer"
-            log_trace git -C "$get_ocaml_source_SRCMIXED" config core.safecrlf false
-            log_trace git -C "$get_ocaml_source_SRCMIXED" add -A
-            log_trace git -C "$get_ocaml_source_SRCMIXED" commit --quiet -m "Commit from source tree"
-            log_trace git -C "$get_ocaml_source_SRCMIXED" tag r-c-ocaml-1-setup-srctree
-        fi
+        # Ensure git patchable
+        gitize "$get_ocaml_source_SRCMIXED"
 
         # Move the repository to the expected tag
         log_trace git -C "$get_ocaml_source_SRCMIXED" stash
-        log_trace git -C "$get_ocaml_source_SRCMIXED/flexdll" stash
         log_trace git -C "$get_ocaml_source_SRCMIXED" -c advice.detachedHead=false checkout r-c-ocaml-1-setup-srctree
-        log_trace git -C "$get_ocaml_source_SRCMIXED/flexdll" -c advice.detachedHead=false checkout r-c-ocaml-1-setup-srctree
         log_trace git -C "$get_ocaml_source_SRCMIXED" reset --hard r-c-ocaml-1-setup-srctree
-        log_trace git -C "$get_ocaml_source_SRCMIXED/flexdll" reset --hard r-c-ocaml-1-setup-srctree
     else
         # Otherwise do git checkout / git fetch ...
 
         get_ocaml_source_COMMIT=$get_ocaml_source_COMMIT_TAG_OR_DIR
 
-        if [ ! -e "$get_ocaml_source_SRCUNIX/Makefile" ] || [ ! -e "$get_ocaml_source_SRCUNIX/.git" ]; then
+        if [ ! -e "$get_ocaml_source_SRCUNIX/Makefile" ] || is_git_corrupt_or_missing "$get_ocaml_source_SRCMIXED"; then
             log_trace rm -rf "$get_ocaml_source_SRCUNIX" # clean any partial downloads
             # do NOT --recurse-submodules because we don't want submodules (ex. flexdll/) that are in HEAD but
             # are not in $get_ocaml_source_COMMIT
             log_trace install -d "$get_ocaml_source_SRCUNIX"
             #   Instead of git clone we use git fetch --depth 1 so we do a shallow clone of the commit
             log_trace git -C "$get_ocaml_source_SRCMIXED" -c init.defaultBranch=master init
+            log_trace git -C "$get_ocaml_source_SRCMIXED" config core.fsmonitor false # unneeded, and avoid "error: daemon terminated"
             log_trace git -C "$get_ocaml_source_SRCMIXED" remote add origin https://github.com/ocaml/ocaml
             log_trace git -C "$get_ocaml_source_SRCMIXED" fetch --depth 1 origin "$get_ocaml_source_COMMIT"
             log_trace git -C "$get_ocaml_source_SRCMIXED" reset --hard FETCH_HEAD
