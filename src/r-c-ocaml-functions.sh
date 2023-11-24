@@ -75,24 +75,37 @@ is_abi_windows() {
   esac
 }
 
+create_detect_msvs_script() {
+  create_detect_msvs_script_ABI=$1
+  shift
+  create_detect_msvs_script_FILE=$2
+  shift
+
+  if is_abi_windows "$create_detect_msvs_script_ABI" ; then
+    if [ ! -s "$create_detect_msvs_script_FILE" ]; then # does file exist and non-zero size? if not, create it
+      DKML_TARGET_ABI="$create_detect_msvs_script_ABI" autodetect_compiler --msvs-detect "$create_detect_msvs_script_FILE"
+    fi
+    return 0
+  fi
+  return 1
+}
+
 # Set MSVS_PATH, MSVS_LIB and MSVS_INC and ABI_IS_WINDOWS
 detect_msvs() {
   detect_msvs_ABI=$1
   shift
 
-  if is_abi_windows "$detect_msvs_ABI" ; then
+  if create_detect_msvs_script "$detect_msvs_ABI" "$WORK/msvs-detect" ; then
     # Get MSVS_* aligned to the DKML compiler
-    if [ ! -e "$WORK"/msvs-detect.out ]; then
-      DKML_TARGET_ABI="$detect_msvs_ABI" autodetect_compiler --msvs-detect "$WORK"/msvs-detect
-      log_script "$WORK"/msvs-detect
-      bash "$WORK"/msvs-detect > "$WORK"/msvs-detect.out
-    fi
+    log_script "$WORK"/msvs-detect
+    bash "$WORK"/msvs-detect > "$WORK"/msvs-detect.out
     log_script "$WORK"/msvs-detect.out
 
-    # shellcheck disable=SC1091
+    #   shellcheck disable=SC1091
     . "$WORK"/msvs-detect.out
     if [ -z "${MSVS_NAME:-}" ] ; then
-      printf "%s\n" "No appropriate Visual Studio C compiler was found -- unable to build OCaml"
+      printf "No appropriate Visual Studio C compiler was found for %s -- unable to build OCaml. msvs-detect:\n" "$detect_msvs_ABI" >&2
+      cat "$WORK"/msvs-detect >&2
       exit 1
     fi
   else
@@ -142,6 +155,16 @@ ocaml_make_real() {
         dump_logs_on_error
         exit 107
     fi
+  fi
+}
+
+# When we run OCaml's ./configure, the DKML compiler must be available.
+# Expects a $WORK/with-compiler.sh script is present.
+configure_environment_for_ocaml() {
+  if ! log_shell "$WORK"/with-compiler.sh "$@"; then
+    printf 'FATAL: ./configure failed\n' >&2
+    dump_logs_on_error
+    exit 107
   fi
 }
 
@@ -292,16 +315,6 @@ make_preconfigured_env_script() {
   $DKMLSYS_CHMOD +x "$make_preconfigured_env_script_DEST".tmp
   $DKMLSYS_MV "$make_preconfigured_env_script_DEST".tmp "$make_preconfigured_env_script_DEST"
   log_script "$make_preconfigured_env_script_DEST"
-}
-
-# When we run OCaml's ./configure, the DKML compiler must be available.
-# Expects a $WORK/with-compiler.sh script is present.
-configure_environment_for_ocaml() {
-  if ! log_shell "$WORK"/with-compiler.sh "$@"; then
-    printf 'FATAL: ./configure failed\n' >&2
-    dump_logs_on_error
-    exit 107
-  fi
 }
 
 ocaml_configure() {

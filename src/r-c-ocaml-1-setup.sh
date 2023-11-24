@@ -414,9 +414,6 @@ if [ -n "$OCAMLC_OPT_EXE" ]; then
     fi
 fi
 
-# Set DKMLSYS_CAT and other things
-autodetect_system_binaries
-
 # Set BUILDHOST_ARCH
 autodetect_buildhost_arch
 
@@ -427,6 +424,18 @@ fi
 SETUP_ARGS+=( -b "'$MSVS_PREFERENCE'" -e "$DKMLHOSTABI" )
 BUILD_HOST_ARGS+=( -b "'$MSVS_PREFERENCE'" -e "$DKMLHOSTABI" )
 BUILD_CROSS_ARGS+=( -e "$DKMLHOSTABI" )
+
+# ---------------------
+
+# Prereqs for r-c-ocaml-functions.sh
+autodetect_system_binaries
+autodetect_system_path
+autodetect_cpus
+autodetect_posix_shell
+export_safe_tmpdir
+
+# shellcheck disable=SC1091
+. "$DKMLDIR/vendor/dkml-compiler/src/r-c-ocaml-functions.sh"
 
 # ---------------------
 # Patching functions
@@ -720,15 +729,8 @@ get_ocaml_source() {
         log_trace git -C "$get_ocaml_source_SRCMIXED" submodule foreach --recursive "git clean -d -x -f -"
     fi
 
-    # Install a synthetic msvs-detect
-    if [ ! -e "$get_ocaml_source_SRCUNIX"/msvs-detect ]; then
-        case "$get_ocaml_source_TARGETPLATFORM" in
-          windows_*)
-            DKML_TARGET_ABI=$get_ocaml_source_TARGETPLATFORM autodetect_compiler --msvs-detect "$WORK"/msvs-detect
-            install "$WORK"/msvs-detect "$get_ocaml_source_SRCUNIX"/msvs-detect
-            ;;
-        esac
-    fi
+    # Install a synthetic msvs-detect if needed
+    create_detect_msvs_script "$get_ocaml_source_TARGETPLATFORM" "$get_ocaml_source_SRCUNIX"/msvs-detect || true
 
     # Windows needs flexdll, although 4.13.x+ has a "--with-flexdll" option which relies on the `flexdll` git submodule
     if [ ! -e "$get_ocaml_source_SRCUNIX"/flexdll/Makefile ]; then
