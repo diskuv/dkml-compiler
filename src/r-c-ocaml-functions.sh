@@ -78,7 +78,7 @@ is_abi_windows() {
 create_detect_msvs_script() {
   create_detect_msvs_script_ABI=$1
   shift
-  create_detect_msvs_script_FILE=$2
+  create_detect_msvs_script_FILE=$1
   shift
 
   if is_abi_windows "$create_detect_msvs_script_ABI" ; then
@@ -159,9 +159,10 @@ ocaml_make_real() {
 }
 
 # When we run OCaml's ./configure, the DKML compiler must be available.
-# Expects a $WORK/with-compiler.sh script is present.
 configure_environment_for_ocaml() {
-  if ! log_shell "$WORK"/with-compiler.sh "$@"; then
+  configure_environment_for_ocaml_WITH_COMPILER=$1
+  shift
+  if ! log_shell "$configure_environment_for_ocaml_WITH_COMPILER" "$@"; then
     printf 'FATAL: ./configure failed\n' >&2
     dump_logs_on_error
     exit 107
@@ -175,6 +176,8 @@ ocaml_make() {
 }
 
 ocaml_configure_windows() {
+  ocaml_configure_windows_WITH_COMPILER=$1
+  shift
   ocaml_configure_windows_ABI="$1"
   shift
   ocaml_configure_windows_HOST="$1"
@@ -219,7 +222,8 @@ ocaml_configure_windows() {
   #   https://docs.microsoft.com/en-us/cpp/error-messages/tool-errors/command-line-error-d8037?view=msvc-170
   #   . See comments in export_safe_tmpdir() for why we need DOS 8.3 TMPDIR
   # shellcheck disable=SC2086
-  configure_environment_for_ocaml --unset=LIB --unset=INCLUDE --unset=PATH --unset=Lib --unset=Include --unset=Path \
+  configure_environment_for_ocaml "$ocaml_configure_windows_WITH_COMPILER" \
+    --unset=LIB --unset=INCLUDE --unset=PATH --unset=Lib --unset=Include --unset=Path \
     PATH="${MSVS_PATH}$DKML_SYSTEM_PATH" \
     LIB="${MSVS_LIB}${LIB:-}" \
     INCLUDE="${MSVS_INC}${INCLUDE:-}" \
@@ -243,6 +247,44 @@ ocaml_configure_windows() {
     # shellcheck disable=SC2034
     OCAML_CONFIGURE_NEEDS_MAKE_FLEXDLL=OFF
   fi
+}
+
+ocaml_configure_unix() {
+  ocaml_configure_unix_WITH_COMPILER="$1"
+  shift
+  ocaml_configure_unix_PREFIX="$1"
+  shift
+  ocaml_configure_unix_TARGET_SYSROOT="$1"
+  shift
+  ocaml_configure_unix_EXTRA_OPTS="$1"
+  shift
+
+  # sysroot
+  if [ -n "${ocaml_configure_unix_TARGET_SYSROOT:-}" ]; then
+    if [ -x /usr/bin/cygpath ]; then
+      ocaml_configure_unix_SYSROOT=$(/usr/bin/cygpath -am "$ocaml_configure_unix_TARGET_SYSROOT")
+    else
+      ocaml_configure_unix_SYSROOT="$ocaml_configure_unix_TARGET_SYSROOT"
+    fi
+  else
+    ocaml_configure_unix_SYSROOT=
+  fi
+
+  # do ./configure
+  if [ -n "$ocaml_configure_unix_SYSROOT" ]; then
+    # shellcheck disable=SC2086
+    configure_environment_for_ocaml "$ocaml_configure_unix_WITH_COMPILER" \
+      "$DKMLSYS_ENV" $ocaml_configure_no_ocaml_leak_environment \
+      ./configure --prefix "$ocaml_configure_unix_PREFIX" --with-sysroot="$ocaml_configure_unix_SYSROOT" $ocaml_configure_unix_EXTRA_OPTS
+  else
+    # shellcheck disable=SC2086
+    configure_environment_for_ocaml "$ocaml_configure_unix_WITH_COMPILER" \
+      "$DKMLSYS_ENV" $ocaml_configure_no_ocaml_leak_environment \
+      ./configure --prefix "$ocaml_configure_unix_PREFIX" $ocaml_configure_unix_EXTRA_OPTS
+  fi
+
+  # shellcheck disable=SC2034
+  OCAML_CONFIGURE_NEEDS_MAKE_FLEXDLL=OFF
 }
 
 ocaml_configure_options_for_abi() {
@@ -291,38 +333,16 @@ ocaml_configure_options_for_abi() {
   esac
 }
 
-make_preconfigured_env_script() {
-  make_preconfigured_env_script_SRC=$1
-  shift
-  make_preconfigured_env_script_DEST=$1
-  shift
-  make_preconfigured_env_script_PRECONFIGURE="$1"
-  shift
-  {
-    printf "#!%s\n" "$DKML_POSIX_SHELL"
-    if [ "${DKML_BUILD_TRACE:-OFF}" = ON ] && [ "${DKML_BUILD_TRACE_LEVEL:-0}" -ge 2 ] ; then
-      printf "set -eufx\n"
-    else
-      printf "set -euf\n"
-    fi
-    if [ -n "$make_preconfigured_env_script_PRECONFIGURE" ]; then
-      printf "DKMLDIR='%s'\n" "$DKMLDIR"
-      printf "DKML_TARGET_ABI='%s'\n" "$ocaml_configure_ABI"
-      printf ". '%s'\n" "$make_preconfigured_env_script_PRECONFIGURE"
-    fi
-    $DKMLSYS_CAT "$make_preconfigured_env_script_SRC"
-  } > "$make_preconfigured_env_script_DEST".tmp
-  $DKMLSYS_CHMOD +x "$make_preconfigured_env_script_DEST".tmp
-  $DKMLSYS_MV "$make_preconfigured_env_script_DEST".tmp "$make_preconfigured_env_script_DEST"
-  log_script "$make_preconfigured_env_script_DEST"
-}
-
 ocaml_configure() {
   ocaml_configure_PREFIX="$1"
   shift
   ocaml_configure_ABI="$1"
   shift
-  ocaml_configure_PRECONFIGURE="$1"
+  ocaml_configure_WITH_COMPILER="$1"
+  shift
+  ocaml_configure_HOST_TRIPLET="$1"
+  shift
+  ocaml_configure_TARGET_SYSROOT="$1"
   shift
   ocaml_configure_EXTRA_OPTS="$1"
   shift
@@ -334,18 +354,8 @@ ocaml_configure() {
   ocaml_configure_EXTRA_ABI_OPTS=$(ocaml_configure_options_for_abi "$ocaml_configure_ABI")
   ocaml_configure_EXTRA_OPTS=$(printf "%s %s" "$ocaml_configure_EXTRA_OPTS" "$ocaml_configure_EXTRA_ABI_OPTS")
 
-  # Detect the compiler matching the host ABI.
-  # * Exports OCAML_HOST_TRIPLET that corresponds to ocaml_configure_ABI as needed for Windows
-  # * Exports DKML_TARGET_SYSROOT as needed
-  # * Creates the specified script
-  DKML_TARGET_ABI="$ocaml_configure_ABI" autodetect_compiler \
-    --post-transform "$ocaml_configure_PRECONFIGURE" \
-    "$WORK"/with-compiler.sh
-  log_script "$WORK"/with-compiler.sh
-  #   To save a lot of troubleshooting time, we'll dump details into the PREFIX
+  # To save a lot of troubleshooting time, we'll dump details into the PREFIX
   $DKMLSYS_INSTALL -d "$ocaml_configure_PREFIX/share/dkml/detect"
-  $DKMLSYS_INSTALL "$ocaml_configure_PRECONFIGURE" "$ocaml_configure_PREFIX/share/dkml/detect/preconfigure.sh"
-  $DKMLSYS_INSTALL "$WORK"/with-compiler.sh "$ocaml_configure_PREFIX/share/dkml/detect/with-compiler.sh"
   echo "$ocaml_configure_ABI" > "$ocaml_configure_PREFIX/share/dkml/detect/abi.txt"
   (set | grep "^DKML_COMPILE_" || true) > "$ocaml_configure_PREFIX/share/dkml/detect/compile-vars.txt"
   
@@ -354,34 +364,9 @@ ocaml_configure() {
 
   if is_abi_windows "$ocaml_configure_ABI"; then
     # do ./configure and define make using host triplet defined in compiler autodetection
-    ocaml_configure_windows "$ocaml_configure_ABI" "$OCAML_HOST_TRIPLET" "$ocaml_configure_PREFIX" "$ocaml_configure_EXTRA_OPTS"
+    ocaml_configure_windows "$ocaml_configure_WITH_COMPILER" "$ocaml_configure_ABI" "$ocaml_configure_HOST_TRIPLET" "$ocaml_configure_PREFIX" "$ocaml_configure_EXTRA_OPTS"
   else
-    # sysroot
-    if [ -n "${DKML_TARGET_SYSROOT:-}" ]; then
-      if [ -x /usr/bin/cygpath ]; then
-        ocaml_configure_SYSROOT=$(/usr/bin/cygpath -am "$DKML_TARGET_SYSROOT")
-      else
-        ocaml_configure_SYSROOT="$DKML_TARGET_SYSROOT"
-      fi
-    else
-      ocaml_configure_SYSROOT=
-    fi
-
-    # do ./configure
-    if [ -n "$ocaml_configure_SYSROOT" ]; then
-      # shellcheck disable=SC2086
-      configure_environment_for_ocaml \
-        "$DKMLSYS_ENV" $ocaml_configure_no_ocaml_leak_environment \
-        ./configure --prefix "$ocaml_configure_PREFIX" --with-sysroot="$ocaml_configure_SYSROOT" $ocaml_configure_EXTRA_OPTS
-    else
-      # shellcheck disable=SC2086
-      configure_environment_for_ocaml \
-        "$DKMLSYS_ENV" $ocaml_configure_no_ocaml_leak_environment \
-        ./configure --prefix "$ocaml_configure_PREFIX" $ocaml_configure_EXTRA_OPTS
-    fi
-
-    # shellcheck disable=SC2034
-    OCAML_CONFIGURE_NEEDS_MAKE_FLEXDLL=OFF
+    ocaml_configure_unix "$ocaml_configure_WITH_COMPILER" "$ocaml_configure_PREFIX" "$ocaml_configure_TARGET_SYSROOT" "$ocaml_configure_EXTRA_OPTS"
   fi
 }
 

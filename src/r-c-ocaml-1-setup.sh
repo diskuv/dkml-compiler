@@ -437,6 +437,8 @@ export_safe_tmpdir
 # shellcheck disable=SC1091
 . "$DKMLDIR/vendor/dkml-compiler/src/r-c-ocaml-functions.sh"
 
+compiler_clear_environment
+
 # ---------------------
 # Patching functions
 

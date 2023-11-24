@@ -171,6 +171,8 @@ export_safe_tmpdir
 # shellcheck disable=SC1091
 . "$DKMLDIR/vendor/dkml-compiler/src/r-c-ocaml-functions.sh"
 
+compiler_clear_environment
+
 ## Parameters
 
 if [ -x /usr/bin/cygpath ]; then
@@ -259,7 +261,7 @@ build_world() {
   shift
   build_world_TARGET_ABI=$1
   shift
-  build_world_PRECONFIGURE=$1
+  build_world_POSTTRANSFORM=$1
   shift
 
   # PREFIX is captured in `ocamlc -config` so it needs to be a mixed Unix/Win32 path.
@@ -300,7 +302,14 @@ build_world() {
   # Make C compiler script for target ABI. Any compile spec (especially from CMake) will be
   # applied.
   install -d "$build_world_BUILD_ROOT"/support
-  DKML_TARGET_ABI="$build_world_TARGET_ABI" autodetect_compiler "$build_world_BUILD_ROOT"/support/with-target-c-compiler.sh
+  #   Exports OCAML_HOST_TRIPLET and DKML_TARGET_SYSROOT
+  DKML_TARGET_ABI="$build_world_TARGET_ABI" \
+    autodetect_compiler \
+    --post-transform "$build_world_POSTTRANSFORM" \
+    "$build_world_BUILD_ROOT"/support/with-target-c-compiler.sh
+  #   To save a lot of troubleshooting time, we'll dump details
+  $DKMLSYS_INSTALL -d "$build_world_PREFIX/share/dkml/detect"
+  $DKMLSYS_INSTALL "$build_world_POSTTRANSFORM" "$build_world_PREFIX/share/dkml/detect/post-transform.sh"
 
   # Target wrappers
   # shellcheck disable=SC2086
@@ -339,7 +348,9 @@ build_world() {
 
 
   # ./configure
-  log_trace ocaml_configure "$build_world_PREFIX" "$build_world_TARGET_ABI" "$build_world_PRECONFIGURE" "--host=$build_world_HOST_TRIPLET $CONFIGUREARGS --disable-ocamldoc"
+  log_trace ocaml_configure "$build_world_PREFIX" "$build_world_TARGET_ABI" \
+    "$build_world_BUILD_ROOT"/support/with-target-c-compiler.sh "$OCAML_HOST_TRIPLET" "$DKML_TARGET_SYSROOT" \
+    "--host=$build_world_HOST_TRIPLET $CONFIGUREARGS --disable-ocamldoc"
 
   # Build
   # -----

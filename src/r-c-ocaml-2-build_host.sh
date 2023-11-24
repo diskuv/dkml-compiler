@@ -169,6 +169,8 @@ export_safe_tmpdir
 # shellcheck disable=SC1091
 . "$DKMLDIR/vendor/dkml-compiler/src/r-c-ocaml-functions.sh"
 
+compiler_clear_environment
+
 if [ -n "$HOSTABISCRIPT" ]; then
     case "$HOSTABISCRIPT" in
     /* | ?:*) # /a/b/c or C:\Windows
@@ -204,7 +206,14 @@ fi
 install -d "$OCAMLSRC_MIXED"/support
 HOST_DKML_COMPILE_SPEC=${DKML_COMPILE_SPEC:-1}
 HOST_DKML_COMPILE_TYPE=${DKML_COMPILE_TYPE:-SYS}
-DKML_TARGET_ABI="$DKMLHOSTABI" DKML_COMPILE_SPEC=$HOST_DKML_COMPILE_SPEC DKML_COMPILE_TYPE=$HOST_DKML_COMPILE_TYPE autodetect_compiler "$OCAMLSRC_MIXED"/support/with-host-c-compiler.sh
+#   Exports OCAML_HOST_TRIPLET and DKML_TARGET_SYSROOT
+DKML_TARGET_ABI="$DKMLHOSTABI" DKML_COMPILE_SPEC=$HOST_DKML_COMPILE_SPEC DKML_COMPILE_TYPE=$HOST_DKML_COMPILE_TYPE \
+    autodetect_compiler \
+    --post-transform "$HOSTABISCRIPT" \
+    "$OCAMLSRC_MIXED"/support/with-host-c-compiler.sh
+#   To save a lot of troubleshooting time, we'll dump details
+$DKMLSYS_INSTALL -d "$OCAMLHOST_UNIX/share/dkml/detect"
+$DKMLSYS_INSTALL "$HOSTABISCRIPT" "$OCAMLHOST_UNIX/share/dkml/detect/post-transform.sh"
 
 # ./configure
 # Output: OCAML_CONFIGURE_NEEDS_MAKE_FLEXDLL
@@ -218,7 +227,9 @@ else
             ;;
     esac
 fi
-log_trace ocaml_configure "$OCAMLHOST_UNIX" "$DKMLHOSTABI" "$HOSTABISCRIPT" "$CONFIGUREARGS"
+log_trace ocaml_configure "$OCAMLHOST_UNIX" "$DKMLHOSTABI" \
+    "$OCAMLSRC_MIXED"/support/with-host-c-compiler.sh "$OCAML_HOST_TRIPLET" "$DKML_TARGET_SYSROOT" \
+    "$CONFIGUREARGS"
 
 # Skip bootstrapping if ocamlc.opt is present
 if [ -n "$OCAMLC_OPT_EXE" ]; then

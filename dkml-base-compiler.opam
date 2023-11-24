@@ -2,17 +2,29 @@ opam-version: "2.0"
 # Composite version format is M.N.O~vA.B.C[~prelP]
 # where:
 # - M.N.O is OCaml compiler version
-# - A.B.C is the DKML version of the dkml-runtime-common
-# - P is optional DKML prerelease version
+# - A.B.C is the DkML version of the dkml-runtime-common
+# - P is optional DkML prerelease version
 # Examples:
 # - 4.14.0~prerel69 (legacy format) < 4.14.0~v0.4.0 < 4.14.0~v0.4.1~prerel69 < 4.14.0~v0.4.1
 # Confer: Version Ordering in https://opam.ocaml.org/doc/Manual.html#Package-Formulas
 version: "4.14.0~v2.1.0"
-synopsis: "OCaml cross-compiler and libraries from the DKML distribution that works with at least Win32 and macOS"
+synopsis: "OCaml cross-compiler and libraries from the DkML distribution that works with at least Win32 and macOS"
 description:
-  """The DKML distribution of the OCaml bytecode and native compiler, Stdlib and the other OCaml libraries (str, unix, bigarray, etc.).
-A cross-compiler for macOS x86_64 to macOS arm64 is included; for build consistency the regular OCaml compiler will be for x86_64 regardless of whether the build machine is Apple Silicon.
-Install with something like: opam switch create dkml-4.14.0 '--formula="dkml-base-compiler" {>= "4.14.0~" & < "4.13.0~"}'"""
+  """The DkML distribution of the OCaml bytecode and native compiler, Stdlib and the other OCaml libraries (str, unix, bigarray, etc.).
+
+A cross-compiler for macOS x86_64 to macOS arm64 is included; for build consistency the regular OCaml compiler will be for
+x86_64 regardless of whether the build machine is Apple Silicon.
+
+To support cross-compilation, environment variables for compilers like CC and LDFLAGS have no effect on the 'host' ABI.
+The compiler for the 'host' ABI will be detected from conventional locations on the system and (for Visual Studio)
+from configuration stored in the DkML home directory.
+
+Advanced: Set environment variables like DKML_TARGET_ABI and DKML_COMPILE_* to do cross-compilation from the 'host' ABI
+to a 'target' ABI. Those variables are documented in dkml-runtime-common's crossplatform-functions.sh script.
+Search for: autodetect_compiler() {
+
+Install with something like:
+  opam switch create dkml-4.14.0 '--formula="dkml-base-compiler" {>= "4.14.0~" & < "4.15.0~"}'"""
 maintainer: ["opensource+diskuv-ocaml@support.diskuv.com"]
 authors: ["Diskuv, Inc. <opensource+diskuv-ocaml@support.diskuv.com>"]
 license: "Apache-2.0"
@@ -187,7 +199,7 @@ install: [
       "-adarwin_x86_64=vendor/dkml-compiler/env/standard-compiler-env-to-ocaml-configure-env.sh" { os = "macos" & arch = "arm64" }
       "-adarwin_arm64=vendor/dkml-compiler/env/standard-compiler-env-to-ocaml-configure-env.sh"  { os = "macos" & arch = "x86_64" }
       #     TODO: Would be nice to bundle the 3 Android cross-compilers here since they are already supported
-      #     by DKML, but I (jonahbeckford@) doubt there is an Android NDK available on the Opam hosts.
+      #     by DkML, but I (jonahbeckford@) doubt there is an Android NDK available on the Opam hosts.
       #     Confer: https://github.com/diskuv/diskuv-ocaml-ghmirror/runs/4831077050
       #     Perhaps the Android NDK should just be downloaded via an 'android-option-ndk23' package? That would give control of the NDK version.
       # "-aandroid_arm64v8a=vendor/dkml-compiler/env/github-actions-ci-to-ocaml-configure-env.sh;android_x86_64=vendor/dkml-compiler/env/github-actions-ci-to-ocaml-configure-env.sh"] { os = "linux" & !ocaml-option-32bit:installed }
