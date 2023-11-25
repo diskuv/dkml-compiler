@@ -25,16 +25,16 @@ export CONF_DKML_CROSS_TOOLCHAIN=@repository@
 export DISKUV_OPAM_REPOSITORY=
 export DKML_HOME=
 # autogen from global_env_vars.
-export DKML_VERSION='2.0.2'
-export DEFAULT_DISKUV_OPAM_REPOSITORY_TAG='2.0.2'
-export DEFAULT_DKML_COMPILER='2.0.2'
+export DKML_VERSION='2.1.0'
+export DEFAULT_DISKUV_OPAM_REPOSITORY_TAG='2.1.0'
+export DEFAULT_DKML_COMPILER='2.1.0'
 export PIN_ASTRING='0.8.5'
 export PIN_BASE='v0.16.1'
 export PIN_BASE64='3.5.1'
 export PIN_BIGARRAY_COMPAT='1.1.0'
 export PIN_BOS='0.2.1'
 export PIN_CAMLP_STREAMS='5.0.1'
-export PIN_CHROME_TRACE='3.9.1'
+export PIN_CHROME_TRACE='3.11.1'
 export PIN_CMDLINER='1.2.0'
 export PIN_CONF_DKML_SYS_OPAM='1'
 export PIN_CONF_PKG_CONFIG='2+cpkgs'
@@ -48,44 +48,43 @@ export PIN_CTYPES='0.19.2-windowssupport-r7'
 export PIN_CUDF='0.10'
 export PIN_DIGESTIF='1.1.4'
 export PIN_DISKUVBOX='0.2.0'
-export PIN_DKML_APPS='2.0.2'
-export PIN_DKML_BASE_COMPILER='4.14.0~v2.0.2'
-export PIN_DKML_BUILD_DESKTOP='2.0.2'
+export PIN_DKML_APPS='2.1.0'
+export PIN_DKML_BASE_COMPILER='4.14.0~v2.1.0'
+export PIN_DKML_BUILD_DESKTOP='2.1.0'
 export PIN_DKML_C_PROBE='3.0.0'
-export PIN_DKML_COMPILER_ENV='2.0.2'
-export PIN_DKML_COMPILER_SRC='2.0.2'
-export PIN_DKML_COMPONENT_COMMON_DESKTOP='2.0.2'
-export PIN_DKML_COMPONENT_COMMON_OPAM='2.2.0~alpha0~20221228'
+export PIN_DKML_COMPILER_SRC='2.1.0'
+export PIN_DKML_COMPONENT_COMMON_DESKTOP='2.1.0'
+export PIN_DKML_COMPONENT_COMMON_OPAM='2.2.0~alpha3~20230918'
 export PIN_DKML_COMPONENT_COMMON_UNIXUTILS='0.2.0'
-export PIN_DKML_COMPONENT_OCAMLCOMPILER_COMMON='4.14.0~v2.0.2'
-export PIN_DKML_COMPONENT_OCAMLCOMPILER_NETWORK='4.14.0~v2.0.2'
-export PIN_DKML_COMPONENT_OCAMLCOMPILER_OFFLINE='4.14.0~v2.0.2'
-export PIN_DKML_COMPONENT_OFFLINE_DESKTOP_FULL='2.0.2'
-export PIN_DKML_COMPONENT_OFFLINE_OPAMSHIM='2.2.0~alpha0~20221228'
+export PIN_DKML_COMPONENT_OCAMLCOMPILER_COMMON='4.14.0~v2.1.0'
+export PIN_DKML_COMPONENT_OCAMLCOMPILER_NETWORK='4.14.0~v2.1.0'
+export PIN_DKML_COMPONENT_OCAMLCOMPILER_OFFLINE='4.14.0~v2.1.0'
+export PIN_DKML_COMPONENT_OFFLINE_DESKTOP_FULL='2.1.0'
+export PIN_DKML_COMPONENT_OFFLINE_OPAMSHIM='2.2.0~alpha3~20230918'
 export PIN_DKML_COMPONENT_OFFLINE_UNIXUTILS='0.2.0'
-export PIN_DKML_COMPONENT_STAGING_DESKTOP_FULL='2.0.2'
-export PIN_DKML_COMPONENT_STAGING_DKMLCONFDIR='2.0.2'
-export PIN_DKML_COMPONENT_STAGING_OCAMLRUN='4.14.0~v2.0.2'
-export PIN_DKML_COMPONENT_STAGING_OPAM32='2.2.0~alpha0~20221228'
-export PIN_DKML_COMPONENT_STAGING_OPAM64='2.2.0~alpha0~20221228'
+export PIN_DKML_COMPONENT_STAGING_DESKTOP_FULL='2.1.0'
+export PIN_DKML_COMPONENT_STAGING_DKMLCONFDIR='2.1.0'
+export PIN_DKML_COMPONENT_STAGING_OCAMLRUN='4.14.0~v2.1.0'
+export PIN_DKML_COMPONENT_STAGING_OPAM32='2.2.0~alpha3~20230918'
+export PIN_DKML_COMPONENT_STAGING_OPAM64='2.2.0~alpha3~20230918'
 export PIN_DKML_COMPONENT_STAGING_UNIXUTILS='0.2.0'
-export PIN_DKML_COMPONENT_STAGING_WITHDKML='2.0.2'
+export PIN_DKML_COMPONENT_STAGING_WITHDKML='2.1.0'
 export PIN_DKML_COMPONENT_XX_CONSOLE='0.1.1'
-export PIN_DKML_EXE_LIB='2.0.2'
-export PIN_DKML_EXE='2.0.2'
-export PIN_DKML_INSTALL_INSTALLER='0.5.0'
-export PIN_DKML_INSTALL_RUNNER='0.5.0'
-export PIN_DKML_INSTALL='0.5.0'
-export PIN_DKML_INSTALLER_OCAML_COMMON='2.0.2'
-export PIN_DKML_INSTALLER_OCAML_NETWORK='2.0.2'
-export PIN_DKML_INSTALLER_OCAML_OFFLINE='2.0.2'
-export PIN_DKML_PACKAGE_CONSOLE='0.5.0'
-export PIN_DKML_RUNTIME_COMMON_NATIVE='2.0.2'
-export PIN_DKML_RUNTIME_COMMON='2.0.2'
-export PIN_DKML_RUNTIME_DISTRIBUTION='2.0.2'
-export PIN_DKML_RUNTIMELIB='2.0.2'
-export PIN_DKML_RUNTIMESCRIPTS='2.0.2'
-export PIN_DKML_WORKFLOWS='2.0.2'
+export PIN_DKML_EXE_LIB='2.1.0'
+export PIN_DKML_EXE='2.1.0'
+export PIN_DKML_INSTALL_INSTALLER='0.5.2'
+export PIN_DKML_INSTALL_RUNNER='0.5.2'
+export PIN_DKML_INSTALL='0.5.2'
+export PIN_DKML_INSTALLER_OCAML_COMMON='2.1.0'
+export PIN_DKML_INSTALLER_OCAML_NETWORK='2.1.0'
+export PIN_DKML_INSTALLER_OCAML_OFFLINE='2.1.0'
+export PIN_DKML_PACKAGE_CONSOLE='0.5.2'
+export PIN_DKML_RUNTIME_COMMON_NATIVE='2.1.0'
+export PIN_DKML_RUNTIME_COMMON='2.1.0'
+export PIN_DKML_RUNTIME_DISTRIBUTION='2.1.0'
+export PIN_DKML_RUNTIMELIB='2.1.0'
+export PIN_DKML_RUNTIMESCRIPTS='2.1.0'
+export PIN_DKML_WORKFLOWS='2.1.0'
 export PIN_DUNE_ACTION_PLUGIN='3.8.3'
 export PIN_DUNE_BUILD_INFO='3.8.3'
 export PIN_DUNE_CONFIGURATOR='3.8.3'
@@ -109,7 +108,7 @@ export PIN_GRAPHICS='5.1.2'
 export PIN_HEX='1.5.0'
 export PIN_INTEGERS='0.7.0'
 export PIN_JANE_STREET_HEADERS='v0.16.0'
-export PIN_JINGOO='1.4.4'
+export PIN_JINGOO='1.5.0'
 export PIN_JSONM='1.0.2'
 export PIN_JSONRPC='1.16.2'
 export PIN_JST_CONFIG='v0.16.0'
@@ -123,7 +122,7 @@ export PIN_MDX='2.3.0'
 export PIN_MENHIR='20230608'
 export PIN_MENHIRLIB='20230608'
 export PIN_MENHIRSDK='20230608'
-export PIN_MERLIN_LIB='4.9-414'
+export PIN_MERLIN_LIB='4.12-414'
 export PIN_METAPP='0.4.4+win'
 export PIN_METAQUOT='0.5.2'
 export PIN_MEW='0.1.0'
@@ -131,9 +130,9 @@ export PIN_MEW_VI='0.5.0'
 export PIN_NUM='1.4'
 export PIN_OCAML_COMPILER_LIBS='v0.12.4'
 export PIN_OCAML_LSP_SERVER='1.16.2'
-export PIN_OCAML_VERSION='3.6.1'
+export PIN_OCAML_VERSION='3.6.2'
 export PIN_OCAML='4.14.0'
-export PIN_OCAMLBUILD='0.14.2+win'
+export PIN_OCAMLBUILD='0.14.2+win+unix'
 export PIN_OCAMLC_LOC='3.8.3'
 export PIN_OCAMLFIND='1.9.5'
 export PIN_OCAMLFORMAT_LIB='0.25.1'
@@ -145,7 +144,7 @@ export PIN_ODOC_PARSER='2.0.0'
 export PIN_ODOC='2.2.0'
 export PIN_ORDERING='3.8.3'
 export PIN_PARSEXP='v0.16.0'
-export PIN_PP='1.1.2'
+export PIN_PP='1.2.0'
 export PIN_PPX_ASSERT='v0.16.0'
 export PIN_PPX_BASE='v0.16.0'
 export PIN_PPX_COLD='v0.16.0'
@@ -165,7 +164,8 @@ export PIN_PPX_SEXP_CONV='v0.16.0'
 export PIN_PPX_YOJSON_CONV_LIB='v0.16.0'
 export PIN_PPXLIB='0.30.0'
 export PIN_PTIME='1.1.0'
-export PIN_RE='1.10.4'
+export PIN_QRC='0.1.1~dune'
+export PIN_RE='1.11.0'
 export PIN_REACT='1.2.2'
 export PIN_REFL='0.4.1'
 export PIN_RESULT='1.5'
@@ -185,16 +185,16 @@ export PIN_TOPKG='1.0.7'
 export PIN_TRAVERSE='0.3.0'
 export PIN_TRIE='1.0.0'
 export PIN_TSORT='2.1.0'
-export PIN_TYXML='4.5.0'
+export PIN_TYXML='4.6.0'
 export PIN_UCHAR='0.0.2'
 export PIN_UTOP='2.13.1'
 export PIN_UUCP='15.0.0'
 export PIN_UUIDM='0.9.8'
 export PIN_UUSEG='15.0.0'
 export PIN_UUTF='1.0.3'
-export PIN_WITH_DKML='2.0.2'
+export PIN_WITH_DKML='2.1.0'
 export PIN_XDG='3.9.0'
-export PIN_YOJSON='2.1.0'
+export PIN_YOJSON='2.1.1'
 export PIN_ZED='3.2.2'
 
 # Set matrix variables
@@ -211,7 +211,7 @@ export dockcross_run_extra_args="--platform linux/386"
 
 
 usage() {
-  echo 'Setup Diskuv OCaml (DKML) compiler on a desktop PC.' >&2
+  echo 'Setup DkML compiler on a desktop PC.' >&2
   echo 'usage: setup-dkml-linux_x86.sh [options]' >&2
   echo 'Options:' >&2
 
@@ -261,7 +261,6 @@ usage() {
   echo "  --PIN_DKML_BASE_COMPILER=<value>. Defaults to: ${PIN_DKML_BASE_COMPILER}" >&2
   echo "  --PIN_DKML_BUILD_DESKTOP=<value>. Defaults to: ${PIN_DKML_BUILD_DESKTOP}" >&2
   echo "  --PIN_DKML_C_PROBE=<value>. Defaults to: ${PIN_DKML_C_PROBE}" >&2
-  echo "  --PIN_DKML_COMPILER_ENV=<value>. Defaults to: ${PIN_DKML_COMPILER_ENV}" >&2
   echo "  --PIN_DKML_COMPILER_SRC=<value>. Defaults to: ${PIN_DKML_COMPILER_SRC}" >&2
   echo "  --PIN_DKML_COMPONENT_COMMON_DESKTOP=<value>. Defaults to: ${PIN_DKML_COMPONENT_COMMON_DESKTOP}" >&2
   echo "  --PIN_DKML_COMPONENT_COMMON_OPAM=<value>. Defaults to: ${PIN_DKML_COMPONENT_COMMON_OPAM}" >&2
@@ -374,6 +373,7 @@ usage() {
   echo "  --PIN_PPX_YOJSON_CONV_LIB=<value>. Defaults to: ${PIN_PPX_YOJSON_CONV_LIB}" >&2
   echo "  --PIN_PPXLIB=<value>. Defaults to: ${PIN_PPXLIB}" >&2
   echo "  --PIN_PTIME=<value>. Defaults to: ${PIN_PTIME}" >&2
+  echo "  --PIN_QRC=<value>. Defaults to: ${PIN_QRC}" >&2
   echo "  --PIN_RE=<value>. Defaults to: ${PIN_RE}" >&2
   echo "  --PIN_REACT=<value>. Defaults to: ${PIN_REACT}" >&2
   echo "  --PIN_REFL=<value>. Defaults to: ${PIN_REFL}" >&2
@@ -501,8 +501,6 @@ while getopts :h-: option; do
     PIN_DKML_BUILD_DESKTOP=*) PIN_DKML_BUILD_DESKTOP=${OPTARG#*=} ;;
     PIN_DKML_C_PROBE) fail "Option \"$OPTARG\" missing argument" ;;
     PIN_DKML_C_PROBE=*) PIN_DKML_C_PROBE=${OPTARG#*=} ;;
-    PIN_DKML_COMPILER_ENV) fail "Option \"$OPTARG\" missing argument" ;;
-    PIN_DKML_COMPILER_ENV=*) PIN_DKML_COMPILER_ENV=${OPTARG#*=} ;;
     PIN_DKML_COMPILER_SRC) fail "Option \"$OPTARG\" missing argument" ;;
     PIN_DKML_COMPILER_SRC=*) PIN_DKML_COMPILER_SRC=${OPTARG#*=} ;;
     PIN_DKML_COMPONENT_COMMON_DESKTOP) fail "Option \"$OPTARG\" missing argument" ;;
@@ -727,6 +725,8 @@ while getopts :h-: option; do
     PIN_PPXLIB=*) PIN_PPXLIB=${OPTARG#*=} ;;
     PIN_PTIME) fail "Option \"$OPTARG\" missing argument" ;;
     PIN_PTIME=*) PIN_PTIME=${OPTARG#*=} ;;
+    PIN_QRC) fail "Option \"$OPTARG\" missing argument" ;;
+    PIN_QRC=*) PIN_QRC=${OPTARG#*=} ;;
     PIN_RE) fail "Option \"$OPTARG\" missing argument" ;;
     PIN_RE=*) PIN_RE=${OPTARG#*=} ;;
     PIN_REACT) fail "Option \"$OPTARG\" missing argument" ;;
@@ -880,7 +880,9 @@ transfer_dir() {
     install -d "$transfer_dir_DST"
     rm -rf "$transfer_dir_DST"
     # Move
-    mv "$transfer_dir_SRC" "$transfer_dir_DST"
+    if [ -d "$transfer_dir_SRC" ]; then
+        mv "$transfer_dir_SRC" "$transfer_dir_DST"
+    fi
 }
 
 # Set TEMP variable which is used, among other things, for OCaml's
@@ -941,7 +943,7 @@ cat > .ci/sd4/run-checkout-code.sh <<'end_of_script'
 # dockcross (used by Linux) since a Docker-in-Docker container can have
 # difficulties doing a git checkout (the Git credentials for any private
 # repositories are likely not present). We don't care about any private
-# repositories for DKML but any code that extends this (ex. DKSDK) may
+# repositories for DkML but any code that extends this (ex. DKSDK) may
 # need to use private repositories.
 
 set -euf
@@ -1024,18 +1026,18 @@ section_end checkout-info
 
 install -d .ci/sd4/g
 
-# dkml-runtime-distribution
+# dkml-component-ocamlcompiler
 
-#   For 'Diagnose Visual Studio environment variables (Windows)' we need dkml-runtime-distribution
+#   For 'Diagnose Visual Studio environment variables (Windows)' we need dkml-component-ocamlcompiler
 #   so that 'Import-Module Machine' and 'Get-VSSetupInstance' can be run.
 #   The version doesn't matter too much, as long as it has a functioning Get-VSSetupInstance
 #   that supports the Visual Studio versions of the latest GitLab CI and GitHub Actions machines.
 #   commit 4d6f1bfc3510c55ba4273cb240e43727854b5718 = WinSDK 19041 and VS 14.29
 case "$dkml_host_abi" in
 windows_*)
-    section_begin checkout-dkml-runtime-distribution 'Checkout dkml-runtime-distribution'
-    git_checkout dkml-runtime-distribution https://github.com/diskuv/dkml-runtime-distribution.git "4d6f1bfc3510c55ba4273cb240e43727854b5718"
-    section_end checkout-dkml-runtime-distribution
+    section_begin checkout-dkml-component-ocamlcompiler 'Checkout dkml-component-ocamlcompiler'
+    git_checkout dkml-component-ocamlcompiler https://github.com/diskuv/dkml-component-ocamlcompiler.git "b9142380b0b8771a0d02f8b88ea786152a6e3d09"
+    section_end checkout-dkml-component-ocamlcompiler
     ;;
 esac
 
@@ -1090,6 +1092,21 @@ export_temp_for_windows
 if [ -e .ci/sd4/vsenv.sh ]; then
     # shellcheck disable=SC1091
     . .ci/sd4/vsenv.sh
+fi
+
+# -------------------------------------------------------------------
+
+# Extend dockcross. https://github.com/dockcross/dockcross#how-to-extend-dockcross-images
+if [ "${in_docker:-}" = "true" ] && [ -n "${dockcross_image:-}" ]; then
+    echo "Doing docker build"
+    section_begin docker-build "Summary: docker build -t dkml-dockcross"
+
+    install -d .ci/sd4/docker-image
+    printf "FROM %s\nENV DEFAULT_DOCKCROSS_IMAGE dkml-dockcross\nRUN if command -v apt-get; then apt-get install -y rsync %s && rm -rf /var/lib/apt/lists/*; fi\nRUN if command -v yum; then yum install -y rsync %s && yum clean all && rm -rf /var/cache/yum; fi" \
+        "${dockcross_image_custom_prefix:-}${dockcross_image:-}" "${dockcross_packages_apt:-}" "${dockcross_packages_yum:-}" >.ci/sd4/docker-image/Dockerfile
+    docker build -t dkml-dockcross .ci/sd4/docker-image
+
+    section_end docker-build
 fi
 
 # -------------------------------------------------------------------
@@ -1305,12 +1322,12 @@ install -d .ci/sd4/dist
 tar cf .ci/sd4/dist/run-with-env.tar -T /dev/null
 
 do_get_dockcross() {
-    if [ -n "${dockcross_image:-}" ]; then
+    if [ "${in_docker:-}" = "true" ] && [ -n "${dockcross_image:-}" ]; then
         # The dockcross script is super-slow
         section_begin get-dockcross 'Get dockcross binary (ManyLinux)'
         install -d .ci/sd4
         #   shellcheck disable=SC2086
-        docker run ${dockcross_run_extra_args:-} --rm "${dockcross_image_custom_prefix:-}${dockcross_image:-}" >.ci/sd4/dockcross.gen
+        docker run ${dockcross_run_extra_args:-} --rm dkml-dockcross >.ci/sd4/dockcross.gen
 
         # PROBLEM 1
         # ---------
@@ -1408,7 +1425,7 @@ if [ "\$BUILDER_UID" = 0 ] && [ "\$BUILDER_GID" = 0 ]; then
         --rm \
         \${ARGS:-} \
          -v "\$HOST_PWD":/work \
-        ${dockcross_image_custom_prefix:-}${dockcross_image:-} ${dockcross_entrypoint} "\$@"
+        dkml-dockcross ${dockcross_entrypoint} "\$@"
 else
     HERE=\$(dirname "\$0")
     HERE=\$(cd "\$HERE" && pwd)
@@ -1425,7 +1442,7 @@ EOF
 }
 do_get_dockcross
 
-if [ -n "${dockcross_image:-}" ]; then
+if [ "${in_docker:-}" = "true" ] && [ -n "${dockcross_image:-}" ]; then
     # rsync needs to be available, even after Docker container disappears
     if [ ! -e .ci/sd4/bs/bin/rsync ]; then
         section_begin get-opam-prereqs-in-dockcross 'Get Opam prerequisites (ManyLinux)'
@@ -1441,7 +1458,7 @@ fi
 # Opam prerequisites for using opam (not for installing opam)
 
 {
-    if [ -n "${docker_runner:-}" ]; then
+    if [ "${in_docker:-}" = "true" ] && [ -n "${docker_runner:-}" ]; then
         # rsync needs to be available, even after Docker container disappears
         if [ ! -e .ci/sd4/bs/bin/rsync.deps ]; then
             section_begin get-opam-prereqs-in-docker 'Get Opam prerequisites (Linux Docker)'
@@ -1459,9 +1476,11 @@ fi
     fi
 
     # Bundle Opam prerequisites (ManyLinux or Linux Docker)
-    if [ -n "${docker_runner:-}" ] || [ -n "${dockcross_image:-}" ]; then
-        # Bundle for consumers of setup-dkml.yml
-        do_tar_rf .ci/sd4/dist/run-with-env.tar .ci/sd4/bs/bin/rsync
+    if [ "${in_docker:-}" = "true" ]; then
+        if [ -n "${docker_runner:-}" ] || [ -n "${dockcross_image:-}" ]; then
+            # Bundle for consumers of setup-dkml.yml
+            do_tar_rf .ci/sd4/dist/run-with-env.tar .ci/sd4/bs/bin/rsync
+        fi
     fi
 }
 
@@ -1651,7 +1670,7 @@ EOF
         echo '___________________' >&2
         do_tar_rf .ci/sd4/dist/run-with-env.tar .ci/sd4/run-with-env .ci/sd4/run-in-docker .ci/sd4/edr
 
-    elif [ -n "${docker_runner:-}" ]; then
+    elif [ "${in_docker:-}" = "true" ] && [ -n "${docker_runner:-}" ]; then
 
         cat >.ci/sd4/run-with-env <<EOF
 #!/bin/sh
@@ -1950,40 +1969,6 @@ do_pins() {
     do_pins_NAME=$1
     shift
 
-    # dkml-base-compiler
-
-    if [ "${DKML_COMPILER:-}" != '@repository@' ] && [ -z "${DKML_COMPILER:-}" ] && [ -z "${OCAML_COMPILER:-}" ]; then
-        section_begin checkout-dkml-base-compiler "Pin dkml-base-compiler to default ${DEFAULT_DKML_COMPILER} (neither dkml-base-compiler nor OCAML_COMPILER specified) for $do_pins_NAME switch"
-        opamrun pin add --switch "$do_pins_NAME" --yes --no-action dkml-base-compiler "https://github.com/diskuv/dkml-compiler.git#${DEFAULT_DKML_COMPILER}"
-        section_end checkout-dkml-base-compiler
-    elif [ "${DKML_COMPILER:-}" != '@repository@' ] && [ -n "${DKML_COMPILER:-}" ] && [ -z "${OCAML_COMPILER:-}" ]; then
-        section_begin checkout-dkml-base-compiler "Pin dkml-base-compiler to $DKML_COMPILER (dkml-base-compiler specified; no OCAML_COMPILER specified) for $do_pins_NAME switch"
-        opamrun pin add --switch "$do_pins_NAME" --yes --no-action dkml-base-compiler "https://github.com/diskuv/dkml-compiler.git#${DKML_COMPILER}"
-        section_end checkout-dkml-base-compiler
-    elif [ -n "${OCAML_COMPILER:-}" ]; then
-        # Validate OCAML_COMPILER (OCAML_COMPILER specified)
-        case "${OCAML_COMPILER:-}" in
-        4.12.1) true ;;
-        4.14.0) true ;;
-        *)
-            echo "OCAML_COMPILER version ${OCAML_COMPILER:-} is not supported" >&2
-            exit 109
-            ;;
-        esac
-
-        section_begin checkout-dkml-base-compiler "Pin dkml-base-compiler (OCAML_COMPILER specified) for $do_pins_NAME switch"
-        opamrun pin add --switch "$do_pins_NAME" --yes --no-action dkml-base-compiler "https://github.com/diskuv/dkml-compiler.git#${OCAML_COMPILER}-v${DKML_VERSION}"
-        section_end checkout-dkml-base-compiler
-    fi
-
-    # conf-dkml-cross-toolchain
-
-    if [ "${CONF_DKML_CROSS_TOOLCHAIN:-}" != '@repository@' ]; then
-        section_begin checkout-conf-dkml-cross-toolchain "Pin conf-dkml-cross-toolchain for $do_pins_NAME switch"
-        opamrun pin add --switch "$do_pins_NAME" --yes --no-action conf-dkml-cross-toolchain "https://github.com/diskuv/conf-dkml-cross-toolchain.git#$CONF_DKML_CROSS_TOOLCHAIN"
-        section_end checkout-conf-dkml-cross-toolchain
-    fi
-
     section_begin "opam-pins-$do_pins_NAME" "Opam pins for $do_pins_NAME switch"
     ### BEGIN pin-adds. DO NOT EDIT THE LINES IN THIS SECTION
     # Managed by bump-packages.cmake
@@ -2011,7 +1996,6 @@ do_pins() {
     opamrun pin add --switch "$do_pins_NAME"  --yes --no-action -k version dkml-base-compiler "${PIN_DKML_BASE_COMPILER}"
     opamrun pin add --switch "$do_pins_NAME"  --yes --no-action -k version dkml-build-desktop "${PIN_DKML_BUILD_DESKTOP}"
     opamrun pin add --switch "$do_pins_NAME"  --yes --no-action -k version dkml-c-probe "${PIN_DKML_C_PROBE}"
-    opamrun pin add --switch "$do_pins_NAME"  --yes --no-action -k version dkml-compiler-env "${PIN_DKML_COMPILER_ENV}"
     opamrun pin add --switch "$do_pins_NAME"  --yes --no-action -k version dkml-compiler-src "${PIN_DKML_COMPILER_SRC}"
     opamrun pin add --switch "$do_pins_NAME"  --yes --no-action -k version dkml-component-common-desktop "${PIN_DKML_COMPONENT_COMMON_DESKTOP}"
     opamrun pin add --switch "$do_pins_NAME"  --yes --no-action -k version dkml-component-common-opam "${PIN_DKML_COMPONENT_COMMON_OPAM}"
@@ -2124,6 +2108,7 @@ do_pins() {
     opamrun pin add --switch "$do_pins_NAME"  --yes --no-action -k version ppx_yojson_conv_lib "${PIN_PPX_YOJSON_CONV_LIB}"
     opamrun pin add --switch "$do_pins_NAME"  --yes --no-action -k version ppxlib "${PIN_PPXLIB}"
     opamrun pin add --switch "$do_pins_NAME"  --yes --no-action -k version ptime "${PIN_PTIME}"
+    opamrun pin add --switch "$do_pins_NAME"  --yes --no-action -k version qrc "${PIN_QRC}"
     opamrun pin add --switch "$do_pins_NAME"  --yes --no-action -k version re "${PIN_RE}"
     opamrun pin add --switch "$do_pins_NAME"  --yes --no-action -k version react "${PIN_REACT}"
     opamrun pin add --switch "$do_pins_NAME"  --yes --no-action -k version refl "${PIN_REFL}"
@@ -2157,6 +2142,47 @@ do_pins() {
     opamrun pin add --switch "$do_pins_NAME"  --yes --no-action -k version zed "${PIN_ZED}"
     ### END pin-adds. DO NOT EDIT THE LINES ABOVE
     section_end "opam-pins-$do_pins_NAME"
+
+    # --------------
+    # REMAINING PINS
+    # --------------
+
+    # These come after [pin-adds] section since [pin-adds] may need to be overridden by
+    # users' choice.
+
+    # dkml-base-compiler
+
+    if [ "${DKML_COMPILER:-}" != '@repository@' ] && [ -z "${DKML_COMPILER:-}" ] && [ -z "${OCAML_COMPILER:-}" ]; then
+        section_begin checkout-dkml-base-compiler "Pin dkml-base-compiler to default ${DEFAULT_DKML_COMPILER} (neither dkml-base-compiler nor OCAML_COMPILER specified) for $do_pins_NAME switch"
+        opamrun pin add --switch "$do_pins_NAME" --yes --no-action dkml-base-compiler "https://github.com/diskuv/dkml-compiler.git#${DEFAULT_DKML_COMPILER}"
+        section_end checkout-dkml-base-compiler
+    elif [ "${DKML_COMPILER:-}" != '@repository@' ] && [ -n "${DKML_COMPILER:-}" ] && [ -z "${OCAML_COMPILER:-}" ]; then
+        section_begin checkout-dkml-base-compiler "Pin dkml-base-compiler to $DKML_COMPILER (dkml-base-compiler specified; no OCAML_COMPILER specified) for $do_pins_NAME switch"
+        opamrun pin add --switch "$do_pins_NAME" --yes --no-action dkml-base-compiler "https://github.com/diskuv/dkml-compiler.git#${DKML_COMPILER}"
+        section_end checkout-dkml-base-compiler
+    elif [ -n "${OCAML_COMPILER:-}" ]; then
+        # Validate OCAML_COMPILER (OCAML_COMPILER specified)
+        case "${OCAML_COMPILER:-}" in
+        4.12.1) true ;;
+        4.14.0) true ;;
+        *)
+            echo "OCAML_COMPILER version ${OCAML_COMPILER:-} is not supported" >&2
+            exit 109
+            ;;
+        esac
+
+        section_begin checkout-dkml-base-compiler "Pin dkml-base-compiler (OCAML_COMPILER specified) for $do_pins_NAME switch"
+        opamrun pin add --switch "$do_pins_NAME" --yes --no-action dkml-base-compiler "https://github.com/diskuv/dkml-compiler.git#${OCAML_COMPILER}-v${DKML_VERSION}"
+        section_end checkout-dkml-base-compiler
+    fi
+
+    # conf-dkml-cross-toolchain
+
+    if [ "${CONF_DKML_CROSS_TOOLCHAIN:-}" != '@repository@' ]; then
+        section_begin checkout-conf-dkml-cross-toolchain "Pin conf-dkml-cross-toolchain for $do_pins_NAME switch"
+        opamrun pin add --switch "$do_pins_NAME" --yes --no-action conf-dkml-cross-toolchain "https://github.com/diskuv/conf-dkml-cross-toolchain.git#$CONF_DKML_CROSS_TOOLCHAIN"
+        section_end checkout-conf-dkml-cross-toolchain
+    fi
 }
 
 if [ "${SKIP_OPAM_MODIFICATIONS:-}" = "false" ]; then
@@ -2239,8 +2265,8 @@ if [ "${SKIP_OPAM_MODIFICATIONS:-}" = "false" ]; then
     fi
 fi
 
-# Because dune.X.Y.Z+shim (and any user DKML packages) requires DKML installed (after all, it is just
-# a with-dkml.exe shim), we need either dkmlvars-v2.sexp or DKML environment
+# Because dune.X.Y.Z+shim (and any user DkML packages) requires DkML installed (after all, it is just
+# a with-dkml.exe shim), we need either dkmlvars-v2.sexp or DkML environment
 # variables. Confer: Dkml_runtimelib.Dkml_context.get_dkmlversion
 #
 # grep matches either:
