@@ -1,7 +1,7 @@
 ; don't waste time traversing down intermediate directories
 
 (dirs
- (:standard \ dkmldir dl dist msys64 _opam _release .ci))
+ (:standard \ dkmldir dl dist stage msys64 _opam _release .ci))
 
 (rule
  (alias gen-opam)
@@ -134,6 +134,30 @@
      dl/darwin_x86_64-ocamlc.opt
      --artifact
      darwin_x86_64-ocamlc.opt
+     --sha256-file
+     %{target}.sha256))
+   ;  darwin_arm64 (ocamlc.opt)
+   (run diskuvbox copy-file %{target}.a %{target}.b)
+   (with-stdout-to
+    %{target}.sha256
+    (run
+     sh
+     ci/src/checksum.sh
+     %{lib:dkml-runtime-common:unix/crossplatform-functions.sh}
+     %{read:src/version.semver.txt}
+     darwin_arm64-ocamlc.opt))
+   (with-stdout-to
+    %{target}.a
+    (run
+     ci/src/bump_source.exe
+     --opam-file
+     %{target}.b
+     --version-file
+     src/version.semver.txt
+     --download-file
+     dl/darwin_arm64-ocamlc.opt
+     --artifact
+     darwin_arm64-ocamlc.opt
      --sha256-file
      %{target}.sha256))
    ; finalize the target

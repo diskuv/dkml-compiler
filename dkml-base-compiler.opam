@@ -237,23 +237,27 @@ extra-source "dl/homebrew-bundle.tar.gz" {
 }
 # BEGIN: Managed by `dune build '@gen-opam' --auto-promote`
 extra-source "dl/windows_x86-ocamlc.opt.exe" {
-  src: "https://github.com/diskuv/dkml-compiler/releases/download/1.2.0-prep4/windows_x86-ocamlc.opt.exe"
-  checksum: "sha256=e6f3b091200c094b3f4c667a4333276a1e806b6a4dc60d3b576067f2f60b85e1"
+  src: "https://github.com/diskuv/dkml-compiler/releases/download/2.1.0-1/windows_x86-ocamlc.opt.exe"
+  checksum: "sha256=ff7c95619120f265c9e2b0d73677fd5411b9b6c05655063caf7d65b33b23f3c7"
 }
 extra-source "dl/windows_x86_64-ocamlc.opt.exe" {
-  src: "https://github.com/diskuv/dkml-compiler/releases/download/1.2.0-prep4/windows_x86_64-ocamlc.opt.exe"
-  checksum: "sha256=bd37004e7a9c94ac79c56824e056ad122d919065e7c10c390a43b5e33cece6ab"
+  src: "https://github.com/diskuv/dkml-compiler/releases/download/2.1.0-1/windows_x86_64-ocamlc.opt.exe"
+  checksum: "sha256=98e1a3df7f9e59cfdbe53c259cb0284b24f393fbc89777ef029d12e33ba417e6"
 }
 extra-source "dl/linux_x86-ocamlc.opt" {
-  src: "https://github.com/diskuv/dkml-compiler/releases/download/1.2.0-prep4/linux_x86-ocamlc.opt"
-  checksum: "sha256=df8eb4e4d3a4e2e01ea0a37561ec999b64edb688ebed420b30451923bd68fc6b"
+  src: "https://github.com/diskuv/dkml-compiler/releases/download/2.1.0-1/linux_x86-ocamlc.opt"
+  checksum: "sha256=3ae5b3fcf1b6f75104adac0365b1d600113bead38ea93e1a673861d48d275dea"
 }
 extra-source "dl/linux_x86_64-ocamlc.opt" {
-  src: "https://github.com/diskuv/dkml-compiler/releases/download/1.2.0-prep4/linux_x86_64-ocamlc.opt"
-  checksum: "sha256=a5d2914c0901e9bc9ca481fd4c9ea7fd8b79becc2d12dcd8c74142e43e18349f"
+  src: "https://github.com/diskuv/dkml-compiler/releases/download/2.1.0-1/linux_x86_64-ocamlc.opt"
+  checksum: "sha256=beb3a45c8bb3899c6d51195db929176481640a33c1ed3f3816fcce657d9690dd"
 }
 extra-source "dl/darwin_x86_64-ocamlc.opt" {
-  src: "https://github.com/diskuv/dkml-compiler/releases/download/1.2.0-prep4/darwin_x86_64-ocamlc.opt"
-  checksum: "sha256=98744a85497cba6670feb0f6d1e705286b5fddfa47f56ea180517733f4c6a54b"
+  src: "https://github.com/diskuv/dkml-compiler/releases/download/2.1.0-1/darwin_x86_64-ocamlc.opt"
+  checksum: "sha256=89971a82713071d8afa3b7570ca62f98ce95ab641d0af3f891554fa4e262b737"
+}
+extra-source "dl/darwin_arm64-ocamlc.opt" {
+  src: "https://github.com/diskuv/dkml-compiler/releases/download/2.1.0-1/darwin_arm64-ocamlc.opt"
+  checksum: "sha256=8cc9568301770454e5f8f81a4279baa48e786e24867cc4aa94c88653f3f93aae"
 }
 # END: Managed by `dune build '@gen-opam' --auto-promote`
