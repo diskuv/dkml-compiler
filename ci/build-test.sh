@@ -71,7 +71,7 @@ fi
 # Build and test
 OPAM_PKGNAME=${OPAM_PACKAGE%.opam}
 if ! [ "${SKIP_OPAM_INSTALL:-}" = ON ]; then
-  opamrun install "./${OPAM_PKGNAME}.opam" --with-test --yes
+  opamrun install "./${OPAM_PKGNAME}.opam" conf-dkml-cross-toolchain --with-test --yes
 fi
 
 # Copy the installed bin/, lib/, share/ and src-ocaml/ from 'dkml' Opam switch
