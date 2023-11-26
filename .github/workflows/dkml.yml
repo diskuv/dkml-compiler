@@ -22,7 +22,7 @@
 #
 # 1. Delete this file.
 # 2. Run dk with your original arguments:
-#        ./dk dkml.workflow.compilers 
+#        ./dk dkml.workflow.compilers PRERELEASE
 #    or get help to come up with new arguments:
 #        ./dk dkml.workflow.compilers HELP
 
@@ -115,7 +115,7 @@ jobs:
 
       - name: Build and test on non-Windows host
         if: "!startsWith(matrix.dkml_host_abi, 'windows_')"
-        run: ci/build-test.sh
+        run: sh ci/build-test.sh
 
       # Capture the dist/ folder for the release job
       - uses: actions/upload-artifact@v3

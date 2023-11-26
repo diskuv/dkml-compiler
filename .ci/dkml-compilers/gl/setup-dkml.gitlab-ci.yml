@@ -666,15 +666,27 @@ variables:
 
       # -------------------------------------------------------------------
 
+      docker_fqin_preusername= # fully qualified image name (hostname[:port]/username/reponame[:tag]), the parts before the username (hostname[:port]/)
+      if [ -n "${docker_registry:-}" ]; then
+          docker_fqin_preusername="$docker_registry/"
+      fi
+
       # Extend dockcross. https://github.com/dockcross/dockcross#how-to-extend-dockcross-images
+      dockcross_image_id=
+      dockcross_cli_image_args=
       if [ "${in_docker:-}" = "true" ] && [ -n "${dockcross_image:-}" ]; then
           echo "Doing docker build"
-          section_begin docker-build "Summary: docker build -t dkml-dockcross"
+          section_begin docker-build "Summary: docker build -t ${docker_fqin_preusername}dkml-workflows/dockcross"
 
           install -d .ci/sd4/docker-image
-          printf "FROM %s\nENV DEFAULT_DOCKCROSS_IMAGE dkml-dockcross\nRUN if command -v apt-get; then apt-get install -y rsync %s && rm -rf /var/lib/apt/lists/*; fi\nRUN if command -v yum; then yum install -y rsync %s && yum clean all && rm -rf /var/cache/yum; fi" \
-              "${dockcross_image_custom_prefix:-}${dockcross_image:-}" "${dockcross_packages_apt:-}" "${dockcross_packages_yum:-}" >.ci/sd4/docker-image/Dockerfile
-          docker build -t dkml-dockcross .ci/sd4/docker-image
+          printf "FROM %s\nENV DEFAULT_DOCKCROSS_IMAGE %sdkml-workflows/dockcross:latest\nRUN if command -v apt-get; then apt-get install -y rsync %s && rm -rf /var/lib/apt/lists/*; fi\nRUN if command -v yum; then yum install -y rsync %s && yum clean all && rm -rf /var/cache/yum; fi" \
+              "${dockcross_image:-}" "${docker_fqin_preusername}" "${dockcross_packages_apt:-}" "${dockcross_packages_yum:-}" >.ci/sd4/docker-image/Dockerfile
+          docker build -t "${docker_fqin_preusername}dkml-workflows/dockcross:latest" .ci/sd4/docker-image
+
+          # Save image id to re-use for all remaining dockcross invocations
+          docker images --format "{{.ID}} {{.CreatedAt}}" | sort -rk 2 | awk 'NR==1{print $1}' | tee .ci/sd4/docker-image-id
+          dockcross_image_id=$(cat .ci/sd4/docker-image-id)
+          dockcross_cli_image_args="--image $dockcross_image_id"
 
           section_end docker-build
       fi
@@ -731,8 +743,8 @@ variables:
       original_opam_root_cacheable=${original_opam_root_cacheable}
       unix_opam_root=${unix_opam_root}
       unix_opam_root_cacheable=${unix_opam_root_cacheable}
+      docker_registry=${docker_registry:-}
       dockcross_image=${dockcross_image:-}
-      dockcross_image_custom_prefix=${dockcross_image_custom_prefix:-}
       dockcross_run_extra_args=${dockcross_run_extra_args:-}
       docker_runner=${docker_runner:-}
       in_docker=${in_docker:-}
@@ -897,7 +909,7 @@ variables:
               section_begin get-dockcross 'Get dockcross binary (ManyLinux)'
               install -d .ci/sd4
               #   shellcheck disable=SC2086
-              docker run ${dockcross_run_extra_args:-} --rm dkml-dockcross >.ci/sd4/dockcross.gen
+              docker run ${dockcross_run_extra_args:-} --rm "${dockcross_image_id}" >.ci/sd4/dockcross.gen
 
               # PROBLEM 1
               # ---------
@@ -995,10 +1007,11 @@ variables:
               --rm \
               \${ARGS:-} \
                -v "\$HOST_PWD":/work \
-              dkml-dockcross ${dockcross_entrypoint} "\$@"
+              "${dockcross_image_id}" ${dockcross_entrypoint} "\$@"
       else
           HERE=\$(dirname "\$0")
           HERE=\$(cd "\$HERE" && pwd)
+          export OCI_EXE=docker # default to podman if available, which breaks complaining about HTTPS vs HTTP on GitHub Actions communicating to http (docker) local registry.
           exec "\$HERE/dockcross-real" "\$@"
       fi
       EOF
@@ -1011,48 +1024,6 @@ variables:
           fi
       }
       do_get_dockcross
-
-      if [ "${in_docker:-}" = "true" ] && [ -n "${dockcross_image:-}" ]; then
-          # rsync needs to be available, even after Docker container disappears
-          if [ ! -e .ci/sd4/bs/bin/rsync ]; then
-              section_begin get-opam-prereqs-in-dockcross 'Get Opam prerequisites (ManyLinux)'
-              install -d .ci/sd4/bs/bin
-              # Install rsync with 'yum' (ManyLinux) or 'apt' (dockcross/linux-x64, etc.)
-              # if not present.
-              #   shellcheck disable=SC2016
-              .ci/sd4/dockcross --args "${dockcross_run_extra_args:-}" sh -c 'if ! command -v rsync; then if command -v yum; then sudo yum install -y rsync; else sudo apt-get install -qq -o=Dpkg::Use-Pty=0 -y rsync; fi; fi && install $(command -v rsync) .ci/sd4/bs/bin'
-              section_end get-opam-prereqs-in-dockcross
-          fi
-      fi
-
-      # Opam prerequisites for using opam (not for installing opam)
-
-      {
-          if [ "${in_docker:-}" = "true" ] && [ -n "${docker_runner:-}" ]; then
-              # rsync needs to be available, even after Docker container disappears
-              if [ ! -e .ci/sd4/bs/bin/rsync.deps ]; then
-                  section_begin get-opam-prereqs-in-docker 'Get Opam prerequisites (Linux Docker)'
-                  install -d .ci/sd4/bs/bin
-                  ${docker_runner} sh -c '
-                  apt-get update -qq -o=Dpkg::Use-Pty=0 &&
-                  apt-get install -qq -o=Dpkg::Use-Pty=0 -y rsync &&
-                  ldd /usr/bin/rsync &&
-                  ls -l /lib/i386-linux-gnu/libpopt.so.0 /lib/i386-linux-gnu/libacl.so.1 /lib/i386-linux-gnu/libattr.so.1 &&
-                  tar cCfhz / /work/.ci/sd4/bs/bin/deps.tar.gz /usr/bin/rsync /lib/i386-linux-gnu/libpopt.so.0
-              '
-                  touch .ci/sd4/bs/bin/rsync.deps
-                  section_end get-opam-prereqs-in-docker
-              fi
-          fi
-
-          # Bundle Opam prerequisites (ManyLinux or Linux Docker)
-          if [ "${in_docker:-}" = "true" ]; then
-              if [ -n "${docker_runner:-}" ] || [ -n "${dockcross_image:-}" ]; then
-                  # Bundle for consumers of setup-dkml.yml
-                  do_tar_rf .ci/sd4/dist/run-with-env.tar .ci/sd4/bs/bin/rsync
-              fi
-          fi
-      }
 
       # Get Opam Cache
       do_get_opam_cache() {
@@ -1228,7 +1199,7 @@ variables:
           termargs=-it
       fi
 
-      exec bash "\${PROJECT_DIR}"/.ci/sd4/dockcross --args "\${termargs} -v \${PROJECT_DIR}/.ci/sd4/edr:/home/root ${dockcross_run_extra_args:-}" /work/.ci/sd4/run-in-docker "\$@"
+      exec bash "\${PROJECT_DIR}"/.ci/sd4/dockcross ${dockcross_cli_image_args} --args "\${termargs} -v \${PROJECT_DIR}/.ci/sd4/edr:/home/root ${dockcross_run_extra_args:-}" /work/.ci/sd4/run-in-docker "\$@"
       EOF
               chmod +x .ci/sd4/run-with-env
 
@@ -2370,7 +2341,7 @@ variables:
       { dkml_host_os: 'darwin',
         opam_root_cacheable: '${CI_PROJECT_DIR}/.ci/o',
         abi_pattern: 'macos-darwin_all',
-        gl_image: 'macos-12-xcode-14',
+        gl_image: 'macos-13-xcode-14',
         bootstrap_opam_version: '2.2.0-alpha-20221228',
         dkml_host_abi: 'darwin_arm64',
         opam_root: '${CI_PROJECT_DIR}/.ci/o' },
@@ -2674,15 +2645,27 @@ variables:
 
       # -------------------------------------------------------------------
 
+      docker_fqin_preusername= # fully qualified image name (hostname[:port]/username/reponame[:tag]), the parts before the username (hostname[:port]/)
+      if [ -n "${docker_registry:-}" ]; then
+          docker_fqin_preusername="$docker_registry/"
+      fi
+
       # Extend dockcross. https://github.com/dockcross/dockcross#how-to-extend-dockcross-images
+      dockcross_image_id=
+      dockcross_cli_image_args=
       if [ "${in_docker:-}" = "true" ] && [ -n "${dockcross_image:-}" ]; then
           echo "Doing docker build"
-          section_begin docker-build "Summary: docker build -t dkml-dockcross"
+          section_begin docker-build "Summary: docker build -t ${docker_fqin_preusername}dkml-workflows/dockcross"
 
           install -d .ci/sd4/docker-image
-          printf "FROM %s\nENV DEFAULT_DOCKCROSS_IMAGE dkml-dockcross\nRUN if command -v apt-get; then apt-get install -y rsync %s && rm -rf /var/lib/apt/lists/*; fi\nRUN if command -v yum; then yum install -y rsync %s && yum clean all && rm -rf /var/cache/yum; fi" \
-              "${dockcross_image_custom_prefix:-}${dockcross_image:-}" "${dockcross_packages_apt:-}" "${dockcross_packages_yum:-}" >.ci/sd4/docker-image/Dockerfile
-          docker build -t dkml-dockcross .ci/sd4/docker-image
+          printf "FROM %s\nENV DEFAULT_DOCKCROSS_IMAGE %sdkml-workflows/dockcross:latest\nRUN if command -v apt-get; then apt-get install -y rsync %s && rm -rf /var/lib/apt/lists/*; fi\nRUN if command -v yum; then yum install -y rsync %s && yum clean all && rm -rf /var/cache/yum; fi" \
+              "${dockcross_image:-}" "${docker_fqin_preusername}" "${dockcross_packages_apt:-}" "${dockcross_packages_yum:-}" >.ci/sd4/docker-image/Dockerfile
+          docker build -t "${docker_fqin_preusername}dkml-workflows/dockcross:latest" .ci/sd4/docker-image
+
+          # Save image id to re-use for all remaining dockcross invocations
+          docker images --format "{{.ID}} {{.CreatedAt}}" | sort -rk 2 | awk 'NR==1{print $1}' | tee .ci/sd4/docker-image-id
+          dockcross_image_id=$(cat .ci/sd4/docker-image-id)
+          dockcross_cli_image_args="--image $dockcross_image_id"
 
           section_end docker-build
       fi
@@ -2739,8 +2722,8 @@ variables:
       original_opam_root_cacheable=${original_opam_root_cacheable}
       unix_opam_root=${unix_opam_root}
       unix_opam_root_cacheable=${unix_opam_root_cacheable}
+      docker_registry=${docker_registry:-}
       dockcross_image=${dockcross_image:-}
-      dockcross_image_custom_prefix=${dockcross_image_custom_prefix:-}
       dockcross_run_extra_args=${dockcross_run_extra_args:-}
       docker_runner=${docker_runner:-}
       in_docker=${in_docker:-}
@@ -2905,7 +2888,7 @@ variables:
               section_begin get-dockcross 'Get dockcross binary (ManyLinux)'
               install -d .ci/sd4
               #   shellcheck disable=SC2086
-              docker run ${dockcross_run_extra_args:-} --rm dkml-dockcross >.ci/sd4/dockcross.gen
+              docker run ${dockcross_run_extra_args:-} --rm "${dockcross_image_id}" >.ci/sd4/dockcross.gen
 
               # PROBLEM 1
               # ---------
@@ -3003,10 +2986,11 @@ variables:
               --rm \
               \${ARGS:-} \
                -v "\$HOST_PWD":/work \
-              dkml-dockcross ${dockcross_entrypoint} "\$@"
+              "${dockcross_image_id}" ${dockcross_entrypoint} "\$@"
       else
           HERE=\$(dirname "\$0")
           HERE=\$(cd "\$HERE" && pwd)
+          export OCI_EXE=docker # default to podman if available, which breaks complaining about HTTPS vs HTTP on GitHub Actions communicating to http (docker) local registry.
           exec "\$HERE/dockcross-real" "\$@"
       fi
       EOF
@@ -3019,48 +3003,6 @@ variables:
           fi
       }
       do_get_dockcross
-
-      if [ "${in_docker:-}" = "true" ] && [ -n "${dockcross_image:-}" ]; then
-          # rsync needs to be available, even after Docker container disappears
-          if [ ! -e .ci/sd4/bs/bin/rsync ]; then
-              section_begin get-opam-prereqs-in-dockcross 'Get Opam prerequisites (ManyLinux)'
-              install -d .ci/sd4/bs/bin
-              # Install rsync with 'yum' (ManyLinux) or 'apt' (dockcross/linux-x64, etc.)
-              # if not present.
-              #   shellcheck disable=SC2016
-              .ci/sd4/dockcross --args "${dockcross_run_extra_args:-}" sh -c 'if ! command -v rsync; then if command -v yum; then sudo yum install -y rsync; else sudo apt-get install -qq -o=Dpkg::Use-Pty=0 -y rsync; fi; fi && install $(command -v rsync) .ci/sd4/bs/bin'
-              section_end get-opam-prereqs-in-dockcross
-          fi
-      fi
-
-      # Opam prerequisites for using opam (not for installing opam)
-
-      {
-          if [ "${in_docker:-}" = "true" ] && [ -n "${docker_runner:-}" ]; then
-              # rsync needs to be available, even after Docker container disappears
-              if [ ! -e .ci/sd4/bs/bin/rsync.deps ]; then
-                  section_begin get-opam-prereqs-in-docker 'Get Opam prerequisites (Linux Docker)'
-                  install -d .ci/sd4/bs/bin
-                  ${docker_runner} sh -c '
-                  apt-get update -qq -o=Dpkg::Use-Pty=0 &&
-                  apt-get install -qq -o=Dpkg::Use-Pty=0 -y rsync &&
-                  ldd /usr/bin/rsync &&
-                  ls -l /lib/i386-linux-gnu/libpopt.so.0 /lib/i386-linux-gnu/libacl.so.1 /lib/i386-linux-gnu/libattr.so.1 &&
-                  tar cCfhz / /work/.ci/sd4/bs/bin/deps.tar.gz /usr/bin/rsync /lib/i386-linux-gnu/libpopt.so.0
-              '
-                  touch .ci/sd4/bs/bin/rsync.deps
-                  section_end get-opam-prereqs-in-docker
-              fi
-          fi
-
-          # Bundle Opam prerequisites (ManyLinux or Linux Docker)
-          if [ "${in_docker:-}" = "true" ]; then
-              if [ -n "${docker_runner:-}" ] || [ -n "${dockcross_image:-}" ]; then
-                  # Bundle for consumers of setup-dkml.yml
-                  do_tar_rf .ci/sd4/dist/run-with-env.tar .ci/sd4/bs/bin/rsync
-              fi
-          fi
-      }
 
       # Get Opam Cache
       do_get_opam_cache() {
@@ -3236,7 +3178,7 @@ variables:
           termargs=-it
       fi
 
-      exec bash "\${PROJECT_DIR}"/.ci/sd4/dockcross --args "\${termargs} -v \${PROJECT_DIR}/.ci/sd4/edr:/home/root ${dockcross_run_extra_args:-}" /work/.ci/sd4/run-in-docker "\$@"
+      exec bash "\${PROJECT_DIR}"/.ci/sd4/dockcross ${dockcross_cli_image_args} --args "\${termargs} -v \${PROJECT_DIR}/.ci/sd4/edr:/home/root ${dockcross_run_extra_args:-}" /work/.ci/sd4/run-in-docker "\$@"
       EOF
               chmod +x .ci/sd4/run-with-env
 
@@ -4400,15 +4342,27 @@ variables:
 
       # -------------------------------------------------------------------
 
+      docker_fqin_preusername= # fully qualified image name (hostname[:port]/username/reponame[:tag]), the parts before the username (hostname[:port]/)
+      if [ -n "${docker_registry:-}" ]; then
+          docker_fqin_preusername="$docker_registry/"
+      fi
+
       # Extend dockcross. https://github.com/dockcross/dockcross#how-to-extend-dockcross-images
+      dockcross_image_id=
+      dockcross_cli_image_args=
       if [ "${in_docker:-}" = "true" ] && [ -n "${dockcross_image:-}" ]; then
           echo "Doing docker build"
-          section_begin docker-build "Summary: docker build -t dkml-dockcross"
+          section_begin docker-build "Summary: docker build -t ${docker_fqin_preusername}dkml-workflows/dockcross"
 
           install -d .ci/sd4/docker-image
-          printf "FROM %s\nENV DEFAULT_DOCKCROSS_IMAGE dkml-dockcross\nRUN if command -v apt-get; then apt-get install -y rsync %s && rm -rf /var/lib/apt/lists/*; fi\nRUN if command -v yum; then yum install -y rsync %s && yum clean all && rm -rf /var/cache/yum; fi" \
-              "${dockcross_image_custom_prefix:-}${dockcross_image:-}" "${dockcross_packages_apt:-}" "${dockcross_packages_yum:-}" >.ci/sd4/docker-image/Dockerfile
-          docker build -t dkml-dockcross .ci/sd4/docker-image
+          printf "FROM %s\nENV DEFAULT_DOCKCROSS_IMAGE %sdkml-workflows/dockcross:latest\nRUN if command -v apt-get; then apt-get install -y rsync %s && rm -rf /var/lib/apt/lists/*; fi\nRUN if command -v yum; then yum install -y rsync %s && yum clean all && rm -rf /var/cache/yum; fi" \
+              "${dockcross_image:-}" "${docker_fqin_preusername}" "${dockcross_packages_apt:-}" "${dockcross_packages_yum:-}" >.ci/sd4/docker-image/Dockerfile
+          docker build -t "${docker_fqin_preusername}dkml-workflows/dockcross:latest" .ci/sd4/docker-image
+
+          # Save image id to re-use for all remaining dockcross invocations
+          docker images --format "{{.ID}} {{.CreatedAt}}" | sort -rk 2 | awk 'NR==1{print $1}' | tee .ci/sd4/docker-image-id
+          dockcross_image_id=$(cat .ci/sd4/docker-image-id)
+          dockcross_cli_image_args="--image $dockcross_image_id"
 
           section_end docker-build
       fi
@@ -4465,8 +4419,8 @@ variables:
       original_opam_root_cacheable=${original_opam_root_cacheable}
       unix_opam_root=${unix_opam_root}
       unix_opam_root_cacheable=${unix_opam_root_cacheable}
+      docker_registry=${docker_registry:-}
       dockcross_image=${dockcross_image:-}
-      dockcross_image_custom_prefix=${dockcross_image_custom_prefix:-}
       dockcross_run_extra_args=${dockcross_run_extra_args:-}
       docker_runner=${docker_runner:-}
       in_docker=${in_docker:-}
@@ -4631,7 +4585,7 @@ variables:
               section_begin get-dockcross 'Get dockcross binary (ManyLinux)'
               install -d .ci/sd4
               #   shellcheck disable=SC2086
-              docker run ${dockcross_run_extra_args:-} --rm dkml-dockcross >.ci/sd4/dockcross.gen
+              docker run ${dockcross_run_extra_args:-} --rm "${dockcross_image_id}" >.ci/sd4/dockcross.gen
 
               # PROBLEM 1
               # ---------
@@ -4729,10 +4683,11 @@ variables:
               --rm \
               \${ARGS:-} \
                -v "\$HOST_PWD":/work \
-              dkml-dockcross ${dockcross_entrypoint} "\$@"
+              "${dockcross_image_id}" ${dockcross_entrypoint} "\$@"
       else
           HERE=\$(dirname "\$0")
           HERE=\$(cd "\$HERE" && pwd)
+          export OCI_EXE=docker # default to podman if available, which breaks complaining about HTTPS vs HTTP on GitHub Actions communicating to http (docker) local registry.
           exec "\$HERE/dockcross-real" "\$@"
       fi
       EOF
@@ -4745,48 +4700,6 @@ variables:
           fi
       }
       do_get_dockcross
-
-      if [ "${in_docker:-}" = "true" ] && [ -n "${dockcross_image:-}" ]; then
-          # rsync needs to be available, even after Docker container disappears
-          if [ ! -e .ci/sd4/bs/bin/rsync ]; then
-              section_begin get-opam-prereqs-in-dockcross 'Get Opam prerequisites (ManyLinux)'
-              install -d .ci/sd4/bs/bin
-              # Install rsync with 'yum' (ManyLinux) or 'apt' (dockcross/linux-x64, etc.)
-              # if not present.
-              #   shellcheck disable=SC2016
-              .ci/sd4/dockcross --args "${dockcross_run_extra_args:-}" sh -c 'if ! command -v rsync; then if command -v yum; then sudo yum install -y rsync; else sudo apt-get install -qq -o=Dpkg::Use-Pty=0 -y rsync; fi; fi && install $(command -v rsync) .ci/sd4/bs/bin'
-              section_end get-opam-prereqs-in-dockcross
-          fi
-      fi
-
-      # Opam prerequisites for using opam (not for installing opam)
-
-      {
-          if [ "${in_docker:-}" = "true" ] && [ -n "${docker_runner:-}" ]; then
-              # rsync needs to be available, even after Docker container disappears
-              if [ ! -e .ci/sd4/bs/bin/rsync.deps ]; then
-                  section_begin get-opam-prereqs-in-docker 'Get Opam prerequisites (Linux Docker)'
-                  install -d .ci/sd4/bs/bin
-                  ${docker_runner} sh -c '
-                  apt-get update -qq -o=Dpkg::Use-Pty=0 &&
-                  apt-get install -qq -o=Dpkg::Use-Pty=0 -y rsync &&
-                  ldd /usr/bin/rsync &&
-                  ls -l /lib/i386-linux-gnu/libpopt.so.0 /lib/i386-linux-gnu/libacl.so.1 /lib/i386-linux-gnu/libattr.so.1 &&
-                  tar cCfhz / /work/.ci/sd4/bs/bin/deps.tar.gz /usr/bin/rsync /lib/i386-linux-gnu/libpopt.so.0
-              '
-                  touch .ci/sd4/bs/bin/rsync.deps
-                  section_end get-opam-prereqs-in-docker
-              fi
-          fi
-
-          # Bundle Opam prerequisites (ManyLinux or Linux Docker)
-          if [ "${in_docker:-}" = "true" ]; then
-              if [ -n "${docker_runner:-}" ] || [ -n "${dockcross_image:-}" ]; then
-                  # Bundle for consumers of setup-dkml.yml
-                  do_tar_rf .ci/sd4/dist/run-with-env.tar .ci/sd4/bs/bin/rsync
-              fi
-          fi
-      }
 
       # Get Opam Cache
       do_get_opam_cache() {
@@ -4962,7 +4875,7 @@ variables:
           termargs=-it
       fi
 
-      exec bash "\${PROJECT_DIR}"/.ci/sd4/dockcross --args "\${termargs} -v \${PROJECT_DIR}/.ci/sd4/edr:/home/root ${dockcross_run_extra_args:-}" /work/.ci/sd4/run-in-docker "\$@"
+      exec bash "\${PROJECT_DIR}"/.ci/sd4/dockcross ${dockcross_cli_image_args} --args "\${termargs} -v \${PROJECT_DIR}/.ci/sd4/edr:/home/root ${dockcross_run_extra_args:-}" /work/.ci/sd4/run-in-docker "\$@"
       EOF
               chmod +x .ci/sd4/run-with-env
 
