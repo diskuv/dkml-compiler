@@ -92,11 +92,11 @@ jobs:
 
     steps:
       - name: Checkout code
-        if: matrix.enabled == 'true'
+        if: matrix.enabled
         uses: actions/checkout@v3
 
       - name: Cache DkML compilers code
-        if: matrix.enabled == 'true'
+        if: matrix.enabled
         uses: actions/cache@v3
         id: cache-dkml-compilers
         with:
@@ -104,7 +104,7 @@ jobs:
           key: ${{ runner.os }}
 
       - name: Checkout DkML compilers code
-        if: steps.cache-dkml-compilers.outputs.cache-hit != 'true' && matrix.enabled == 'true'
+        if: steps.cache-dkml-compilers.outputs.cache-hit != 'true' && matrix.enabled
         # For help: ./dk dkml.workflow.compilers HELP
         run: ./dk dkml.workflow.compilers PRERELEASE CI GitHub
 
@@ -112,19 +112,19 @@ jobs:
       #   opam_root, exe_ext, dkml_host_abi, abi_pattern (and many more)
       #
       - name: Setup DkML compilers on a Windows host
-        if: startsWith(matrix.dkml_host_abi, 'windows_') && matrix.enabled == 'true'
+        if: startsWith(matrix.dkml_host_abi, 'windows_') && matrix.enabled
         uses: ./.ci/dkml-compilers/gh-windows/pre
         with:
           DKML_COMPILER: ${{ env.DKML_COMPILER }}
           CACHE_PREFIX: ${{ env.CACHE_PREFIX }}
       - name: Setup DkML compilers on a Linux host
-        if: startsWith(matrix.dkml_host_abi, 'linux_') && matrix.enabled == 'true'
+        if: startsWith(matrix.dkml_host_abi, 'linux_') && matrix.enabled
         uses: ./.ci/dkml-compilers/gh-linux/pre
         with:
           DKML_COMPILER: ${{ env.DKML_COMPILER }}
           CACHE_PREFIX: ${{ env.CACHE_PREFIX }}
       - name: Setup DkML compilers on a Darwin host
-        if: startsWith(matrix.dkml_host_abi, 'darwin_') && matrix.enabled == 'true'
+        if: startsWith(matrix.dkml_host_abi, 'darwin_') && matrix.enabled
         uses: ./.ci/dkml-compilers/gh-darwin/pre
         with:
           DKML_COMPILER: ${{ env.DKML_COMPILER }}
@@ -134,13 +134,13 @@ jobs:
       # ci/build-test.sh or a similar file
 
       - name: Build and test on Windows host
-        if: startsWith(matrix.dkml_host_abi, 'windows_') && matrix.enabled == 'true'
+        if: startsWith(matrix.dkml_host_abi, 'windows_') && matrix.enabled
         shell: msys2 {0}
         run: ci/build-test.sh
 
       - name: Build and test on non-Windows host
         if: |
-          !startsWith(matrix.dkml_host_abi, 'windows_') && matrix.enabled == 'true'
+          !startsWith(matrix.dkml_host_abi, 'windows_') && matrix.enabled
         run: sh ci/build-test.sh
 
       # Capture the dist/ folder for the release job
@@ -152,15 +152,15 @@ jobs:
       # The .ci/dkml-compilers "post" actions will finalize caching, etc.
 
       - name: Teardown DkML compilers on a Windows host
-        if: startsWith(matrix.dkml_host_abi, 'windows_') && matrix.enabled == 'true'
+        if: startsWith(matrix.dkml_host_abi, 'windows_') && matrix.enabled
         uses: ./.ci/dkml-compilers/gh-windows/post
 
       - name: Teardown DkML compilers on a Darwin host
-        if: startsWith(matrix.dkml_host_abi, 'darwin_') && matrix.enabled == 'true'
+        if: startsWith(matrix.dkml_host_abi, 'darwin_') && matrix.enabled
         uses: ./.ci/dkml-compilers/gh-darwin/post
 
       - name: Teardown DkML compilers on a Linux host
-        if: startsWith(matrix.dkml_host_abi, 'linux_') && matrix.enabled == 'true'
+        if: startsWith(matrix.dkml_host_abi, 'linux_') && matrix.enabled
         uses: ./.ci/dkml-compilers/gh-linux/post
 
   #--------
