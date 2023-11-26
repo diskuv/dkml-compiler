@@ -74,72 +74,15 @@ if ! [ "${SKIP_OPAM_INSTALL:-}" = ON ]; then
   opamrun install "./${OPAM_PKGNAME}.opam" conf-dkml-cross-toolchain --with-test --yes
 fi
 
-# Copy the installed bin/, lib/, share/ and src-ocaml/ from 'dkml' Opam switch
-# into dist/ folder:
-#
-# dist/
-#   <dkml_host_abi>/
-#      <file1>
-#      ...
-#
-# For GitHub Actions specifically the structure is:
-#
-# dist/
-#    <file1>
-#      ...
-# since the ABI should be the uploaded artifact name already in .github/workflows:
-#   - uses: actions/upload-artifact@v3
-#     with:
-#       name: ${{ matrix.dkml_host_abi }}
-#       path: dist/
+# Copy the installed binaries (including cross-compiled ones) from Opam into dist/ folder.
+# Name the binaries with the target ABI since GitHub Releases are flat namespaces.
+prefix=$(opamrun var prefix)
+opamrun exec -- sh ci/package-build.sh "$dkml_host_abi" "$prefix"
 
-if [ -n "${GITHUB_ENV:-}" ]; then
-    DIST=dist
-else
-    DIST="dist/${dkml_host_abi}"
-fi
-install -d "${DIST}" "stage"
-#   Copy installation into stage/
-for d in bin lib share/doc share/ocaml-config; do
-    echo "Copying $d ..."
-    ls -l "${opam_root}/dkml/$d/"
-    rm -rf "stage/${d:?}/"
-    install -d "stage/$d/"
-    rsync -a "${opamroot_unix}/dkml/$d/" "stage/$d"
-done
-#   For Windows you must ask your users to first install the vc_redist executable.
-#   Confer: https://github.com/diskuv/dkml-workflows#distributing-your-windows-executables
+# For Windows you must ask your users to first install the vc_redist executable.
+# Confer: https://github.com/diskuv/dkml-workflows#distributing-your-windows-executables
 case "${dkml_host_abi}" in
-windows_x86_64) wget -O "stage/bin/vc_redist.x64.exe" https://aka.ms/vs/17/release/vc_redist.x64.exe ;;
-windows_x86) wget -O "stage/bin/vc_redist.x86.exe" https://aka.ms/vs/17/release/vc_redist.x86.exe ;;
-windows_arm64) wget -O "stage/bin/vc_redist.arm64.exe" https://aka.ms/vs/17/release/vc_redist.arm64.exe ;;
+windows_x86_64) wget -O dist/vc_redist.x64.exe https://aka.ms/vs/17/release/vc_redist.x64.exe ;;
+windows_x86) wget -O dist/vc_redist.x86.exe https://aka.ms/vs/17/release/vc_redist.x86.exe ;;
+windows_arm64) wget -O dist/vc_redist.arm64.exe https://aka.ms/vs/17/release/vc_redist.arm64.exe ;;
 esac
-
-# Final Diagnostics
-case "${dkml_host_abi}" in
-linux_*)
-    if command -v apk; then
-        apk add file
-    fi ;;
-esac
-file "stage/bin/ocamlc.opt${exe_ext:-}"
-
-# Zip up everything in stage/, and put into DIST
-case "${dkml_host_abi}" in
-windows_*)
-    if command -v pacman; then
-        pacman -Sy --noconfirm --needed zip
-    fi ;;
-esac
-set -x
-cd "stage"
-  # .tar.gz on all platforms
-  tar cfz "../${DIST}/dkml-compiler.tar.gz" .
-  # zip only on Windows (no need to waste GitHub/GitLab space)
-  case "${dkml_host_abi}" in
-  windows_*)
-    zip -rq "../${DIST}/dkml-compiler.zip" .
-  esac
-  # ocamlc.opt on all platforms, used to bootstrap compiling OCaml faster
-  install "bin/ocamlc.opt${exe_ext:-}" "../${DIST}/"
-cd ..

@@ -16,12 +16,12 @@ install -d "${_release}"
 cd dist
 if [ -n "${GITHUB_ENV:-}" ]; then
     # GitHub Releases
-    #   Filename = Target_ABI '-' File
+    #   Filename = [Target_ABI '-'] File
     find . -mindepth 1 -maxdepth 1 -type d | while read -r dkml_target_abi; do
         dkml_target_abi=$(basename "${dkml_target_abi}")
         find "${dkml_target_abi}" -mindepth 1 -maxdepth 1 -type f | while read -r file; do
           file=$(basename "${file}")
-          install -v "${dkml_target_abi}/${file}" "${_release}/${dkml_target_abi}-${file}"
+          install -v "${dkml_target_abi}/${file}" "${_release}/${file}"
         done
     done
 else
