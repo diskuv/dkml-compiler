@@ -64,9 +64,10 @@ jobs:
           - gh_os: macos-latest # Intel
             abi_pattern: macos-darwin_all-intel
             dkml_host_abi: darwin_x86_64
-          - gh_os: macos-13-xlarge # Apple Silicon. https://github.blog/2023-10-02-introducing-the-new-apple-silicon-powered-m1-macos-larger-runner-for-github-actions/
-            abi_pattern: macos-darwin_all-silicon
-            dkml_host_abi: darwin_arm64
+          # macos-13-xlarge is NOT FREE for Public projects as of 2023-11-25.
+          # - gh_os: macos-13-xlarge # Apple Silicon. https://github.blog/2023-10-02-introducing-the-new-apple-silicon-powered-m1-macos-larger-runner-for-github-actions/
+          #   abi_pattern: macos-darwin_all-silicon
+          #   dkml_host_abi: darwin_arm64
 
     runs-on: ${{ matrix.gh_os }}
     name: build / ${{ matrix.abi_pattern }}
