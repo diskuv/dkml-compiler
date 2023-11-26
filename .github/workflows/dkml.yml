@@ -101,7 +101,7 @@ jobs:
         id: cache-dkml-compilers
         with:
           path: .ci/dkml-compilers
-          key: ${{ runner.os }}
+          key: dkml-compilers-${{ runner.os }}
 
       - name: Checkout DkML compilers code
         if: steps.cache-dkml-compilers.outputs.cache-hit != 'true' && matrix.enabled
