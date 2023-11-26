@@ -43,31 +43,42 @@ on:
   push:
   # ... or trigger manually from GitHub web interface
   workflow_dispatch:
+    inputs:
+      apple-silicon:
+        type: boolean
+        default: false
+        description: "Turn on Apple Silicon job (not free)"
 
 jobs:
   build:
     strategy:
       matrix:
-        include: # 
+        include:
           - gh_os: windows-2019
             abi_pattern: win32-windows_x86
             dkml_host_abi: windows_x86
+            enabled: "true"
           - gh_os: windows-2019
             abi_pattern: win32-windows_x86_64
             dkml_host_abi: windows_x86_64
+            enabled: "true"
           - gh_os: ubuntu-latest
             abi_pattern: manylinux2014-linux_x86
             dkml_host_abi: linux_x86
+            enabled: "true"
           - gh_os: ubuntu-latest
             abi_pattern: manylinux2014-linux_x86_64
             dkml_host_abi: linux_x86_64
+            enabled: "true"
           - gh_os: macos-latest # Intel
             abi_pattern: macos-darwin_all-intel
             dkml_host_abi: darwin_x86_64
+            enabled: "true"
           # macos-13-xlarge is NOT FREE for Public projects as of 2023-11-25.
-          # - gh_os: macos-13-xlarge # Apple Silicon. https://github.blog/2023-10-02-introducing-the-new-apple-silicon-powered-m1-macos-larger-runner-for-github-actions/
-          #   abi_pattern: macos-darwin_all-silicon
-          #   dkml_host_abi: darwin_arm64
+          - gh_os: macos-13-xlarge # Apple Silicon. https://github.blog/2023-10-02-introducing-the-new-apple-silicon-powered-m1-macos-larger-runner-for-github-actions/
+            abi_pattern: macos-darwin_all-silicon
+            dkml_host_abi: darwin_arm64
+            enabled: ${{ inputs.apple-silicon }}
 
     runs-on: ${{ matrix.gh_os }}
     name: build / ${{ matrix.abi_pattern }}
@@ -84,27 +95,27 @@ jobs:
           key: ${{ runner.os }}
 
       - name: Checkout DkML compilers code
-        if: steps.cache-dkml-compilers.outputs.cache-hit != 'true'
+        if: steps.cache-dkml-compilers.outputs.cache-hit != 'true' && matrix.enabled == 'true'
         # For help: ./dk dkml.workflow.compilers HELP
         run: ./dk dkml.workflow.compilers PRERELEASE CI GitHub
 
       # The .ci/dkml-compilers "pre" actions will create the environment variables:
       #   opam_root, exe_ext, dkml_host_abi, abi_pattern (and many more)
-      # 
+      #
       - name: Setup DkML compilers on a Windows host
-        if: startsWith(matrix.dkml_host_abi, 'windows_')
+        if: startsWith(matrix.dkml_host_abi, 'windows_') && matrix.enabled == 'true'
         uses: ./.ci/dkml-compilers/gh-windows/pre
         with:
           DKML_COMPILER: ${{ env.DKML_COMPILER }}
           CACHE_PREFIX: ${{ env.CACHE_PREFIX }}
       - name: Setup DkML compilers on a Linux host
-        if: startsWith(matrix.dkml_host_abi, 'linux_')
+        if: startsWith(matrix.dkml_host_abi, 'linux_') && matrix.enabled == 'true'
         uses: ./.ci/dkml-compilers/gh-linux/pre
         with:
           DKML_COMPILER: ${{ env.DKML_COMPILER }}
           CACHE_PREFIX: ${{ env.CACHE_PREFIX }}
       - name: Setup DkML compilers on a Darwin host
-        if: startsWith(matrix.dkml_host_abi, 'darwin_')
+        if: startsWith(matrix.dkml_host_abi, 'darwin_') && matrix.enabled == 'true'
         uses: ./.ci/dkml-compilers/gh-darwin/pre
         with:
           DKML_COMPILER: ${{ env.DKML_COMPILER }}
@@ -114,12 +125,13 @@ jobs:
       # ci/build-test.sh or a similar file
 
       - name: Build and test on Windows host
-        if: startsWith(matrix.dkml_host_abi, 'windows_')
+        if: startsWith(matrix.dkml_host_abi, 'windows_') && matrix.enabled == 'true'
         shell: msys2 {0}
         run: ci/build-test.sh
 
       - name: Build and test on non-Windows host
-        if: "!startsWith(matrix.dkml_host_abi, 'windows_')"
+        if: |
+          !startsWith(matrix.dkml_host_abi, 'windows_') && matrix.enabled == 'true'
         run: sh ci/build-test.sh
 
       # Capture the dist/ folder for the release job
@@ -131,15 +143,15 @@ jobs:
       # The .ci/dkml-compilers "post" actions will finalize caching, etc.
 
       - name: Teardown DkML compilers on a Windows host
-        if: startsWith(matrix.dkml_host_abi, 'windows_')
+        if: startsWith(matrix.dkml_host_abi, 'windows_') && matrix.enabled == 'true'
         uses: ./.ci/dkml-compilers/gh-windows/post
 
       - name: Teardown DkML compilers on a Darwin host
-        if: startsWith(matrix.dkml_host_abi, 'darwin_')
+        if: startsWith(matrix.dkml_host_abi, 'darwin_') && matrix.enabled == 'true'
         uses: ./.ci/dkml-compilers/gh-darwin/post
 
       - name: Teardown DkML compilers on a Linux host
-        if: startsWith(matrix.dkml_host_abi, 'linux_')
+        if: startsWith(matrix.dkml_host_abi, 'linux_') && matrix.enabled == 'true'
         uses: ./.ci/dkml-compilers/gh-linux/post
 
   #--------
