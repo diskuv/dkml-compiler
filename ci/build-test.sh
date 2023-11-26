@@ -43,8 +43,16 @@ elif [ -n "${PC_PROJECT_DIR:-}" ]; then
     export PATH="$PC_PROJECT_DIR/.ci/sd4/opamrun:$PATH"
 elif [ -n "${GITHUB_WORKSPACE:-}" ]; then
     export PATH="$GITHUB_WORKSPACE/.ci/sd4/opamrun:$PATH"
-else
+elif [ -d .ci/sd4/opamrun ]; then
     export PATH="$PWD/.ci/sd4/opamrun:$PATH"
+else
+    # allow testing from command line.
+    # ex:
+    #   opam pin dkml-base-compiler git+file://$PWD/.git#$(git rev-parse HEAD) --yes --no-action
+    #   opam_root=$(opam var root) dkml_host_abi=darwin_x86_64 abi_pattern=macos-darwin_all SKIP_OPAM_UPDATE=ON sh ci/build-test.sh
+    opamrun() {
+        opam "$@"
+    }
 fi
 
 # Initial Diagnostics
@@ -52,20 +60,12 @@ opamrun switch
 opamrun list
 opamrun var
 opamrun config report
-opamrun exec -- ocamlc -config
-xswitch=$(opamrun var switch)
-if [ -x /usr/bin/cypgath ]; then
-    xswitch=$(/usr/bin/cygpath -au "$xswitch")
-fi
-if [ -e "$xswitch/src-ocaml/config.log" ]; then
-    echo '--- BEGIN src-ocaml/config.log ---' >&2
-    cat "$xswitch/src-ocaml/config.log" >&2
-    echo '--- END src-ocaml/config.log ---' >&2
-fi
 
 # Update
 if ! [ "${SKIP_OPAM_INSTALL:-}" = ON ]; then
-  opamrun update
+  if ! [ "${SKIP_OPAM_UPDATE:-}" = ON ]; then
+    opamrun update
+  fi
 fi
 
 # Build and test

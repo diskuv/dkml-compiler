@@ -2340,7 +2340,8 @@ variables:
       # autogen from gl_vars. only darwin
       { dkml_host_os: 'darwin',
         opam_root_cacheable: '${CI_PROJECT_DIR}/.ci/o',
-        abi_pattern: 'macos-darwin_all',
+        abi_pattern: 'macos-darwin_all-silicon',
+        no_gh: 'true',
         gl_image: 'macos-13-xcode-14',
         bootstrap_opam_version: '2.2.0-alpha-20221228',
         dkml_host_abi: 'darwin_arm64',

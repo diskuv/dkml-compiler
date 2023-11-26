@@ -86,6 +86,19 @@ to structure the patches so they are more or less independent of each other.
 and do a `git log` in the `OCaml source patched ...` directories. You must also run
 `./dk user.reindex` in a Unix shell or PowerShell.
 
+## Optimization
+
+If we have a prebuilt `ocamlc.opt` for an architecture ... possibly and likely for an old version of
+OCaml, it is used to save some initial bootstrapping time during `ocaml install dkml-base-compiler`.
+
+Note that the prebuilt `ocamlc.opt` is optional. If it doesn't exist, then some extra time is spent
+during `opam install`. This optionality allows for:
+
+1. Let's `dkml-base-compiler` build in CI.
+2. Then `ocamlc.opt` can be saved forever as a CI release artifact.
+3. Then `ocamlc.opt` can be used for all new compiler builds by modifying the download links in
+   `dkml-base-compiler.opam`.
+
 ## Status
 
 [![Syntax check](https://github.com/diskuv/dkml-compiler/actions/workflows/syntax.yml/badge.svg)](https://github.com/diskuv/dkml-compiler/actions/workflows/syntax.yml)

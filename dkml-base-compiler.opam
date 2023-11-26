@@ -142,13 +142,12 @@ build: [
 
   #   <dkmldir>/vendor/dkml-compiler/bin/bootstrap-ocamlc.opt.exe
   #   to speed up compile
-  ["install" "-d" "dkmldir/vendor/dkml-compiler/bin"]
-  ["install" "dl/windows_x86-ocamlc.opt.exe" "dkmldir/vendor/dkml-compiler/bin/bootstrap-ocamlc.opt.exe"]     { os = "win32" & (arch = "x86_32" |  ocaml-option-32bit:installed) }
-  ["install" "dl/windows_x86_64-ocamlc.opt.exe" "dkmldir/vendor/dkml-compiler/bin/bootstrap-ocamlc.opt.exe"]  { os = "win32" & (arch = "x86_64" & !ocaml-option-32bit:installed) }
-  ["install" "dl/linux_x86-ocamlc.opt" "dkmldir/vendor/dkml-compiler/bin/bootstrap-ocamlc.opt.exe"]           { os = "linux" & (arch = "x86_32" |  ocaml-option-32bit:installed) }
-  ["install" "dl/linux_x86_64-ocamlc.opt" "dkmldir/vendor/dkml-compiler/bin/bootstrap-ocamlc.opt.exe"]        { os = "linux" & (arch = "x86_64" & !ocaml-option-32bit:installed) }
-  ["install" "dl/darwin_x86_64-ocamlc.opt" "dkmldir/vendor/dkml-compiler/bin/bootstrap-ocamlc.opt.exe"]       { os = "macos" & arch = "x86_64" }
-  ["install" "dl/darwin_arm64-ocamlc.opt" "dkmldir/vendor/dkml-compiler/bin/bootstrap-ocamlc.opt.exe"]        { os = "macos" & arch = "arm64" }
+  ["sh" "scripts/install-ocamlc-opt.sh" "windows_x86" ".exe"]     { os = "win32" & (arch = "x86_32" |  ocaml-option-32bit:installed) }
+  ["sh" "scripts/install-ocamlc-opt.sh" "windows_x86_64" ".exe"]  { os = "win32" & (arch = "x86_64" & !ocaml-option-32bit:installed) }
+  ["sh" "scripts/install-ocamlc-opt.sh" "linux_x86" ""]           { os = "linux" & (arch = "x86_32" |  ocaml-option-32bit:installed) }
+  ["sh" "scripts/install-ocamlc-opt.sh" "linux_x86_64" ""]        { os = "linux" & (arch = "x86_64" & !ocaml-option-32bit:installed) }
+  ["sh" "scripts/install-ocamlc-opt.sh" "darwin_x86_64" ""]       { os = "macos" & arch = "x86_64" }
+  ["sh" "scripts/install-ocamlc-opt.sh" "darwin_arm64" ""]        { os = "macos" & arch = "arm64" }
 ]
 install: [
   # Run r-c-ocaml-1-setup.sh
