@@ -54,7 +54,7 @@ that can take the "mlcross" Opam directory structure and add it to
 
 ## Developing
 
-First run `with-dkml make local-install` on Diskuv OCaml on Windows, or
+First run `with-dkml make local-install` on DkML on Windows, or
 `make local-install` on other platforms, to install the compiler in
 a local opam switch using an in-place build.
 

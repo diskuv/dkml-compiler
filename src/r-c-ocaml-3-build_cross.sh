@@ -22,7 +22,7 @@
 # ----------------------------
 #
 # @jonahbeckford: 2021-10-26
-# - This file is licensed differently than the rest of the Diskuv OCaml distribution.
+# - This file is licensed differently than the rest of the DkML distribution.
 #   Keep the Apache License in this file since this file is part of the reproducible
 #   build files.
 #
@@ -61,7 +61,7 @@ usage() {
     printf "%s\n" "   -d DIR: DKML directory containing a .dkmlroot file"
     printf "%s\n" "   -t DIR: Target directory for the reproducible directory tree"
     printf "%s\n" "   -a TARGETABIS: Optional. See r-c-ocaml-1-setup.sh"
-    printf "%s\n" "   -e DKMLHOSTABI: Uses the Diskuv OCaml compiler detector find a host ABI compiler"
+    printf "%s\n" "   -e DKMLHOSTABI: Uses the DkML compiler detector find a host ABI compiler"
     printf "%s\n" "   -f HOSTSRC_SUBDIR: Use HOSTSRC_SUBDIR subdirectory of -t DIR to place the source code of the host ABI"
     printf "%s\n" "   -g CROSS_SUBDIR: Use CROSS_SUBDIR subdirectory of -t DIR to place target ABIs"
     printf "%s\n" "   -l FLEXLINKFLAGS: Options added to flexlink while building ocaml, ocamlc, etc. native Windows executables"

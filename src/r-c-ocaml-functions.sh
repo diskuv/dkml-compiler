@@ -16,7 +16,7 @@
 # ----------------------------
 #
 # @jonahbeckford: 2021-10-26
-# - This file is licensed differently than the rest of the Diskuv OCaml distribution.
+# - This file is licensed differently than the rest of the DkML distribution.
 #   Keep the Apache License in this file since this file is part of the reproducible
 #   build files.
 #

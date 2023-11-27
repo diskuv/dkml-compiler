@@ -40,7 +40,7 @@
 # Generally the variables conform to the description in
 # https://www.gnu.org/software/make/manual/html_node/Implicit-Variables.html.
 # The compiler will have been chosen from:
-# a) find the compiler selected/validated in the Diskuv OCaml installation
+# a) find the compiler selected/validated in the DkML installation
 #    (Windows) or on first-use (Unix)
 # b) the specific architecture that has been given in DKML_TARGET_ABI
 #

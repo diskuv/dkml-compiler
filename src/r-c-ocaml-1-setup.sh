@@ -16,7 +16,7 @@
 # ----------------------------
 #
 # @jonahbeckford: 2021-10-26
-# - This file is licensed differently than the rest of the Diskuv OCaml distribution.
+# - This file is licensed differently than the rest of the DkML distribution.
 #   Keep the Apache License in this file since this file is part of the reproducible
 #   build files.
 #
@@ -158,7 +158,7 @@ usage() {
         printf "%s\n" "      Defaults to '$OPT_MSVS_PREFERENCE' which, because it does not include '@',"
         printf "%s\n" "      will not choose a compiler based on environment variables that would disrupt reproducibility."
         printf "%s\n" "      Confer with https://github.com/metastack/msvs-tools#msvs-detect"
-        printf "%s\n" "   -e DKMLHOSTABI: Optional. Use the Diskuv OCaml compiler detector find a host ABI compiler."
+        printf "%s\n" "   -e DKMLHOSTABI: Optional. Use the DkML compiler detector find a host ABI compiler."
         printf "%s\n" "      Especially useful to find a 32-bit Windows host compiler that can use 64-bits of memory for the compiler."
         printf "%s\n" "      Values include: windows_x86, windows_x86_64, android_arm64v8a, darwin_x86_64, etc."
         printf "%s\n" "      Others are/will be documented on https://diskuv.gitlab.io/diskuv-ocaml. Defaults to an"
@@ -769,7 +769,7 @@ BUILD_CROSS_ARGS+=( -s "$_OCAMLVER" )
 
 # Find and apply patches to the host ABI
 apply_patches "$OCAMLSRC_UNIX"          ocaml    "$_OCAMLVER"    host
-if [ -e "$OCAMLSRC_UNIX"/flexdll/Makefile ]; then
+if [ -e "$OCAMLSRC_UNIX"/flexdll/Makefile ] && is_unixy_windows_build_machine; then
     apply_patches "$OCAMLSRC_UNIX/flexdll"  flexdll  "$_FLEXDLLVER"  host
 fi
 
@@ -794,7 +794,7 @@ else
             get_ocaml_source "$GIT_COMMITID_TAG_OR_DIR" "$_srcabidir_unix" "$TARGETDIR_MIXED/$CROSS_SUBDIR/$_targetabi/$HOSTSRC_SUBDIR" "$_targetabi"
             # Find and apply patches to the target ABI
             apply_patches "$_srcabidir_unix"            ocaml    "$_OCAMLVER"    cross
-            if [ -e "$_srcabidir_unix"/flexdll/Makefile ]; then
+            if [ -e "$_srcabidir_unix"/flexdll/Makefile ] && is_unixy_windows_build_machine; then
                 apply_patches "$_srcabidir_unix/flexdll"    flexdll  "$_FLEXDLLVER"  cross
             fi
         done < "$WORK"/tabi

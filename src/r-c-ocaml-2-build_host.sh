@@ -46,7 +46,7 @@ usage() {
         printf "%s\n" "   -t DIR: Target directory for the reproducible directory tree"
         printf "%s\n" "   -b PREF: Required and used only for the MSVC compiler. See r-c-ocaml-1-setup.sh"
         printf "%s\n" "   -c OCAMLC_OPT_EXE: If a possibly older 'ocamlc.opt' is specified, it speeds up compilation of the new OCaml compiler"
-        printf "%s\n" "   -e DKMLHOSTABI: Uses the Diskuv OCaml compiler detector find a host ABI compiler"
+        printf "%s\n" "   -e DKMLHOSTABI: Uses the DkML compiler detector find a host ABI compiler"
         printf "%s\n" "   -f HOSTSRC_SUBDIR: Use HOSTSRC_SUBDIR subdirectory of -t DIR to place the source code of the host ABI"
         printf "%s\n" "   -p HOST_SUBDIR: Optional. Use HOST_SUBDIR subdirectory of -t DIR to place the host ABI"
         printf "%s\n" "   -k HOSTABISCRIPT: Optional. See r-c-ocaml-1-setup.sh"
