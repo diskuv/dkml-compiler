@@ -7,7 +7,7 @@ opam-version: "2.0"
 # Examples:
 # - 4.14.0~prerel69 (legacy format) < 4.14.0~v0.4.0 < 4.14.0~v0.4.1~prerel69 < 4.14.0~v0.4.1
 # Confer: Version Ordering in https://opam.ocaml.org/doc/Manual.html#Package-Formulas
-version: "4.14.0~v2.1.0"
+version: "4.14.2~v2.1.0"
 synopsis: "OCaml cross-compiler and libraries from the DkML distribution that works with at least Win32 and macOS"
 description:
   """The DkML distribution of the OCaml bytecode and native compiler, Stdlib and the other OCaml libraries (str, unix, bigarray, etc.).
@@ -24,14 +24,14 @@ to a 'target' ABI. Those variables are documented in dkml-runtime-common's cross
 Search for: autodetect_compiler() {
 
 Install with something like:
-  opam switch create dkml-4.14.0 '--formula="dkml-base-compiler" {>= "4.14.0~" & < "4.15.0~"}'"""
+  opam switch create dkml-4.14.2 '--formula="dkml-base-compiler" {>= "4.14.2~" & < "4.15.0~"}'"""
 maintainer: ["opensource+diskuv-ocaml@support.diskuv.com"]
 authors: ["Diskuv, Inc. <opensource+diskuv-ocaml@support.diskuv.com>"]
 license: "Apache-2.0"
 homepage: "https://github.com/diskuv/dkml-compiler"
 bug-reports: "https://github.com/diskuv/dkml-compiler/issues"
 depends: [
-  "ocaml" {= "4.14.0" & post}
+  "ocaml" {= "4.14.2" & post}
 
   "base-unix" {post}
   "base-bigarray" {post}
@@ -63,7 +63,7 @@ build: [
   ["tar" "xCfz" "dl/ocaml"          "dl/ocaml.tar.gz"   "--strip-components=1"]
   ["tar" "xCfz" "dl/ocaml/flexdll"  "dl/flexdll.tar.gz" "--strip-components=1"]
 
-  # Debugging for 4.14.0 `Env.Error(_)` and `Persistent_env.Error(_)`
+  # Debugging for 4.14.2 `Env.Error(_)` and `Persistent_env.Error(_)`
   # Example:
   #   Fatal error: exception Persistent_env.Error(_)
   #   Raised at Persistent_env.error in file "typing/persistent_env.ml", line 33, characters 16-33
@@ -79,7 +79,7 @@ build: [
   #   Called from UTop_main.common_init in file "src/lib/uTop_main.ml", line 1384, characters 2-1921
   #   Called from UTop_main.main_aux in file "src/lib/uTop_main.ml", line 1476, characters 6-30
   #   Called from UTop_main.main_internal in file "src/lib/uTop_main.ml", line 1497, characters 4-25  
-  ["install" "debug/env.ml" "debug/persistent_env.ml" "dl/ocaml/typing/"] {dkml-debug-env-failures & version > "4.14.0~v1.2.1~" & version <= "4.14.0"}
+  ["install" "debug/env.ml" "debug/persistent_env.ml" "dl/ocaml/typing/"] {dkml-debug-env-failures & version > "4.14.2~v1.2.1~" & version <= "4.14.2"}
 
   # Create a DKMLDIR. Its structure mimics a git submodule setup.
   #   <dkmldir>/.dkmlroot
