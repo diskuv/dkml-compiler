@@ -2,6 +2,10 @@
 
 ## Pending
 
+* Accept repeated `-m` and `-n` options
+
+## 2.1.0
+
 * Fix bug where the cross-compiler `ocaml` interpreter was hardcoded to the
   cross-compiled standard library rather than the host standard library.
 

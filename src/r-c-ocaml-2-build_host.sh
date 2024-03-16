@@ -53,7 +53,7 @@ usage() {
         printf "%s\n" "   -l FLEXLINKFLAGS: Options added to flexlink while building ocaml, ocamlc, etc. native Windows executables"
         printf "%s\n" "   -m CONFIGUREARGS: Optional. Extra arguments passed to OCaml's ./configure. --with-flexdll"
         printf "%s\n" "      and --host will have already been set appropriately, but you can override the --host heuristic by adding it"
-        printf "%s\n" "      to -m CONFIGUREARGS"
+        printf "%s\n" "      to -m CONFIGUREARGS. Can be repeated"
         printf "%s\n" "   -q [ON|OFF]: Optional. Defaults to OFF. Only support host builds, not cross-compiling. Much quicker"
         printf "%s\n" "   -r Only build ocamlrun, Stdlib and the other libraries. Cannot be used with -a TARGETABIS"
     } >&2
@@ -101,7 +101,7 @@ while getopts ":s:d:t:b:c:e:m:k:l:rf:p:q:h" opt; do
         f ) HOSTSRC_SUBDIR=$OPTARG ;;
         p ) HOST_SUBDIR=$OPTARG ;;
         m )
-            CONFIGUREARGS="$OPTARG"
+            CONFIGUREARGS="$CONFIGUREARGS $OPTARG"
         ;;
         k)
             HOSTABISCRIPT="$OPTARG"
