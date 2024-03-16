@@ -461,6 +461,10 @@ set_ocaml_version_stems() {
     case "$set_version_stems_VER" in
         4.*) VERSION_STEMS+=("4") ;;
         5.*) VERSION_STEMS+=("5") ;;
+        *)
+            echo "FATAL: Unsupported stemming case 1 for version $set_version_stems_VER" >&2
+            exit 123
+            ;;
     esac
     case "$set_version_stems_VER" in
         4.11.*) VERSION_STEMS+=("4_11") ;;
@@ -469,11 +473,21 @@ set_ocaml_version_stems() {
         4.14.*) VERSION_STEMS+=("4_14") ;;
         5.00.*) VERSION_STEMS+=("5_00") ;;
         5.01.*) VERSION_STEMS+=("5_01") ;;
+        5.1.*) VERSION_STEMS+=("5_1") ;;
+        5.2.*) VERSION_STEMS+=("5_2") ;;
+        *)
+            echo "FATAL: Unsupported stemming case 2 for version $set_version_stems_VER" >&2
+            exit 123
+            ;;
     esac
     case "$set_version_stems_VER" in
         4.14.0) VERSION_STEMS+=("4_14_0") ;;
         4.14.1) VERSION_STEMS+=("4_14_1") ;;
         4.14.2) VERSION_STEMS+=("4_14_2") ;;
+        *)
+            echo "FATAL: Unsupported stemming case 3 for version $set_version_stems_VER" >&2
+            exit 123
+            ;;
     esac
 }
 set_flexdll_version_stems() {
