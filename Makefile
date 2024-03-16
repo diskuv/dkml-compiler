@@ -3,6 +3,10 @@ OPTION_PACKAGES = dkml-option-debuginfo
 .PHONY: all
 all: install
 
+.PHONY: clean
+clean:
+	rm -rf _opam _build dkmldir dist Brewfile msys64 stage
+
 .PHONY: create-switch
 create-switch: _opam/.opam-switch/switch-config
 

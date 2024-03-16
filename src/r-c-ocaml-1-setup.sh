@@ -567,7 +567,9 @@ apply_patch() {
         printf "\n"
         printf "%s\n" "---"
         $DKMLSYS_CAT "$apply_patch_PATCHFILE_MIXED"
-    } | log_trace git -C "$apply_patch_SRCDIR_MIXED" am --ignore-date --committer-date-is-author-date
+    } > "$WORK/current-patch"
+    #cp "$WORK/current-patch" $DKMLDIR/
+    log_trace git -C "$apply_patch_SRCDIR_MIXED" am --ignore-date --committer-date-is-author-date < "$WORK/current-patch"
 }
 
 apply_patches() {

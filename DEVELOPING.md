@@ -39,7 +39,13 @@ opam exec -- dune build '@gen-dkml' --auto-promote
 
 ### Windows
 
-Run the following inside a `with-dkml bash` shell:
+If you have DkML installed, we recommend:
+
+```powershell
+with-dkml make local-install
+```
+
+Otherwise, run the following inside a `with-dkml bash`, MSYS2 or Cygwin shell:
 
 ```sh
 rm -rf _build/prefix
@@ -61,6 +67,14 @@ env DKML_REPRODUCIBLE_SYSTEM_BREWFILE=./Brewfile \
 ### macOS
 
 #### Apple Silicon
+
+If you have `opam` we recommend:
+
+```sh
+make local-install
+```
+
+Otherwise:
 
 ```sh
 rm -rf _build/prefix

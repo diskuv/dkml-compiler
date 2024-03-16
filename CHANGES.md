@@ -2,6 +2,7 @@
 
 ## Pending
 
+* Upgrade OCaml compiler to 4.14.2
 * Accept repeated `-m` and `-n` options
 * Accept environment variables `DKML_HOST_OCAML_CONFIGURE` and
   `DKML_TARGET_OCAML_CONFIGURE` to do configure flags like
