@@ -3,6 +3,9 @@
 ## Pending
 
 * Accept repeated `-m` and `-n` options
+* Accept environment variables `DKML_HOST_OCAML_CONFIGURE` and
+  `DKML_TARGET_OCAML_CONFIGURE` to do configure flags like
+  `DKML_HOST_OCAML_CONFIGURE=--enable-imprecise-c99-float-ops`
 
 ## 2.1.0
 
