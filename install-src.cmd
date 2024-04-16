@@ -48,6 +48,8 @@ COPY /Y /B src\p\flexdll-cross-0_42-a01-arm64.patch %TARGETDIR%\src\p
 IF %ERRORLEVEL% NEQ 0 (ECHO Error during COPY &EXIT /B 1)
 COPY /Y /B src\p\ocaml-common-4_12-a01-alignfiletime.patch %TARGETDIR%\src\p
 IF %ERRORLEVEL% NEQ 0 (ECHO Error during COPY &EXIT /B 1)
+COPY /Y /B src\p\ocaml-common-4_14_0-a01-fmatest.patch %TARGETDIR%\src\p
+IF %ERRORLEVEL% NEQ 0 (ECHO Error during COPY &EXIT /B 1)
 COPY /Y /B src\p\ocaml-common-4_14-a01-alignfiletime.patch %TARGETDIR%\src\p
 IF %ERRORLEVEL% NEQ 0 (ECHO Error during COPY &EXIT /B 1)
 COPY /Y /B src\p\ocaml-common-4_14-a02-nattop.patch %TARGETDIR%\src\p
@@ -56,9 +58,7 @@ COPY /Y /B src\p\ocaml-common-4_14-a03-keepasm.patch %TARGETDIR%\src\p
 IF %ERRORLEVEL% NEQ 0 (ECHO Error during COPY &EXIT /B 1)
 COPY /Y /B src\p\ocaml-common-4_14-a04-xdg.patch %TARGETDIR%\src\p
 IF %ERRORLEVEL% NEQ 0 (ECHO Error during COPY &EXIT /B 1)
-COPY /Y /B src\p\ocaml-common-4_14_0-a01-fmatest.patch %TARGETDIR%\src\p
-IF %ERRORLEVEL% NEQ 0 (ECHO Error during COPY &EXIT /B 1)
-COPY /Y /B src\p\ocaml-common-4_14_0-a02-msvccflags.patch %TARGETDIR%\src\p
+COPY /Y /B src\p\ocaml-common-4_14-a05-msvccflags.patch %TARGETDIR%\src\p
 IF %ERRORLEVEL% NEQ 0 (ECHO Error during COPY &EXIT /B 1)
 COPY /Y /B src\p\ocaml-cross-4_12-a01.patch %TARGETDIR%\src\p
 IF %ERRORLEVEL% NEQ 0 (ECHO Error during COPY &EXIT /B 1)
@@ -70,7 +70,9 @@ COPY /Y /B src\p\ocaml-cross-4_13-a01.patch %TARGETDIR%\src\p
 IF %ERRORLEVEL% NEQ 0 (ECHO Error during COPY &EXIT /B 1)
 COPY /Y /B src\p\ocaml-cross-4_14-a01.patch %TARGETDIR%\src\p
 IF %ERRORLEVEL% NEQ 0 (ECHO Error during COPY &EXIT /B 1)
-COPY /Y /B src\p\ocaml-cross-4_14-a02-arm32.patch %TARGETDIR%\src\p
+COPY /Y /B src\p\ocaml-cross-4_14_0-a02-arm32.patch %TARGETDIR%\src\p
+IF %ERRORLEVEL% NEQ 0 (ECHO Error during COPY &EXIT /B 1)
+COPY /Y /B src\p\ocaml-cross-4_14_2-a02-arm32.patch %TARGETDIR%\src\p
 IF %ERRORLEVEL% NEQ 0 (ECHO Error during COPY &EXIT /B 1)
 COPY /Y /B src\p\ocaml-cross-5_00_a02-arm32.patch %TARGETDIR%\src\p
 IF %ERRORLEVEL% NEQ 0 (ECHO Error during COPY &EXIT /B 1)
