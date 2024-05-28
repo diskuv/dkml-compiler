@@ -2,6 +2,11 @@
 
 ## Pending
 
+* Backport from 5.2.0 of [Linear computation of closure environments](https://github.com/ocaml/ocaml/pull/12222)
+  to fix performance bug <https://discuss.ocaml.org/t/scaling-factors-when-compiling-mutually-recursive-definitions/14708>
+
+## 2.1.1
+
 * Upgrade OCaml compiler to 4.14.2
 * Accept repeated `-m` and `-n` options
 * Accept environment variables `DKML_HOST_OCAML_CONFIGURE` and
