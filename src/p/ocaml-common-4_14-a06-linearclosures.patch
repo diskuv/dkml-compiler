@@ -1,0 +1,378 @@
+diff --git a/bytecomp/bytegen.ml b/bytecomp/bytegen.ml
+index 27e170ffce..12690f7061 100644
+--- a/bytecomp/bytegen.ml
++++ b/bytecomp/bytegen.ml
+@@ -34,20 +34,53 @@ let new_label () =
+ (**** Operations on compilation environments. ****)
+ 
+ let empty_env =
+-  { ce_stack = Ident.empty; ce_heap = Ident.empty; ce_rec = Ident.empty }
++  { ce_stack = Ident.empty; ce_closure = Not_in_closure }
+ 
+ (* Add a stack-allocated variable *)
+ 
+ let add_var id pos env =
+   { ce_stack = Ident.add id pos env.ce_stack;
+-    ce_heap = env.ce_heap;
+-    ce_rec = env.ce_rec }
++    ce_closure = env.ce_closure }
+ 
+ let rec add_vars idlist pos env =
+   match idlist with
+     [] -> env
+   | id :: rem -> add_vars rem (pos + 1) (add_var id pos env)
+ 
++(* Compute the closure environment *)
++
++let rec add_positions entries pos_to_entry ~pos ~delta = function
++  | [] -> entries, pos
++  | id :: rem ->
++    let entries =
++      Ident.add id (pos_to_entry pos) entries
++    in
++    add_positions entries pos_to_entry ~pos:(pos + delta) ~delta rem
++
++type function_definition =
++  | Single_non_recursive
++  | Multiple_recursive of Ident.t list
++
++let closure_entries fun_defs fvs =
++  let funct_entries, pos_end_functs =
++    match fun_defs with
++    | Single_non_recursive ->
++      (* No need to store the function in the environment, but we still need to
++         reserve a slot in the closure block *)
++      Ident.empty, 3
++    | Multiple_recursive functs ->
++      add_positions Ident.empty (fun pos -> Function pos) ~pos:0 ~delta:3 functs
++  in
++  (* Note: [pos_end_functs] is the position where we would store the next
++     function if there was one, and points after an eventual infix tag.
++     Since that was the last function, we don't need the last infix tag
++     and start storing free variables at [pos_end_functs - 1]. *)
++  let all_entries, _end_pos =
++    add_positions funct_entries (fun pos -> Free_variable pos)
++      ~pos:(pos_end_functs - 1) ~delta:1 fvs
++  in
++  all_entries
++
+ (**** Examination of the continuation ****)
+ 
+ (* Return a label to the beginning of the given continuation.
+@@ -354,9 +387,8 @@ type function_to_compile =
+   { params: Ident.t list;               (* function parameters *)
+     body: lambda;                       (* the function body *)
+     label: label;                       (* the label of the function entry *)
+-    free_vars: Ident.t list;            (* free variables of the function *)
+-    num_defs: int;            (* number of mutually recursive definitions *)
+-    rec_vars: Ident.t list;             (* mutually recursive fn names *)
++    entries: closure_entry Ident.tbl;   (* the offsets for the free variables
++                                           and mutually recursive functions *)
+     rec_pos: int }                      (* rank in recursive definition *)
+ 
+ let functions_to_compile  = (Stack.create () : function_to_compile Stack.t)
+@@ -545,15 +577,18 @@ let rec comp_expr env exp sz cont =
+         let pos = Ident.find_same id env.ce_stack in
+         Kacc(sz - pos) :: cont
+       with Not_found ->
+-      try
+-        let pos = Ident.find_same id env.ce_heap in
+-        Kenvacc(pos) :: cont
+-      with Not_found ->
+-      try
+-        let ofs = Ident.find_same id env.ce_rec in
+-        Koffsetclosure(ofs) :: cont
+-      with Not_found ->
++      let not_found () =
+         fatal_error ("Bytegen.comp_expr: var " ^ Ident.unique_name id)
++      in
++      match env.ce_closure with
++      | Not_in_closure -> not_found ()
++      | In_closure { entries; env_pos } ->
++        match Ident.find_same id entries with
++        | Free_variable pos ->
++          Kenvacc(pos - env_pos) :: cont
++        | Function pos ->
++          Koffsetclosure(pos - env_pos) :: cont
++        | exception Not_found -> not_found ()
+       end
+   | Lconst cst ->
+       Kconst cst :: cont
+@@ -601,9 +636,10 @@ let rec comp_expr env exp sz cont =
+       let cont = add_pseudo_event loc !compunit_name cont in
+       let lbl = new_label() in
+       let fv = Ident.Set.elements(free_variables exp) in
++      let entries = closure_entries Single_non_recursive fv in
+       let to_compile =
+         { params = List.map fst params; body = body; label = lbl;
+-          free_vars = fv; num_defs = 1; rec_vars = []; rec_pos = 0 } in
++          entries = entries; rec_pos = 0 } in
+       Stack.push to_compile functions_to_compile;
+       comp_args env (List.map (fun n -> Lvar n) fv) sz
+         (Kclosure(lbl, List.length fv) :: cont)
+@@ -620,14 +656,16 @@ let rec comp_expr env exp sz cont =
+         let fv =
+           Ident.Set.elements (free_variables (Lletrec(decl, lambda_unit))) in
+         let rec_idents = List.map (fun (id, _lam) -> id) decl in
++        let entries =
++          closure_entries (Multiple_recursive rec_idents) fv
++        in
+         let rec comp_fun pos = function
+             [] -> []
+           | (_id, Lfunction{params; body}) :: rem ->
+               let lbl = new_label() in
+               let to_compile =
+                 { params = List.map fst params; body = body; label = lbl;
+-                  free_vars = fv; num_defs = ndecl; rec_vars = rec_idents;
+-                  rec_pos = pos} in
++                  entries = entries; rec_pos = pos} in
+               Stack.push to_compile functions_to_compile;
+               lbl :: comp_fun (pos + 1) rem
+           | _ -> assert false in
+@@ -1060,13 +1098,15 @@ let comp_block env exp sz cont =
+ 
+ let comp_function tc cont =
+   let arity = List.length tc.params in
+-  let rec positions pos delta = function
+-      [] -> Ident.empty
+-    | id :: rem -> Ident.add id pos (positions (pos + delta) delta rem) in
++  let ce_stack, _last_pos =
++    add_positions Ident.empty Fun.id ~pos:arity ~delta:(-1) tc.params
++  in
+   let env =
+-    { ce_stack = positions arity (-1) tc.params;
+-      ce_heap = positions (3 * (tc.num_defs - tc.rec_pos) - 1) 1 tc.free_vars;
+-      ce_rec = positions (-3 * tc.rec_pos) 3 tc.rec_vars } in
++    { ce_stack;
++      ce_closure =
++        In_closure { entries = tc.entries; env_pos = 3 * tc.rec_pos }
++    }
++  in
+   let cont =
+     comp_block env tc.body arity (Kreturn arity :: cont) in
+   if arity > 1 then
+diff --git a/bytecomp/instruct.ml b/bytecomp/instruct.ml
+index c684bedf99..c1ecf1f51a 100644
+--- a/bytecomp/instruct.ml
++++ b/bytecomp/instruct.ml
+@@ -15,10 +15,20 @@
+ 
+ open Lambda
+ 
++type closure_entry =
++  | Free_variable of int
++  | Function of int
++
++type closure_env =
++  | Not_in_closure
++  | In_closure of {
++      entries: closure_entry Ident.tbl;
++      env_pos: int;
++    }
++
+ type compilation_env =
+   { ce_stack: int Ident.tbl;
+-    ce_heap: int Ident.tbl;
+-    ce_rec: int Ident.tbl }
++    ce_closure: closure_env }
+ 
+ type debug_event =
+   { mutable ev_pos: int;                (* Position in bytecode *)
+diff --git a/bytecomp/instruct.mli b/bytecomp/instruct.mli
+index e1cae776b0..a95990f153 100644
+--- a/bytecomp/instruct.mli
++++ b/bytecomp/instruct.mli
+@@ -19,21 +19,35 @@ open Lambda
+ 
+ (* Structure of compilation environments *)
+ 
++type closure_entry =
++  | Free_variable of int
++  | Function of int
++
++type closure_env =
++  | Not_in_closure
++  | In_closure of {
++      entries: closure_entry Ident.tbl; (* Offsets of the free variables and
++                                           recursive functions from the start of
++                                           the block *)
++      env_pos: int;                     (* Offset of the current function from
++                                           the start of the block *)
++    }
++
+ type compilation_env =
+-  { ce_stack: int Ident.tbl; (* Positions of variables in the stack *)
+-    ce_heap: int Ident.tbl;  (* Structure of the heap-allocated env *)
+-    ce_rec: int Ident.tbl }  (* Functions bound by the same let rec *)
++  { ce_stack: int Ident.tbl;  (* Positions of variables in the stack *)
++    ce_closure: closure_env } (* Structure of the heap-allocated env *)
+ 
+ (* The ce_stack component gives locations of variables residing
+    in the stack. The locations are offsets w.r.t. the origin of the
+    stack frame.
+-   The ce_heap component gives the positions of variables residing in the
+-   heap-allocated environment.
+-   The ce_rec component associates offsets to identifiers for functions
+-   bound by the same let rec as the current function.  The offsets
+-   are used by the OFFSETCLOSURE instruction to recover the closure
+-   pointer of the desired function from the env register (which
+-   points to the closure for the current function). *)
++   The ce_closure component gives the positions of variables residing in the
++   heap-allocated environment. The env_pos component gives the position of
++   the current function from the start of the closure block, and the entries
++   component gives the positions of free variables and functions bound by the
++   same let rec as the current function, from the start of the closure block.
++   These are used by the ENVACC and OFFSETCLOSURE instructions to recover the
++   relevant value from the env register (which points to the current function).
++*)
+ 
+ (* Debugging events *)
+ 
+diff --git a/debugger/eval.ml b/debugger/eval.ml
+index a47f381de5..9d9a8c090b 100644
+--- a/debugger/eval.ml
++++ b/debugger/eval.ml
+@@ -47,20 +47,28 @@ let rec address path event = function
+           Debugcom.Remote_value.global (Symtable.get_global_position id)
+         with Symtable.Error _ -> raise(Error(Unbound_identifier id))
+       else
++        let not_found () =
++          raise(Error(Unbound_identifier id))
++        in
+         begin match event with
+           Some {ev_ev = ev} ->
+             begin try
+               let pos = Ident.find_same id ev.ev_compenv.ce_stack in
+               Debugcom.Remote_value.local (ev.ev_stacksize - pos)
+             with Not_found ->
+-            try
+-              let pos = Ident.find_same id ev.ev_compenv.ce_heap in
+-              Debugcom.Remote_value.from_environment pos
+-            with Not_found ->
+-              raise(Error(Unbound_identifier id))
++            match ev.ev_compenv.ce_closure with
++            | Not_in_closure -> not_found ()
++            | In_closure { entries; env_pos } ->
++              match Ident.find_same id entries with
++              | Free_variable pos ->
++                Debugcom.Remote_value.from_environment (pos - env_pos)
++              | Function _pos ->
++                (* Recursive functions seem to be unhandled *)
++                not_found ()
++              | exception Not_found -> not_found ()
+             end
+         | None ->
+-            raise(Error(Unbound_identifier id))
++            not_found ()
+         end
+   | Env.Adot(root, pos) ->
+       let v = address path event root in
+diff --git a/middle_end/closure/closure.ml b/middle_end/closure/closure.ml
+index ac18435189..0fb50cb880 100644
+--- a/middle_end/closure/closure.ml
++++ b/middle_end/closure/closure.ml
+@@ -50,13 +50,6 @@ let rec split_list n l =
+     | a::l -> let (l1, l2) = split_list (n-1) l in (a::l1, l2)
+   end
+ 
+-let rec build_closure_env env_param pos = function
+-    [] -> V.Map.empty
+-  | id :: rem ->
+-      V.Map.add id
+-        (Uprim(P.Pfield pos, [Uvar env_param], Debuginfo.none))
+-          (build_closure_env env_param (pos+1) rem)
+-
+ (* Auxiliary for accessing globals.  We change the name of the global
+    to the name of the corresponding asm symbol.  This is done here
+    and no longer in Cmmgen so that approximations stored in .cmx files
+@@ -701,9 +694,21 @@ let rec substitute loc ((backend, fpc) as st) sb rn ulam =
+   | Uunreachable ->
+       Uunreachable
+ 
++type closure_entry =
++  | Free_variable of int
++  | Function of int
++
++type closure_env =
++  | Not_in_closure
++  | In_closure of {
++      entries: closure_entry V.Map.t;
++      env_param: V.t;
++      env_pos: int;
++    }
++
+ type env = {
+   backend : (module Backend_intf.S);
+-  cenv : ulambda V.Map.t;
++  cenv : closure_env;
+   fenv : value_approximation V.Map.t;
+   mutable_vars : V.Set.t;
+ }
+@@ -882,8 +887,20 @@ let close_approx_var { fenv; cenv } id =
+   match approx with
+     Value_const c -> make_const c
+   | approx ->
+-      let subst = try V.Map.find id cenv with Not_found -> Uvar id in
+-      (subst, approx)
++      match cenv with
++      | Not_in_closure -> Uvar id, approx
++      | In_closure { entries; env_param; env_pos } ->
++        let subst =
++          match V.Map.find id entries with
++          | Free_variable fv_pos ->
++            Uprim(P.Pfield (fv_pos - env_pos),
++                  [Uvar env_param],
++                  Debuginfo.none)
++          | Function fun_pos ->
++            Uoffset(Uvar env_param, fun_pos - env_pos)
++          | exception Not_found -> Uvar id
++        in
++        (subst, approx)
+ 
+ let close_var env id =
+   let (ulam, _app) = close_approx_var env id in ulam
+@@ -1296,16 +1313,29 @@ and close_functions { backend; fenv; cenv; mutable_vars } fun_defs =
+   (* This reference will be set to false if the hypothesis that a function
+      does not use its environment parameter is invalidated. *)
+   let useless_env = ref initially_closed in
++  let cenv_entries =
++    let rec free_variables_entries fv_pos = function
++        [] -> V.Map.empty
++      | id :: rem ->
++          V.Map.add id (Free_variable fv_pos)
++            (free_variables_entries (fv_pos+1) rem)
++    in
++    let entries_fv = free_variables_entries fv_pos fv in
++    List.fold_right2
++      (fun (id, _params, _return, _body, _fundesc, _dbg) pos env ->
++         V.Map.add id (Function pos) env)
++      uncurried_defs clos_offsets entries_fv
++  in
+   (* Translate each function definition *)
+   let clos_fundef (id, params, return, body, fundesc, dbg) env_pos =
+     let env_param = V.create_local "env" in
+-    let cenv_fv =
+-      build_closure_env env_param (fv_pos - env_pos) fv in
+     let cenv_body =
+-      List.fold_right2
+-        (fun (id, _params, _return, _body, _fundesc, _dbg) pos env ->
+-          V.Map.add id (Uoffset(Uvar env_param, pos - env_pos)) env)
+-        uncurried_defs clos_offsets cenv_fv in
++      In_closure {
++        entries = cenv_entries;
++        env_param;
++        env_pos;
++      }
++    in
+     let (ubody, approx) =
+       close { backend; fenv = fenv_rec; cenv = cenv_body; mutable_vars } body
+     in
+@@ -1514,7 +1544,7 @@ let intro ~backend ~size lam =
+   Compilenv.set_global_approx(Value_tuple !global_approx);
+   let (ulam, _approx) =
+     close { backend; fenv = V.Map.empty;
+-            cenv = V.Map.empty; mutable_vars = V.Set.empty } lam
++            cenv = Not_in_closure; mutable_vars = V.Set.empty } lam
+   in
+   let opaque =
+     !Clflags.opaque
