@@ -1,6 +1,6 @@
 # An empty OCaml package for dkml-compiler-env. All the interesting things are not OCaml (ie. scripts)
 # in the lib folder. META is needed so that Dune (etc.) can lookup the lib folder
 # through findlib.
-version = "2.1.1"
+version = "2.1.2"
 description = ""
 requires = ""
