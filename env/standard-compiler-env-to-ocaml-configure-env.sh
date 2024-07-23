@@ -541,7 +541,7 @@ if cmake_flag_on "${DKML_COMPILE_CM_MSVC:-}"; then
     # Tell ./configure to not add /O2 and /MD (and future other flags) that should be chosen by CFLAGS
     CFLAGS_MSVC_SET=1
 
-    # Add -MD or -MDd
+    # Add -MD or -MDd for DLL linking of UCRT runtime (https://learn.microsoft.com/en-us/cpp/c-runtime-library/crt-library-features?view=msvc-170)
     if [ "${DKML_COMPILE_CM_CONFIG:-}" = "Debug" ]; then
       autodetect_compiler_CFLAGS="-MDd${autodetect_compiler_CFLAGS:+ $autodetect_compiler_CFLAGS}"
     else

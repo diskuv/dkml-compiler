@@ -68,6 +68,7 @@ usage() {
     printf "%s\n" "   -n CONFIGUREARGS: Optional. Extra arguments passed to OCaml's ./configure. --with-flexdll"
     printf "%s\n" "      and --host will have already been set appropriately, but you can override the --host heuristic by adding it"
     printf "%s\n" "      to -n CONFIGUREARGS. Can be repeated."
+    printf "%s\n" "   -w Disable non-essentials like the native toplevel and ocamldoc."
   } >&2
 }
 
@@ -80,12 +81,14 @@ DKMLHOSTABI=
 HOSTSRC_SUBDIR=
 CROSS_SUBDIR=
 FLEXLINKFLAGS=
-while getopts ":s:d:t:a:n:e:f:g:l:h" opt; do
+DISABLE_EXTRAS=0
+while getopts ":s:d:t:a:n:e:f:g:l:wh" opt; do
   case ${opt} in
   h)
     usage
     exit 0
     ;;
+  w) DISABLE_EXTRAS=1 ;;
   s)
     _OCAMLVER="$OPTARG"
     ;;
@@ -336,8 +339,8 @@ build_world() {
   esac
 
   # check if we'll build native toplevel
-  case "$_OCAMLVER,$build_world_TARGET_ABI" in
-    4.14.*,*|5.*,*)
+  case "$DISABLE_EXTRAS,$_OCAMLVER" in
+    0,4.14.*|0,5.*)
         # Install native toplevel
         native_toplevel=full
         CONFIGUREARGS="--enable-native-toplevel${CONFIGUREARGS:+ $CONFIGUREARGS}"
