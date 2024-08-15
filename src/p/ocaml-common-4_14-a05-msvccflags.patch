@@ -7,8 +7,8 @@ index 47754ef..c0a5dde 100755
  -fexcess-precision=standard" ;; #(
    msvc-*) :
 -    common_cflags="-nologo -O2 -Gy- -MD $cc_warnings"
-+    if [ "${CFLAGS_MSVC_SET:-}" = 1 ]; then
-+      common_cflags="-nologo -Gy- $cc_warnings"
++    if [ -n "${CFLAGS_MSVC}" ]; then
++      common_cflags="-nologo -Gy- ${CFLAGS_MSVC} $cc_warnings"
 +    else
 +      common_cflags="-nologo -O2 -Gy- -MD $cc_warnings"
 +    fi

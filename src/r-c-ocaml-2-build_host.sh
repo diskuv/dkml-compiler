@@ -55,7 +55,8 @@ usage() {
         printf "%s\n" "      and --host will have already been set appropriately, but you can override the --host heuristic by adding it"
         printf "%s\n" "      to -m CONFIGUREARGS. Can be repeated"
         printf "%s\n" "   -q [ON|OFF]: Optional. Defaults to OFF. Only support host builds, not cross-compiling. Much quicker"
-        printf "%s\n" "   -r Only build ocamlrun, Stdlib and the other libraries. Cannot be used with -a TARGETABIS"
+        printf "%s\n" "   -r Only build ocamlrun, Stdlib and the other libraries. Cannot be used with -a TARGETABIS."
+        printf "%s\n" "   -w Disable non-essentials like the native toplevel and ocamldoc."
     } >&2
 }
 
@@ -71,14 +72,16 @@ HOST_SUBDIR=
 HOST_ONLY=OFF
 OCAMLC_OPT_EXE=
 FLEXLINKFLAGS=
+DISABLE_EXTRAS=0
 export MSVS_PREFERENCE=
-while getopts ":s:d:t:b:c:e:m:k:l:rf:p:q:h" opt; do
+while getopts ":s:d:t:b:c:e:m:k:l:rf:p:q:wh" opt; do
     case ${opt} in
         h )
             usage
             exit 0
         ;;
-        s) _OCAMLVER="$OPTARG" ;;
+        w ) DISABLE_EXTRAS=1 ;;
+        s ) _OCAMLVER="$OPTARG" ;;
         d )
             DKMLDIR="$OPTARG"
             if [ ! -e "$DKMLDIR/.dkmlroot" ]; then
@@ -218,14 +221,17 @@ $DKMLSYS_INSTALL "$HOSTABISCRIPT" "$OCAMLHOST_UNIX/share/dkml/detect/post-transf
 # ./configure
 # Output: OCAML_CONFIGURE_NEEDS_MAKE_FLEXDLL
 if [ "$RUNTIMEONLY" = ON ]; then
-    CONFIGUREARGS="$CONFIGUREARGS --disable-native-compiler --disable-stdlib-manpages"
+    CONFIGUREARGS="$CONFIGUREARGS --disable-native-compiler --disable-stdlib-manpages --disable-ocamldoc"
 else
-    case "$_OCAMLVER" in
-        4.14.*|5.*)
+    case "$DISABLE_EXTRAS,$_OCAMLVER" in
+        0,4.14.*|0,5.*)
             # Install native toplevel
             CONFIGUREARGS="$CONFIGUREARGS --enable-native-toplevel"
             ;;
     esac
+    if [ "$DISABLE_EXTRAS" -eq 1 ]; then
+        CONFIGUREARGS="$CONFIGUREARGS --disable-ocamldoc"
+    fi
 fi
 log_trace ocaml_configure "$OCAMLHOST_UNIX" "$DKMLHOSTABI" \
     "$OCAMLSRC_MIXED"/support/with-host-c-compiler.sh "$OCAML_HOST_TRIPLET" "$DKML_TARGET_SYSROOT" \

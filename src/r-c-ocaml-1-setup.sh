@@ -172,7 +172,7 @@ usage() {
         printf "%s\n" "   -n TARGETCONFIGUREARGS: Optional. Extra arguments passed to OCaml's ./configure for the target ABI. --with-flexdll"
         printf "%s\n" "      and --host will have already been set appropriately, but you can override the --host heuristic by adding it"
         printf "%s\n" "      to -n TARGETCONFIGUREARGS. Can be repeated."
-        printf "%s\n" "   -r Only build ocamlrun, Stdlib and the other libraries. Cannot be used with -a TARGETABIS"
+        printf "%s\n" "   -r Only build ocamlrun, Stdlib and the other libraries. Cannot be used with -a TARGETABIS."
         printf "%s\n" "   -f HOSTSRC_SUBDIR: Optional. Use HOSTSRC_SUBDIR subdirectory of -t DIR to place the source code of the host ABI."
         printf "%s\n" "      Defaults to $HOSTSRC_SUBDIR"
         printf "%s\n" "   -p HOST_SUBDIR: Optional. Use HOST_SUBDIR subdirectory of -t DIR to place the host ABI. Defaults to $HOST_SUBDIR"
@@ -181,6 +181,7 @@ usage() {
         printf "%s\n" "      CROSS_SUBDIR for cross-compilation, the source code is copied from TEMPLATE_DIR/HOSTSRC_SUBDIR and"
         printf "%s\n" "      TEMPLATE_DIR/CROSS_SUBDIR. The expectation is the template directory comes from a prior 1-setup.sh invocation; in"
         printf "%s\n" "      particular the patching has already been done"
+        printf "%s\n" "   -w Disable non-essentials like the native toplevel and ocamldoc."
         printf "%s\n" "   -x Do not include temporary object files (only useful for debugging) in target directory"
         printf "%s\n" "   -z Do not include .git repositories in target directory"
     } >&2
@@ -211,12 +212,15 @@ RUNTIMEONLY=OFF
 TEMPLATEDIR=
 HOSTABISCRIPT=
 OCAMLC_OPT_EXE=
-while getopts ":d:v:u:t:a:b:c:e:k:l:m:n:rf:p:g:o:xzh" opt; do
+while getopts ":d:v:u:t:a:b:c:e:k:l:m:n:rf:p:g:o:wxzh" opt; do
     case ${opt} in
         h )
             usage
             exit 0
         ;;
+        w ) SETUP_ARGS+=( -w )
+            BUILD_HOST_ARGS+=( -w )
+            BUILD_CROSS_ARGS+=( -w ) ;;
         d )
             DKMLDIR="$OPTARG"
             if [ ! -e "$DKMLDIR/.dkmlroot" ]; then

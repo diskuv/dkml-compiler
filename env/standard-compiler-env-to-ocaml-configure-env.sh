@@ -522,7 +522,7 @@ esac
 if cmake_flag_on "${DKML_COMPILE_CM_MSVC:-}"; then
     # To avoid the following when /Zi or /ZI is enabled:
     #   2># major_gc.c : fatal error C1041: cannot open program database 'Z:\build\windows_x86\Debug\dksdk\system\_opam\.opam-switch\build\ocaml-variants.4.12.0+options+dkml+msvc32\runtime\vc140.pdb'; if multiple CL.EXE write to the same .PDB file, please use /FS
-    # we use /FS. This slows things down, so we should only do it
+    # we use /FS. This slows things down, so we should only do it when /Zi or /ZI is detected
     if printf "%s" "${autodetect_compiler_CFLAGS:-}" | PATH=/usr/bin:/bin grep -q "[/-]Zi"; then
         autodetect_compiler_CFLAGS="$autodetect_compiler_CFLAGS /FS"
     elif printf "%s" "${autodetect_compiler_CFLAGS:-}" | PATH=/usr/bin:/bin grep -q "[/-]ZI"; then
@@ -538,23 +538,49 @@ if cmake_flag_on "${DKML_COMPILE_CM_MSVC:-}"; then
     autodetect_compiler_AS=$(printf "%s" "${autodetect_compiler_AS:-}" | PATH=/usr/bin:/bin sed 's# /# -#g')
     autodetect_compiler_ASFLAGS=$(printf "%s" "${autodetect_compiler_ASFLAGS:-}" | PATH=/usr/bin:/bin sed 's# /# -#g')
 
-    # Tell ./configure to not add /O2 and /MD (and future other flags) that should be chosen by CFLAGS
-    CFLAGS_MSVC_SET=1
-
-    # Add -MD or -MDd
+    # Add -MD or -MDd for DLL linking of UCRT runtime (https://learn.microsoft.com/en-us/cpp/c-runtime-library/crt-library-features?view=msvc-170)
     if [ "${DKML_COMPILE_CM_CONFIG:-}" = "Debug" ]; then
       autodetect_compiler_CFLAGS="-MDd${autodetect_compiler_CFLAGS:+ $autodetect_compiler_CFLAGS}"
     else
       autodetect_compiler_CFLAGS="-MD${autodetect_compiler_CFLAGS:+ $autodetect_compiler_CFLAGS}"
     fi
+
+    # CFLAGS_MSVC
+    #
+    # Reason 1 - Mitigate MSYS2 GNU make bug ...
+    #
+    # The 4.14.2 ./configure script ignored the CFLAGS environment variable set by
+    # with-host-c-compiler.sh (which is a by-product of this script) in the following:
+    #
+    #  # Makefile.config
+    #  CFLAGS?=-MDd   -DWIN32 -D_WINDOWS -Zi -Ob0 -Od -RTC1 -FS
+    #  ...
+    #  MKEXE_USING_COMPILER=$(CC) $(OC_CFLAGS) $(CFLAGS) $(OUTPUTEXE)$(1) $(2) \
+    #      /link /subsystem:console $(OC_LDFLAGS) $(LDFLAGS) && ($(MERGEMANIFESTEXE))
+    #
+    #  # stdlib/Makefile
+    #  tmpheader%exe: $(HEADERPROGRAM)%$(O)
+    #    $(call MKEXE_USING_COMPILER,$@,$^ $(EXTRALIBS))
+    #
+    # Perhaps the `$(call)` strips environment variables away.
+    # ==> Do not use CFLAGS environment variable
+    #
+    # Reason 2 - Override ./configures's hardcoded /O2 ... /MD (which conflict sometimes, especially /MDd set above)
+    # ==> Override /O2 ... /MD
+
+    CFLAGS_MSVC="${autodetect_compiler_CFLAGS}"    
+    autodetect_compiler_CFLAGS=
 fi
 
 # Bind non-standard variables into launcher scripts
 export_binding ASPP "${ASPP:-}"
 export_binding DIRECT_LD "${DIRECT_LD:-}"
-export_binding CFLAGS_MSVC_SET "${CFLAGS_MSVC_SET:-}"
+export_binding CFLAGS_MSVC "${CFLAGS_MSVC:-}"
 export_binding AR "${AR:-}"
 export_binding STRIP "${STRIP:-}"
 export_binding RANLIB "${RANLIB:-}"
 export_binding NM "${NM:-}"
 export_binding OBJDUMP "${OBJDUMP:-}"
+
+# The [export_binding] and the [autodetect_compiler_*] variables will be read by
+# dkml-runtime-common's crossplatform-functions.sh:autodetect_compiler_write_output()

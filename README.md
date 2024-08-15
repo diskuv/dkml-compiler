@@ -1,17 +1,20 @@
 # dkml-compiler
 
-POSIX Bourne shell scripts to compile the DKML distribution of OCaml.
+POSIX Bourne shell scripts to compile the DkML distribution of OCaml.
+
+The OCaml patches in [src/p](src/p) are dual-licensed under the [OCaml flavor of the LGPL 2.1 license](./LICENSE-LGPL21-ocaml)
+and the permissive [Apache 2.0 license](./LICENSE-Apache2).
+All other source code including the shell scripts are released solely under the permissive [Apache 2.0 license](./LICENSE-Apache2).
 
 There is also a `dkml-base-compiler.opam` that always compiles the latest
-DKML supported compiler. However the `dkml-compiler` repository ~~supports~~
-will support more than one version of OCaml; you can get other versions by
-adding the [diskuv-opam-repository](https://github.com/diskuv/diskuv-opam-repository#readme)
+DkML supported compiler. However you can choose an older version by
+adding an older version of [diskuv-opam-repository](https://github.com/diskuv/diskuv-opam-repository#readme)
 to your Opam switch.
 
-The `diskuv-opam-repository` is also necessary if you want to use a DKML
+The `diskuv-opam-repository` is also necessary if you want to use a DkML
 version of the OCaml 4.x compiler on a non-Windows machine. The central Opam
-repository only introduced the DKML distribution in OCaml 5.x generally and
-OCaml 4.12 for Windows specifically.
+repository only introduced the DkML distribution in OCaml 5.x generally and
+OCaml 4.14 for Windows specifically.
 
 ## Packages that rely on dkml-compiler
 
@@ -29,7 +32,7 @@ OCaml 4.12 for Windows specifically.
 | `dl/*.tar.gz`                      | Opam extra-source downloads                                        |
 | `dl/ocaml`                         | Unpatched OCaml source from `dl/ocaml.tar.gz`                      |
 | `dl/ocaml/flexdll`                 | Unpatched flexdll source from `dl/flexdll.tar.gz`                  |
-| `dkmldir/.dkmlroot`                | Properties file with the version of DKML based on the Opam version |
+| `dkmldir/.dkmlroot`                | Properties file with the version of DkML based on the Opam version |
 | `dkmldir/vendor/dkml-compiler/src` | A copy of the toplevel `src/`                                      |
 | `dkmldir/vendor/drc`               | Source from `dl/dkml-runtime-common.tar.gz`                        |
 
@@ -45,7 +48,7 @@ OCaml 4.12 for Windows specifically.
 | `$(opam var prefix)/share/dkml-base-compiler/mlcross/<ABI>/lib/ocaml` | OCaml target ABI libraries. Ex. `unix.cmxa` |
 
 All ABI names are compatible with [dkml-c-probe](https://github.com/diskuv/dkml-c-probe#readme).
-The target ABI folders will not be present if DKML does not support cross-compiling
+The target ABI folders will not be present if DkML does not support cross-compiling
 on the host ABI. Currently only macOS has a target ABI.
 
 There is another Opam package [conf-dkml-cross-toolchain](https://github.com/diskuv/conf-dkml-cross-toolchain)
