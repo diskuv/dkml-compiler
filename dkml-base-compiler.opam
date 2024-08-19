@@ -8,7 +8,7 @@ opam-version: "2.0"
 # - 4.14.0~prerel69 (legacy format) < 4.14.0~v0.4.0 < 4.14.0~v0.4.1~prerel69 < 4.14.0~v0.4.1
 # Confer: Version Ordering in https://opam.ocaml.org/doc/Manual.html#Package-Formulas
 version: "4.14.2~v2.1.2"
-synopsis: "OCaml cross-compiler and libraries from the DkML distribution that works with at least Win32 and macOS"
+synopsis: "OCaml cross-compiler and libraries from the DkML distribution."
 description:
   """The DkML distribution of the OCaml bytecode and native compiler, Stdlib and the other OCaml libraries (str, unix, bigarray, etc.).
 
@@ -25,8 +25,8 @@ Search for: autodetect_compiler() {
 
 Install with something like:
   opam switch create dkml-4.14.2 '--formula="dkml-base-compiler" {>= "4.14.2~" & < "4.15.0~"}'"""
-maintainer: ["opensource+diskuv-ocaml@support.diskuv.com"]
-authors: ["Diskuv, Inc. <opensource+diskuv-ocaml@support.diskuv.com>"]
+maintainer: ["opensource+dkml@support.diskuv.com"]
+authors: ["Diskuv, Inc. <opensource+dkml@support.diskuv.com>"]
 license: "Apache-2.0"
 homepage: "https://github.com/diskuv/dkml-compiler"
 bug-reports: "https://github.com/diskuv/dkml-compiler/issues"
@@ -38,19 +38,36 @@ depends: [
   "base-threads" {post}
 
   "dkml-runtime-common-native" {= "2.1.2"}
+
+  "dkml-host-abi"
+  ("dkml-host-abi-darwin_arm64" |
+   "dkml-host-abi-darwin_x86_64" |
+   "dkml-host-abi-linux_x86_64" |
+   "dkml-host-abi-linux_x86" |
+   "dkml-host-abi-windows_x86_64" |
+   "dkml-host-abi-windows_arm64" |
+   "dkml-host-abi-windows_x86")  
 ]
 depopts: [
   "ocaml-option-32bit"
   "dkml-option-debuginfo"
   "dkml-option-minsize"
+  "dkml-target-abi-android_arm64v8a"
+  "dkml-target-abi-android_arm32v7a"
+  "dkml-target-abi-android_x86_64"
+  "dkml-target-abi-android_x86"
+  "dkml-target-abi-darwin_arm64"
+  "dkml-target-abi-darwin_x86_64"
+  "dkml-target-abi-linux_x86_64"
+  "dkml-target-abi-linux_x86"
+  "dkml-target-abi-windows_x86_64"
+  "dkml-target-abi-windows_arm64"
+  "dkml-target-abi-windows_x86"
 ]
 conflict-class: "ocaml-core-compiler"
 flags: [ compiler avoid-version ]
 available: [
-  opam-version >= "2.1.0" &
-  ( (arch = "x86_64" & (os = "linux" | os = "win32" | os = "macos")) |
-    (arch = "x86_32" & (os = "linux" | os = "win32")) |
-    (arch = "arm64" & os = "macos") )
+  opam-version >= "2.1.0"
 ]
 build: [
   # Dump Homebrew, which is needed for reproducible build auditing in drc's crossplatform-functions.sh.
@@ -109,21 +126,21 @@ build: [
       env/standard-compiler-env-to-ocaml-configure-env.sh > \
       dkmldir/vendor/dkml-compiler/env/standard-compiler-env-to-ocaml-configure-env.sh
     """
-  ] {dkml-option-debuginfo:installed & os = "win32" & arch = "x86_32"}
+  ] {dkml-option-debuginfo:installed & dkml-host-abi-windows_x86:installed}
   ["sh" "-eufc"
     """
     sed 's/^INJECT_CFLAGS=$/INJECT_CFLAGS=-Z7/; s/^DEFAULT_AS=$/DEFAULT_AS=ml64/; s/^INJECT_ASFLAGS=$/INJECT_ASFLAGS="-Zd -Zi"/' \
       env/standard-compiler-env-to-ocaml-configure-env.sh > \
       dkmldir/vendor/dkml-compiler/env/standard-compiler-env-to-ocaml-configure-env.sh
     """
-  ] {dkml-option-debuginfo:installed & os = "win32" & arch = "x86_64"}
+  ] {dkml-option-debuginfo:installed & dkml-host-abi-windows_x86_64:installed}
   ["sh" "-eufc"
     """
     sed 's/^INJECT_CFLAGS=$/INJECT_CFLAGS=-Z7/; s/^DEFAULT_AS=$/DEFAULT_AS=armasm64/; s/^INJECT_ASFLAGS=$/INJECT_ASFLAGS="-Zd -Zi"/' \
       env/standard-compiler-env-to-ocaml-configure-env.sh > \
       dkmldir/vendor/dkml-compiler/env/standard-compiler-env-to-ocaml-configure-env.sh
     """
-  ] {dkml-option-debuginfo:installed & os = "win32" & arch = "arm64"}
+  ] {dkml-option-debuginfo:installed & dkml-host-abi-windows_arm64:installed}
   ["sh" "-eufc"
     """
     sed 's/^INJECT_CFLAGS=$/INJECT_CFLAGS="-g -O0"/; s/^INJECT_ASFLAGS=$/INJECT_ASFLAGS="-g -O0"/' \
@@ -142,12 +159,13 @@ build: [
 
   #   <dkmldir>/vendor/dkml-compiler/bin/bootstrap-ocamlc.opt.exe
   #   to speed up compile
-  ["sh" "scripts/install-ocamlc-opt.sh" "windows_x86" ".exe"]     { os = "win32" & (arch = "x86_32" |  ocaml-option-32bit:installed) }
-  ["sh" "scripts/install-ocamlc-opt.sh" "windows_x86_64" ".exe"]  { os = "win32" & (arch = "x86_64" & !ocaml-option-32bit:installed) }
-  ["sh" "scripts/install-ocamlc-opt.sh" "linux_x86" ""]           { os = "linux" & (arch = "x86_32" |  ocaml-option-32bit:installed) }
-  ["sh" "scripts/install-ocamlc-opt.sh" "linux_x86_64" ""]        { os = "linux" & (arch = "x86_64" & !ocaml-option-32bit:installed) }
-  ["sh" "scripts/install-ocamlc-opt.sh" "darwin_x86_64" ""]       { os = "macos" & arch = "x86_64" }
-  ["sh" "scripts/install-ocamlc-opt.sh" "darwin_arm64" ""]        { os = "macos" & arch = "arm64" }
+  ["sh" "scripts/install-ocamlc-opt.sh" "windows_x86" ".exe"]     { dkml-host-abi-windows_x86:installed }
+  ["sh" "scripts/install-ocamlc-opt.sh" "windows_x86_64" ".exe"]  { dkml-host-abi-windows_x86_64:installed }
+  ["sh" "scripts/install-ocamlc-opt.sh" "windows_arm64" ".exe"]   { dkml-host-abi-windows_arm64:installed }
+  ["sh" "scripts/install-ocamlc-opt.sh" "linux_x86" ""]           { dkml-host-abi-linux_x86:installed }
+  ["sh" "scripts/install-ocamlc-opt.sh" "linux_x86_64" ""]        { dkml-host-abi-linux_x86_64:installed }
+  ["sh" "scripts/install-ocamlc-opt.sh" "darwin_x86_64" ""]       { dkml-host-abi-darwin_x86_64:installed }
+  ["sh" "scripts/install-ocamlc-opt.sh" "darwin_arm64" ""]        { dkml-host-abi-darwin_arm64:installed }
 ]
 install: [
   # Run r-c-ocaml-1-setup.sh
@@ -176,33 +194,16 @@ install: [
       "-n"                                                      { !dkml-option-debuginfo:installed }
       "--disable-debug-runtime --disable-instrumented-runtime"  { !dkml-option-debuginfo:installed }
       #   Host architectures
-      "-ewindows_x86"     { os = "win32" & (arch = "x86_32" |  ocaml-option-32bit:installed) }
-      "-ewindows_x86_64"  { os = "win32" & (arch = "x86_64" & !ocaml-option-32bit:installed) }
-      "-elinux_x86"       { os = "linux" & (arch = "x86_32" |  ocaml-option-32bit:installed) }
-      "-elinux_x86_64"    { os = "linux" & (arch = "x86_64" & !ocaml-option-32bit:installed) }
-      "-edarwin_x86_64"   { os = "macos" & arch = "x86_64" }
-      "-edarwin_arm64"    { os = "macos" & arch = "arm64" }
+      "-e%{dkml-host-abi:abi}%"
       #   Target architectures (if cross-compiling; similar to dkml-component-staging-ocamlrun.opam)
-      #     TODO: With the -adarwin_x86_64 configuration below, an Apple Silicon machine will produce an arm64 ocamlopt.opt
-      #     in the staging-files/darwin_arm64 directory,
-      #     and that ocamlopt.opt will create x86_64 OCaml native executables. So that darwin_arm64/bin/ocamlopt.opt will not
-      #     run on an x86_64 machine.
-      #     The -adarwin_arm64 configuration is similar but has one important difference. The config will produce an x86_64
-      #     ocamlopt.opt, in the staging-files/darwin_x86_64 directory, and that ocamlopt.opt will create arm64 OCaml native
-      #     executables. But that darwin_x86_64/bin/ocamlopt.opt _will_ run on almost _all_ Apple Silicon (arm64) machines
-      #     because of Rosetta2. The only major exception is Opam CI has disabled Rosetta2 as of Nov 8, 2022.
-      #     Ideally we would have [-aHOST] and [-aHOST-TARGET]. That is: -adarwin_x86_64, -adarwin_arm64 and
-      #     -adarwin_x86_64-darwin_arm64. But that cross specification has ripple effects that needs time (technical debt) to
-      #     get right. Luckily our build machines are always Apple x86_64 (GitHub Actions and GitLab CI/CD), and even if the
-      #     build machines were Apple Silicon we typically only care about the generated artifacts (the target ABI).
-      "-adarwin_x86_64=vendor/dkml-compiler/env/standard-compiler-env-to-ocaml-configure-env.sh" { os = "macos" & arch = "arm64" }
-      "-adarwin_arm64=vendor/dkml-compiler/env/standard-compiler-env-to-ocaml-configure-env.sh"  { os = "macos" & arch = "x86_64" }
+      "-adarwin_x86_64=vendor/dkml-compiler/env/standard-compiler-env-to-ocaml-configure-env.sh" { dkml-target-abi-darwin_arm64:installed }
+      "-adarwin_arm64=vendor/dkml-compiler/env/standard-compiler-env-to-ocaml-configure-env.sh"  { dkml-target-abi-darwin_x86_64:installed }
       #     TODO: Would be nice to bundle the 3 Android cross-compilers here since they are already supported
       #     by DkML, but I (jonahbeckford@) doubt there is an Android NDK available on the Opam hosts.
       #     Confer: https://github.com/diskuv/diskuv-ocaml-ghmirror/runs/4831077050
       #     Perhaps the Android NDK should just be downloaded via an 'android-option-ndk23' package? That would give control of the NDK version.
-      # "-aandroid_arm64v8a=vendor/dkml-compiler/env/github-actions-ci-to-ocaml-configure-env.sh;android_x86_64=vendor/dkml-compiler/env/github-actions-ci-to-ocaml-configure-env.sh"] { os = "linux" & !ocaml-option-32bit:installed }
-      # "-aandroid_arm32v7a=vendor/dkml-compiler/env/github-actions-ci-to-ocaml-configure-env.sh" { os = "linux" & ocaml-option-32bit:installed }
+      # "-aandroid_arm64v8a=vendor/dkml-compiler/env/github-actions-ci-to-ocaml-configure-env.sh;android_arm64v8a=vendor/dkml-compiler/env/github-actions-ci-to-ocaml-configure-env.sh"] { dkml-target-abi-android_arm64v8a:installed }
+      # "-aandroid_arm32v7a=vendor/dkml-compiler/env/github-actions-ci-to-ocaml-configure-env.sh" { dkml-target-abi-android_arm32v7a:installed }
       "-k" "vendor/dkml-compiler/env/standard-compiler-env-to-ocaml-configure-env.sh"
   ]
 
