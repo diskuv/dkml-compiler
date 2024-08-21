@@ -37,7 +37,7 @@ depends: [
   "base-bigarray" {post}
   "base-threads" {post}
 
-  "dkml-runtime-common-native" {= "2.1.2"}
+  "dkml-runtime-common" {= "2.1.2"}
 
   "dkml-host-abi"
   ("dkml-host-abi-darwin_arm64" |
@@ -108,7 +108,7 @@ build: [
   #   <dkmldir>/vendor/drc/
   ["install" "-d" "dkmldir/vendor/drc"]
   #     tar through pipe is essentially an rsync (without requiring rsync)
-  ["sh" "-eufc" "tar cCf '%{dkml-runtime-common-native:lib}%/' - . | tar xCf dkmldir/vendor/drc/ -"]
+  ["sh" "-eufc" "tar cCf '%{dkml-runtime-common:lib}%/' - . | tar xCf dkmldir/vendor/drc/ -"]
 
   #   <dkmldir>/vendor/dkml-compiler/
   ["install" "-d" "dkmldir/vendor/dkml-compiler/src" "dkmldir/vendor/dkml-compiler/env"]
