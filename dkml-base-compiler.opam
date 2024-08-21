@@ -196,8 +196,8 @@ install: [
       #   Host architectures
       "-e%{dkml-host-abi:abi}%"
       #   Target architectures (if cross-compiling; similar to dkml-component-staging-ocamlrun.opam)
-      "-adarwin_x86_64=vendor/dkml-compiler/env/standard-compiler-env-to-ocaml-configure-env.sh" { dkml-target-abi-darwin_arm64:installed }
-      "-adarwin_arm64=vendor/dkml-compiler/env/standard-compiler-env-to-ocaml-configure-env.sh"  { dkml-target-abi-darwin_x86_64:installed }
+      "-adarwin_x86_64=vendor/dkml-compiler/env/standard-compiler-env-to-ocaml-configure-env.sh" { dkml-target-abi-darwin_x86_64:installed }
+      "-adarwin_arm64=vendor/dkml-compiler/env/standard-compiler-env-to-ocaml-configure-env.sh"  { dkml-target-abi-darwin_arm64:installed }
       #     TODO: Would be nice to bundle the 3 Android cross-compilers here since they are already supported
       #     by DkML, but I (jonahbeckford@) doubt there is an Android NDK available on the Opam hosts.
       #     Confer: https://github.com/diskuv/diskuv-ocaml-ghmirror/runs/4831077050
