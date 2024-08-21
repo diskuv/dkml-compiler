@@ -14,19 +14,22 @@ variables:
   SECONDARY_SWITCH: "false"
   VERBOSE: "false"
   DKML_HOME: ""
+  MSYS2_BASEDIR: "." # The msys64 is automatically appended
 
   # autogen from global_env_vars.
-  DKML_VERSION: '2.1.0'
-  DEFAULT_DISKUV_OPAM_REPOSITORY_TAG: '2.1.0'
-  DEFAULT_DKML_COMPILER: '2.1.0'
+  DKML_VERSION: '2.1.1'
+  DEFAULT_DISKUV_OPAM_REPOSITORY_TAG: '2.1.1'
+  DEFAULT_DKML_COMPILER: '2.1.1'
+  BOOTSTRAP_OPAM_VERSION: 'v2.2.0-alpha-20221228'
   PIN_ASTRING: '0.8.5'
   PIN_BASE: 'v0.16.1'
   PIN_BASE64: '3.5.1'
   PIN_BIGARRAY_COMPAT: '1.1.0'
   PIN_BOS: '0.2.1'
   PIN_CAMLP_STREAMS: '5.0.1'
-  PIN_CHROME_TRACE: '3.11.1'
+  PIN_CHROME_TRACE: '3.15.0'
   PIN_CMDLINER: '1.2.0'
+  PIN_CONF_BASH: '1'
   PIN_CONF_DKML_SYS_OPAM: '1'
   PIN_CONF_PKG_CONFIG: '2+cpkgs'
   PIN_CONF_SQLITE3: '3.1+cpkgs'
@@ -34,58 +37,58 @@ variables:
   PIN_CRUNCH: '3.3.1'
   PIN_CSEXP: '1.5.2'
   PIN_CSTRUCT: '6.2.0'
-  PIN_CTYPES_FOREIGN: '0.19.2-windowssupport-r7'
-  PIN_CTYPES: '0.19.2-windowssupport-r7'
+  PIN_CTYPES_FOREIGN: '0.19.2-windowssupport-r8'
+  PIN_CTYPES: '0.19.2-windowssupport-r8'
   PIN_CUDF: '0.10'
-  PIN_DIGESTIF: '1.1.4'
+  PIN_DIGESTIF: '1.2.0'
   PIN_DISKUVBOX: '0.2.0'
-  PIN_DKML_APPS: '2.1.0'
-  PIN_DKML_BASE_COMPILER: '4.14.0~v2.1.0'
-  PIN_DKML_BUILD_DESKTOP: '2.1.0'
+  PIN_DKML_APPS: '2.1.1'
+  PIN_DKML_BASE_COMPILER: '4.14.2~v2.1.1'
+  PIN_DKML_BUILD_DESKTOP: '2.1.1'
   PIN_DKML_C_PROBE: '3.0.0'
-  PIN_DKML_COMPILER_SRC: '2.1.0'
-  PIN_DKML_COMPONENT_COMMON_DESKTOP: '2.1.0'
-  PIN_DKML_COMPONENT_COMMON_OPAM: '2.2.0~alpha0~20221228'
+  PIN_DKML_COMPILER_SRC: '2.1.1'
+  PIN_DKML_COMPONENT_COMMON_DESKTOP: '2.1.1'
+  PIN_DKML_COMPONENT_COMMON_OPAM: '2.2.0~alpha0~20221228-r3'
   PIN_DKML_COMPONENT_COMMON_UNIXUTILS: '0.2.0'
-  PIN_DKML_COMPONENT_OCAMLCOMPILER_COMMON: '4.14.0~v2.1.0'
-  PIN_DKML_COMPONENT_OCAMLCOMPILER_NETWORK: '4.14.0~v2.1.0'
-  PIN_DKML_COMPONENT_OCAMLCOMPILER_OFFLINE: '4.14.0~v2.1.0'
-  PIN_DKML_COMPONENT_OFFLINE_DESKTOP_FULL: '2.1.0'
-  PIN_DKML_COMPONENT_OFFLINE_OPAMSHIM: '2.2.0~alpha0~20221228'
+  PIN_DKML_COMPONENT_OCAMLCOMPILER_COMMON: '4.14.2~v2.1.1'
+  PIN_DKML_COMPONENT_OCAMLCOMPILER_NETWORK: '4.14.2~v2.1.1'
+  PIN_DKML_COMPONENT_OCAMLCOMPILER_OFFLINE: '4.14.2~v2.1.1'
+  PIN_DKML_COMPONENT_OFFLINE_DESKTOP_FULL: '2.1.1'
+  PIN_DKML_COMPONENT_OFFLINE_OPAMSHIM: '2.2.0~alpha0~20221228-r3'
   PIN_DKML_COMPONENT_OFFLINE_UNIXUTILS: '0.2.0'
-  PIN_DKML_COMPONENT_STAGING_DESKTOP_FULL: '2.1.0'
-  PIN_DKML_COMPONENT_STAGING_DKMLCONFDIR: '2.1.0'
-  PIN_DKML_COMPONENT_STAGING_OCAMLRUN: '4.14.0~v2.1.0'
-  PIN_DKML_COMPONENT_STAGING_OPAM32: '2.2.0~alpha0~20221228'
-  PIN_DKML_COMPONENT_STAGING_OPAM64: '2.2.0~alpha0~20221228'
+  PIN_DKML_COMPONENT_STAGING_DESKTOP_FULL: '2.1.1'
+  PIN_DKML_COMPONENT_STAGING_DKMLCONFDIR: '2.1.1'
+  PIN_DKML_COMPONENT_STAGING_OCAMLRUN: '4.14.2~v2.1.1'
+  PIN_DKML_COMPONENT_STAGING_OPAM32: '2.2.0~alpha0~20221228-r3'
+  PIN_DKML_COMPONENT_STAGING_OPAM64: '2.2.0~alpha0~20221228-r3'
   PIN_DKML_COMPONENT_STAGING_UNIXUTILS: '0.2.0'
-  PIN_DKML_COMPONENT_STAGING_WITHDKML: '2.1.0'
+  PIN_DKML_COMPONENT_STAGING_WITHDKML: '2.1.1'
   PIN_DKML_COMPONENT_XX_CONSOLE: '0.1.1'
-  PIN_DKML_EXE_LIB: '2.1.0'
-  PIN_DKML_EXE: '2.1.0'
+  PIN_DKML_EXE_LIB: '2.1.1'
+  PIN_DKML_EXE: '2.1.1'
   PIN_DKML_INSTALL_INSTALLER: '0.5.2'
   PIN_DKML_INSTALL_RUNNER: '0.5.2'
   PIN_DKML_INSTALL: '0.5.2'
-  PIN_DKML_INSTALLER_OCAML_COMMON: '2.1.0'
-  PIN_DKML_INSTALLER_OCAML_NETWORK: '2.1.0'
-  PIN_DKML_INSTALLER_OCAML_OFFLINE: '2.1.0'
+  PIN_DKML_INSTALLER_OCAML_COMMON: '2.1.1'
+  PIN_DKML_INSTALLER_OCAML_NETWORK: '2.1.1'
+  PIN_DKML_INSTALLER_OCAML_OFFLINE: '2.1.1'
   PIN_DKML_PACKAGE_CONSOLE: '0.5.2'
-  PIN_DKML_RUNTIME_COMMON_NATIVE: '2.1.0'
-  PIN_DKML_RUNTIME_COMMON: '2.1.0'
-  PIN_DKML_RUNTIME_DISTRIBUTION: '2.1.0'
-  PIN_DKML_RUNTIMELIB: '2.1.0'
-  PIN_DKML_RUNTIMESCRIPTS: '2.1.0'
-  PIN_DKML_WORKFLOWS: '2.1.0'
-  PIN_DUNE_ACTION_PLUGIN: '3.8.3'
-  PIN_DUNE_BUILD_INFO: '3.8.3'
-  PIN_DUNE_CONFIGURATOR: '3.8.3'
-  PIN_DUNE_GLOB: '3.8.3'
-  PIN_DUNE_PRIVATE_LIBS: '3.8.3'
-  PIN_DUNE_RPC_LWT: '3.8.3'
-  PIN_DUNE_RPC: '3.8.3'
-  PIN_DUNE_SITE: '3.8.3'
-  PIN_DUNE: '3.8.3'
-  PIN_DYN: '3.8.3'
+  PIN_DKML_RUNTIME_COMMON_NATIVE: '2.1.1'
+  PIN_DKML_RUNTIME_COMMON: '2.1.1'
+  PIN_DKML_RUNTIME_DISTRIBUTION: '2.1.1'
+  PIN_DKML_RUNTIMELIB: '2.1.1'
+  PIN_DKML_RUNTIMESCRIPTS: '2.1.1'
+  PIN_DKML_WORKFLOWS: '2.1.1'
+  PIN_DUNE_ACTION_PLUGIN: '3.15.0'
+  PIN_DUNE_BUILD_INFO: '3.15.0'
+  PIN_DUNE_CONFIGURATOR: '3.15.0'
+  PIN_DUNE_GLOB: '3.15.0'
+  PIN_DUNE_PRIVATE_LIBS: '3.15.0'
+  PIN_DUNE_RPC_LWT: '3.15.0'
+  PIN_DUNE_RPC: '3.15.0'
+  PIN_DUNE_SITE: '3.15.0'
+  PIN_DUNE: '3.15.0'
+  PIN_DYN: '3.15.0'
   PIN_EITHER: '1.0.0'
   PIN_EQAF: '0.9'
   PIN_EXTLIB: '1.7.9'
@@ -97,44 +100,48 @@ variables:
   PIN_FPATH: '0.7.3'
   PIN_GRAPHICS: '5.1.2'
   PIN_HEX: '1.5.0'
+  PIN_HMAP: '0.8.1'
   PIN_INTEGERS: '0.7.0'
+  PIN_IOSTREAM: '0.2.2'
   PIN_JANE_STREET_HEADERS: 'v0.16.0'
   PIN_JINGOO: '1.5.0'
   PIN_JSONM: '1.0.2'
-  PIN_JSONRPC: '1.16.2'
+  PIN_JSONRPC: '1.17.0'
   PIN_JST_CONFIG: 'v0.16.0'
-  PIN_LAMBDA_TERM: '3.3.1'
+  PIN_LAMBDA_TERM: '3.3.2'
   PIN_LOGS: '0.7.0'
-  PIN_LSP: '1.16.2'
-  PIN_LWT: '5.6.1'
+  PIN_LSP: '1.17.0'
+  PIN_LWT: '5.7.0'
   PIN_LWT_REACT: '1.2.0'
   PIN_MCCS: '1.1+13'
-  PIN_MDX: '2.3.0'
-  PIN_MENHIR: '20230608'
-  PIN_MENHIRLIB: '20230608'
-  PIN_MENHIRSDK: '20230608'
-  PIN_MERLIN_LIB: '4.12-414'
+  PIN_MDX: '2.4.1'
+  PIN_MENHIR: '20231231'
+  PIN_MENHIRCST: '20231231'
+  PIN_MENHIRLIB: '20231231'
+  PIN_MENHIRSDK: '20231231'
+  PIN_MERLIN_LIB: '4.14-414'
   PIN_METAPP: '0.4.4+win'
   PIN_METAQUOT: '0.5.2'
   PIN_MEW: '0.1.0'
   PIN_MEW_VI: '0.5.0'
-  PIN_NUM: '1.4'
+  PIN_NUM: '1.5'
   PIN_OCAML_COMPILER_LIBS: 'v0.12.4'
-  PIN_OCAML_LSP_SERVER: '1.16.2'
-  PIN_OCAML_VERSION: '3.6.2'
-  PIN_OCAML: '4.14.0'
+  PIN_OCAML_LSP_SERVER: '1.17.0'
+  PIN_OCAML_VERSION: '3.6.5'
+  PIN_OCAML: '4.14.2'
   PIN_OCAMLBUILD: '0.14.2+win+unix'
-  PIN_OCAMLC_LOC: '3.8.3'
+  PIN_OCAMLC_LOC: '3.15.0'
   PIN_OCAMLFIND: '1.9.5'
-  PIN_OCAMLFORMAT_LIB: '0.25.1'
-  PIN_OCAMLFORMAT_RPC_LIB: '0.25.1'
-  PIN_OCAMLFORMAT: '0.25.1'
+  PIN_OCAMLFORMAT_LIB: '0.26.1'
+  PIN_OCAMLFORMAT_RPC_LIB: '0.26.1'
+  PIN_OCAMLFORMAT: '0.26.1'
   PIN_OCP_INDENT: '1.8.2-windowssupport'
   PIN_OCPLIB_ENDIAN: '1.2'
-  PIN_ODOC_PARSER: '2.0.0'
-  PIN_ODOC: '2.2.0'
-  PIN_ORDERING: '3.8.3'
+  PIN_ODOC_PARSER: '2.4.1'
+  PIN_ODOC: '2.4.1'
+  PIN_ORDERING: '3.15.0'
   PIN_PARSEXP: 'v0.16.0'
+  PIN_POSIXAT: 'v0.16.0'
   PIN_PP: '1.2.0'
   PIN_PPX_ASSERT: 'v0.16.0'
   PIN_PPX_BASE: 'v0.16.0'
@@ -148,7 +155,7 @@ variables:
   PIN_PPX_HASH: 'v0.16.0'
   PIN_PPX_HERE: 'v0.16.0'
   PIN_PPX_IGNORE_INSTRUMENTATION: 'v0.16.0'
-  PIN_PPX_INLINE_TEST: 'v0.16.0'
+  PIN_PPX_INLINE_TEST: 'v0.16.1'
   PIN_PPX_OPTCOMP: 'v0.16.0'
   PIN_PPX_PIPEBANG: 'v0.16.0'
   PIN_PPX_SEXP_CONV: 'v0.16.0'
@@ -165,13 +172,15 @@ variables:
   PIN_SEXPLIB: 'v0.16.0'
   PIN_SEXPLIB0: 'v0.16.0'
   PIN_SHA: '1.15.4'
+  PIN_SHEXP: 'v0.16.0'
   PIN_SPAWN: 'v0.15.1'
   PIN_SQLITE3: '5.1.0+msvc'
   PIN_STDCOMPAT: '19+optautoconf'
   PIN_STDIO: 'v0.16.0'
   PIN_STDLIB_SHIMS: '0.3.0'
-  PIN_STDUNE: '3.8.3'
+  PIN_STDUNE: '3.15.0'
   PIN_TIME_NOW: 'v0.16.0'
+  PIN_TINY_HTTPD: '0.16'
   PIN_TOPKG: '1.0.7'
   PIN_TRAVERSE: '0.3.0'
   PIN_TRIE: '1.0.0'
@@ -183,10 +192,10 @@ variables:
   PIN_UUIDM: '0.9.8'
   PIN_UUSEG: '15.0.0'
   PIN_UUTF: '1.0.3'
-  PIN_WITH_DKML: '2.1.0'
-  PIN_XDG: '3.9.0'
-  PIN_YOJSON: '2.1.1'
-  PIN_ZED: '3.2.2'
+  PIN_WITH_DKML: '2.1.1'
+  PIN_XDG: '3.15.0'
+  PIN_YOJSON: '2.1.2'
+  PIN_ZED: '3.2.3'
 
 .common:setup-dkml-allplusmincache:
   stage: build
@@ -198,14 +207,14 @@ variables:
     expire_in: "1 days"
   # Only 4 caches allowed in GitLab CI
   cache:
-    - key: "a2_1_${CACHE_PREFIX}-2_1_0-${abi_pattern}-${CI_COMMIT_REF_SLUG}"
+    - key: "a2_1_${CACHE_PREFIX}-2_1_1-${abi_pattern}-${CI_COMMIT_REF_SLUG}"
       paths:
         - ${opam_root_cacheable}/download-cache
 
 .common:setup-dkml-cache:
   # Only 4 caches allowed in GitLab CI
   cache:
-    - key: "b2_1_${CACHE_PREFIX}-2_1_0-${abi_pattern}-${CI_COMMIT_REF_SLUG}"
+    - key: "b2_1_${CACHE_PREFIX}-2_1_1-${abi_pattern}-${CI_COMMIT_REF_SLUG}"
       paths:
         - .ci/sd4/bs
         - ${opam_root_cacheable}/config
@@ -263,6 +272,9 @@ variables:
   tags: [shared-windows, windows, windows-1809]
   timeout: 2h
   before_script:
+    # For dos2unix and any other direct MSYS2 invocation that does not go through `bash -lc` first.
+    - $env:LANG = "en_US.UTF-8"
+
     # ------------------
     # Section formatting
     # ------------------
@@ -293,41 +305,43 @@ variables:
     - If ( "${env:VERBOSE}" -eq "true" ) { dir 'env:' }
 
     - |
-      if ( Test-Path -Path msys64\usr\bin\pacman.exe ) {
+      if ( Test-Path -Path "${env:MSYS2_BASEDIR}\msys64\usr\bin\pacman.exe" ) {
         Write-Host "Re-using MSYS2 from cache."
       } else {
           Write-Host "Download the archive ..."
-          If ( !(Test-Path -Path msys64\var\cache ) ) { New-Item msys64\var\cache -ItemType Directory | Out-Null }
-          If ( !(Test-Path -Path msys64\var\cache\msys2.exe ) ) {
-              Invoke-WebRequest "https://github.com/msys2/msys2-installer/releases/download/2022-10-28/msys2-base-x86_64-20221028.sfx.exe" -outfile "msys64\var\cache\msys2.exe"
-              $Msys2ActualHash = (Get-FileHash -Algorithm SHA256 "msys64\var\cache\msys2.exe").Hash
-              if ("$Msys2ActualHash" -ne "E365B79B4B30B6F4BAF34BD93F3D2A41C0A92801C7A96D79CDDBFCA1090A0554") {
+          If ( !(Test-Path -Path "${env:MSYS2_BASEDIR}\msys64" ) ) { New-Item "${env:MSYS2_BASEDIR}\msys64" -ItemType Directory | Out-Null }
+          If ( !(Test-Path -Path "${env:MSYS2_BASEDIR}\msys64\msys2.exe" ) ) {
+              Invoke-WebRequest "https://github.com/msys2/msys2-installer/releases/download/2024-01-13/msys2-base-x86_64-20240113.sfx.exe" -outfile "${env:MSYS2_BASEDIR}\msys64\msys2.exe"
+              $Msys2ActualHash = (Get-FileHash -Algorithm SHA256 "${env:MSYS2_BASEDIR}\msys64\msys2.exe").Hash
+              if ("$Msys2ActualHash" -ne "DBA7E6D27E6A9AB850F502DA44F6BFCD16D4D7B175FC2B25BEE37207335CB12F") {
                   Write-Error "The MSYS2 installer was corrupted. You will need to retry the CI job. If that fails contact MSYS2 (file an issue) for why their installer executable changed"
                   Exit 79
               }
           }
 
           Write-Host "Extract the archive ..."
-          msys64\var\cache\msys2.exe -y # Extract to .\msys64
-          Remove-Item msys64\var\cache\msys2.exe # Delete the archive again
-          ((Get-Content -path msys64\etc\post-install\07-pacman-key.post -Raw) -replace '--refresh-keys', '--version') | Set-Content -Path msys64\etc\post-install\07-pacman-key.post
-          msys64\usr\bin\bash -lc "sed -i 's/^CheckSpace/#CheckSpace/g' /etc/pacman.conf"
+          & "${env:MSYS2_BASEDIR}\msys64\msys2.exe" -y "-o${env:MSYS2_BASEDIR}"
+          Remove-Item "${env:MSYS2_BASEDIR}\msys64\msys2.exe" # Delete the archive again
+          ((Get-Content -path "${env:MSYS2_BASEDIR}\msys64\etc\post-install\07-pacman-key.post" -Raw) -replace '--refresh-keys', '--version') | Set-Content -Path "${env:MSYS2_BASEDIR}\msys64\etc\post-install\07-pacman-key.post"
+          & "${env:MSYS2_BASEDIR}\msys64\usr\bin\bash" -lc "sed -i 's/^CheckSpace/#CheckSpace/g' /etc/pacman.conf"
 
           Write-Host "Run for the first time ..."
-          msys64\usr\bin\bash -lc ' '
+          & "${env:MSYS2_BASEDIR}\msys64\usr\bin\bash" -lc ' '
       }
     - Write-Host "Update MSYS2 ..."
-    - msys64\usr\bin\bash -lc 'pacman --noconfirm -Syuu' # Core update (in case any core packages are outdated)
-    - msys64\usr\bin\bash -lc 'pacman --noconfirm -Syuu' # Normal update
+    - '& "${env:MSYS2_BASEDIR}\msys64\usr\bin\bash" -lc "pacman --noconfirm -Syuu"' # Core update (in case any core packages are outdated)
+    - '& "${env:MSYS2_BASEDIR}\msys64\usr\bin\bash" -lc "pacman --noconfirm -Syuu"' # Normal update
     - taskkill /F /FI "MODULES eq msys-2.0.dll"
 
     - Write-Host "Install matrix, required and CI packages ..."
     #   Packages for GitLab CI:
     #     dos2unix (used to translate PowerShell written files below in this CI .yml into MSYS2 scripts)
-    - msys64\usr\bin\bash -lc 'set -x; pacman -Sy --noconfirm --needed ${msys2_packages}  wget make rsync diffutils patch unzip git tar xz dos2unix'
+    - |
+      & "${env:MSYS2_BASEDIR}\msys64\usr\bin\bash" -lc 'set -x; pacman -Sy --noconfirm --needed ${msys2_packages}  wget make rsync diffutils patch unzip git tar xz dos2unix'
 
     - Write-Host "Uninstall MSYS2 conflicting executables ..."
-    - msys64\usr\bin\bash -lc 'rm -vf /usr/bin/link.exe' # link.exe interferes with MSVC's link.exe
+    - |
+      & "${env:MSYS2_BASEDIR}\msys64\usr\bin\bash" -lc 'rm -vf /usr/bin/link.exe' # link.exe interferes with MSVC's link.exe
 
     # ------------------ SECTION END Install MSYS2
     - Write-Host "${esc}[0Ksection_end:$(Get-CurrentEpochSecs):install-msys2${cr}${esc}[0K"
@@ -458,8 +472,8 @@ variables:
                   TEMP=$(cygpath -am "$RUNNER_TEMP")
               else
                   # GitLab CI/CD or desktop
-                  install -d .ci/tmp
-                  TEMP=$(cygpath -am ".ci/tmp")
+                  install -d .ci/sd4/tmp
+                  TEMP=$(cygpath -am ".ci/sd4/tmp")
               fi
               export TEMP
           fi
@@ -494,7 +508,7 @@ variables:
       }
       '@
       Set-Content -Path ".ci\sd4\common-values.sh" -Encoding Unicode -Value $Content
-    - msys64\usr\bin\bash -lc 'dos2unix .ci/sd4/common-values.sh'
+      & "${env:MSYS2_BASEDIR}\msys64\usr\bin\dos2unix" .ci/sd4/common-values.sh
 
     - |
       $Content = @'
@@ -610,15 +624,12 @@ variables:
 
       '@
       Set-Content -Path ".ci\sd4\run-checkout-code.sh" -Encoding Unicode -Value $Content
-    - msys64\usr\bin\bash -lc 'dos2unix .ci/sd4/run-checkout-code.sh'
+      & "${env:MSYS2_BASEDIR}\msys64\usr\bin\dos2unix" .ci/sd4/run-checkout-code.sh
 
     - |
       $Content = @'
       #!/bin/sh
       set -euf
-
-      # Constants
-      SHA512_DEVNULL='cf83e1357eefb8bdf1542850d66d8007d620e4050b5715dc83f4a921d36ce9ce47d0d13c5d85f2b0ff8318d2877eec2f63b931bd47417a81a538327af927da3e'
 
       setup_WORKSPACE_VARNAME=$1
       shift
@@ -676,12 +687,17 @@ variables:
       dockcross_cli_image_args=
       if [ "${in_docker:-}" = "true" ] && [ -n "${dockcross_image:-}" ]; then
           echo "Doing docker build"
-          section_begin docker-build "Summary: docker build -t ${docker_fqin_preusername}dkml-workflows/dockcross"
+          section_begin docker-build "Summary: docker build --quiet --tag ${docker_fqin_preusername}dkml-workflows/dockcross"
 
           install -d .ci/sd4/docker-image
-          printf "FROM %s\nENV DEFAULT_DOCKCROSS_IMAGE %sdkml-workflows/dockcross:latest\nRUN if command -v apt-get; then apt-get install -y rsync %s && rm -rf /var/lib/apt/lists/*; fi\nRUN if command -v yum; then yum install -y rsync %s && yum clean all && rm -rf /var/cache/yum; fi" \
-              "${dockcross_image:-}" "${docker_fqin_preusername}" "${dockcross_packages_apt:-}" "${dockcross_packages_yum:-}" >.ci/sd4/docker-image/Dockerfile
-          docker build -t "${docker_fqin_preusername}dkml-workflows/dockcross:latest" .ci/sd4/docker-image
+          #   Since GitLab CI limits environment variables to 255 characters, if you need to exceed that there are five (5)
+          #   variations of `dockcross_packages_apt` and `dockcross_packages_yum` to spread the packages over.
+          printf "FROM %s\nENV DEFAULT_DOCKCROSS_IMAGE %sdkml-workflows/dockcross:latest\nRUN if command -v apt-get; then apt-get install -y rsync %s %s %s %s %s && rm -rf /var/lib/apt/lists/*; fi\nRUN if command -v yum; then yum install -y rsync %s %s %s %s %s && yum clean all && rm -rf /var/cache/yum; fi" \
+              "${dockcross_image:-}" "${docker_fqin_preusername}" \
+              "${dockcross_packages_apt:-}" "${dockcross_packages_apt2:-}" "${dockcross_packages_apt3:-}" "${dockcross_packages_apt4:-}" "${dockcross_packages_apt5:-}" \
+              "${dockcross_packages_yum:-}" "${dockcross_packages_yum2:-}" "${dockcross_packages_yum3:-}" "${dockcross_packages_yum4:-}" "${dockcross_packages_yum5:-}" \
+              >.ci/sd4/docker-image/Dockerfile
+          docker build --quiet --tag "${docker_fqin_preusername}dkml-workflows/dockcross:latest" .ci/sd4/docker-image
 
           # Save image id to re-use for all remaining dockcross invocations
           docker images --format "{{.ID}} {{.CreatedAt}}" | sort -rk 2 | awk 'NR==1{print $1}' | tee .ci/sd4/docker-image-id
@@ -712,7 +728,6 @@ variables:
       ------
       Inputs
       ------
-      FDOPEN_OPAMEXE_BOOTSTRAP=${FDOPEN_OPAMEXE_BOOTSTRAP:-}
       DISKUV_OPAM_REPOSITORY=${DISKUV_OPAM_REPOSITORY:-}
       DKML_COMPILER=${DKML_COMPILER:-}
       OCAML_COMPILER=${OCAML_COMPILER:-}
@@ -724,18 +739,18 @@ variables:
       DKML_HOME=${DKML_HOME:-}
       VERBOSE=${VERBOSE:-}
       .
-      -------------------
-      Generated Constants
-      -------------------
+      ----------------------
+      DkML Release Constants
+      ----------------------
       DKML_VERSION=$DKML_VERSION
       DEFAULT_DISKUV_OPAM_REPOSITORY_TAG=$DEFAULT_DISKUV_OPAM_REPOSITORY_TAG
       DEFAULT_DKML_COMPILER=$DEFAULT_DKML_COMPILER
+      BOOTSTRAP_OPAM_VERSION=$BOOTSTRAP_OPAM_VERSION
       .
       ------
       Matrix
       ------
       dkml_host_abi=$dkml_host_abi
-      bootstrap_opam_version=$bootstrap_opam_version
       abi_pattern=$abi_pattern
       opam_root=${opam_root}
       opam_root_cacheable=${opam_root_cacheable}
@@ -776,122 +791,26 @@ variables:
       section_end setup-info
 
       do_bootstrap() {
-          # Bootstrap from historical release
-          runit_BOOTSTRAPPED=0
+          install -d .ci/sd4/bs
+          cd .ci/sd4/bs
 
-          #   Bootstrap opam from fdopen (Windows)
-          if [ "$runit_BOOTSTRAPPED" = 0 ] && [ "${FDOPEN_OPAMEXE_BOOTSTRAP:-}" = "true" ]; then
-              if [ -e .ci/sd4/opam64/bin/opam.exe ] && [ -e .ci/sd4/opam64/bin/opam-installer.exe ]; then
-                  runit_BOOTSTRAPPED=1
+          if [ ! -e stamp ] || [ "$(cat stamp)" != "${BOOTSTRAP_OPAM_VERSION}${dkml_host_abi}" ]; then
+              echo 'Bootstrap opam from dkml-component-opam release ...'
+              if command -v curl > /dev/null 2> /dev/null; then
+                  curl -s -L -o opam.tar.gz "https://github.com/diskuv/dkml-component-opam/releases/download/${BOOTSTRAP_OPAM_VERSION}/dkml-component-staging-opam.tar.gz"
               else
-                  case "$dkml_host_abi" in
-                  windows_*)
-                      echo 'Bootstrap opam from fdopen (Windows) ...'
-                      install -d .ci/sd4/bs/bin
-                      wget -O "$setup_WORKSPACE"/.ci/sd4/opam64.tar.xz https://github.com/fdopen/opam-repository-mingw/releases/download/0.0.0.2/opam64.tar.xz
-
-                      # this stalls: tar xvCfJ "$setup_WORKSPACE"/.ci/sd4 "$setup_WORKSPACE"/.ci/sd4/opam64.tar.xz
-                      xz -v -d "$setup_WORKSPACE"/.ci/sd4/opam64.tar.xz
-                      tar xvCf .ci/sd4 .ci/sd4/opam64.tar
-
-                      rm -rf "$setup_WORKSPACE"/.ci/sd4/bs/bin/Opam.Runtime.amd64
-                      mv -v "$setup_WORKSPACE"/.ci/sd4/opam64/bin/Opam.Runtime.amd64/ "$setup_WORKSPACE"/.ci/sd4/bs/bin/
-                      mv -v "$setup_WORKSPACE"/.ci/sd4/opam64/bin/opam.exe "$setup_WORKSPACE"/.ci/sd4/bs/bin/
-                      mv -v "$setup_WORKSPACE"/.ci/sd4/opam64/bin/opam-installer.exe "$setup_WORKSPACE"/.ci/sd4/bs/bin/
-
-                      # diagnostics
-                      ldd "$setup_WORKSPACE"/.ci/sd4/bs/bin/opam.exe
-                      ldd "$setup_WORKSPACE"/.ci/sd4/bs/bin/opam-installer.exe
-
-                      runit_BOOTSTRAPPED=1
-                      ;;
-                  esac
+                  wget -q -O opam.tar.gz "https://github.com/diskuv/dkml-component-opam/releases/download/${BOOTSTRAP_OPAM_VERSION}/dkml-component-staging-opam.tar.gz"
               fi
+              tar tfz opam.tar.gz
+              tar xfz opam.tar.gz "./staging-files/${dkml_host_abi}/"
+              rm -rf bin/
+              mv "staging-files/${dkml_host_abi}/bin" .
+              rm -rf "${abi_pattern}"
+              printf "%s" "${BOOTSTRAP_OPAM_VERSION}${dkml_host_abi}" >stamp
           fi
 
-          #   Bootstrap from historical release
-          if [ "$runit_BOOTSTRAPPED" = 0 ] && [ "$bootstrap_opam_version" != "os" ]; then
-              install -d .ci/sd4/bs
-              cd .ci/sd4/bs
-
-              if [ ! -e version ] || [ "$(cat version)" != "$bootstrap_opam_version" ]; then
-                  echo 'Bootstrap opam from historical release (non-Windows; Windows non-fdopen) ...'
-                  if command -v curl > /dev/null 2> /dev/null; then
-                      curl -L -o opam.tar.gz "https://github.com/diskuv/dkml-component-opam/releases/download/v${bootstrap_opam_version}/dkml-component-staging-opam.tar.gz"
-                  else
-                      wget -O opam.tar.gz "https://github.com/diskuv/dkml-component-opam/releases/download/v${bootstrap_opam_version}/dkml-component-staging-opam.tar.gz"
-                  fi
-                  tar tvfz opam.tar.gz
-                  tar xfz opam.tar.gz "./staging-files/${dkml_host_abi}/"
-                  rm -rf bin/
-                  mv "staging-files/${dkml_host_abi}/bin" .
-                  rm -rf "${abi_pattern}"
-                  printf "%s" "${bootstrap_opam_version}" >version
-              fi
-
-              rm -f opam.tar.gz
-              cd ../../..
-
-              runit_BOOTSTRAPPED=1
-          fi
-
-          #   Bootstrap from package manager or GitHub ocaml/opam release
-          case "$runit_BOOTSTRAPPED,$bootstrap_opam_version,$dkml_host_abi" in
-          0,os,darwin_*)
-              if ! command -v opam; then
-                  echo 'Bootstrap opam from package manager (macOS) ...'
-                  brew install gpatch
-                  brew install opam
-              fi
-              runit_BOOTSTRAPPED=1
-              ;;
-          0,os,linux_x86)
-              if [ ! -x .ci/sd4/bs/bin/opam ]; then
-                  echo 'Bootstrap opam from GitHub ocaml/opam release (Linux x86) ...'
-                  install -d .ci/sd4/bs/bin
-                  if command -v curl > /dev/null 2> /dev/null; then
-                      curl -L -o .ci/sd4/bs/bin/opam.tmp https://github.com/ocaml/opam/releases/download/2.1.2/opam-2.1.2-i686-linux
-                  else
-                      wget -O .ci/sd4/bs/bin/opam.tmp https://github.com/ocaml/opam/releases/download/2.1.2/opam-2.1.2-i686-linux
-                  fi
-                  sha512_check=$(openssl sha512 2>&1 </dev/null | cut -f 2 -d ' ')
-                  if [ "$SHA512_DEVNULL" = "$sha512_check" ]; then
-                      sha512=$(openssl sha512 ".ci/sd4/bs/bin/opam.tmp" 2>/dev/null | cut -f 2 -d ' ')
-                      check="85a480d60e09a7d37fa0d0434ed97a3187434772ceb4e7e8faa5b06bc18423d004af3ad5849c7d35e72dca155103257fd6b1178872df8291583929eb8f884b6a"
-                      test "$sha512" = "$check"
-                      chmod +x .ci/sd4/bs/bin/opam.tmp
-                      mv .ci/sd4/bs/bin/opam.tmp .ci/sd4/bs/bin/opam
-                  else
-                      echo "openssl 512 option unsupported."
-                      exit 61
-                  fi
-              fi
-              runit_BOOTSTRAPPED=1
-              ;;
-          0,os,linux_x86_64)
-              if [ ! -x .ci/sd4/bs/bin/opam ]; then
-                  echo 'Bootstrap opam from GitHub ocaml/opam release (Linux x86_64) ...'
-                  install -d .ci/sd4/bs/bin
-                  if command -v curl > /dev/null 2> /dev/null; then
-                      curl -L -o .ci/sd4/bs/bin/opam.tmp https://github.com/ocaml/opam/releases/download/2.1.2/opam-2.1.2-x86_64-linux
-                  else
-                      wget -O .ci/sd4/bs/bin/opam.tmp https://github.com/ocaml/opam/releases/download/2.1.2/opam-2.1.2-x86_64-linux
-                  fi
-                  sha512_check=$(openssl sha512 2>&1 </dev/null | cut -f 2 -d ' ')
-                  if [ "$SHA512_DEVNULL" = "$sha512_check" ]; then
-                      sha512=$(openssl sha512 ".ci/sd4/bs/bin/opam.tmp" 2>/dev/null | cut -f 2 -d ' ')
-                      check="c0657ecbd4dc212587a4da70c5ff0402df95d148867be0e1eb1be8863a2851015f191437c3c99b7c2b153fcaa56cac99169c76ec94c5787750d7a59cd1fbb68b"
-                      test "$sha512" = "$check"
-                      chmod +x .ci/sd4/bs/bin/opam.tmp
-                      mv .ci/sd4/bs/bin/opam.tmp .ci/sd4/bs/bin/opam
-                  else
-                      echo "openssl 512 option unsupported."
-                      exit 61
-                  fi
-              fi
-              runit_BOOTSTRAPPED=1
-              ;;
-          esac
+          rm -f opam.tar.gz
+          cd ../../..
       }
       section_begin bootstrap-opam 'Bootstrap opam'
       do_bootstrap
@@ -1002,12 +921,40 @@ variables:
               shift
           fi
 
+          # Handle: dockcross --args "-v X:Y --platform P" --image "..." --
+          # Confer: https://github.com/dockcross/dockcross/blob/96d87416f639af0204bdd42553e4b99315ca8476/imagefiles/dockcross#L97C1-L134
+          ARG_ARGS=
+          ARG_IMAGE="${dockcross_image_id}"
+          while [[ \$# != 0 ]]; do
+              case \$1 in
+                  --)
+                      shift
+                      break
+                      ;;
+                  --args|-a)
+                      ARG_ARGS="\$2"
+                      shift 2
+                      ;;
+                  --image|-i)
+                      ARG_IMAGE="\$2"
+                      shift 2
+                      ;;
+                  -*)
+                      echo Unknown option \"\$1\" >&2
+                      exit 67
+                      ;;
+                  *)
+                      break
+                      ;;
+              esac
+          done
+
           # Directly invoke entrypoint
           exec docker run --entrypoint /bin/bash \
               --rm \
-              \${ARGS:-} \
+              \${ARG_ARGS} \
                -v "\$HOST_PWD":/work \
-              "${dockcross_image_id}" ${dockcross_entrypoint} "\$@"
+              "\${ARG_IMAGE}" ${dockcross_entrypoint} "\$@"
       else
           HERE=\$(dirname "\$0")
           HERE=\$(cd "\$HERE" && pwd)
@@ -1040,23 +987,6 @@ variables:
       # Setup Opam
 
       do_write_opam_scripts() {
-          case "${FDOPEN_OPAMEXE_BOOTSTRAP:-},$dkml_host_abi" in
-          true,windows_*)
-              # With fdopen's opam.exe, 'os-distribution = "cygwinports"'. But native Windows opam.exe has 'os-distribution = "win32"'.
-              # But on Windows we always want MSYS2 or native Windows libraries, not Cygwin. If cygwinports then
-              # code like https://github.com/ocaml/opam-repository/blob/08cbb8258bd4bf30cd6f307c958911a29d537b54/packages/conf-pkg-config/conf-pkg-config.2/opam#L36
-              # will fail. So always set 'os-distribution = "win32"' on Windows.
-              PATCH_OS_DISTRIBUTION_WIN32=true
-              # With fdopen's opam.exe, no 'exe = ".exe"' is set because Cygwin does not need file extensions.
-              # Native Windows requires a .exe extension.
-              PATCH_EXE_WIN32=true
-              ;;
-          *)
-              PATCH_OS_DISTRIBUTION_WIN32=false
-              PATCH_EXE_WIN32=false
-              ;;
-          esac
-
           # ---------------------
           # Empty opam repository
           # ---------------------
@@ -1097,8 +1027,7 @@ variables:
 
           # ---------------
           # Create Opam support scripts (not needed for all platforms)
-          #   The PATH to find opam must work internally in setup-dkml.yml (sd4/bs/bin) and
-          #   by consumers of setup-dkml.yml (sd4/opamexe)
+          #   The PATH to find opam must work internally in setup-dkml.yml (sd4/bs/bin)
           # ---------------
 
           USER_ID=$(id -u)
@@ -1109,7 +1038,7 @@ variables:
           case "${opam_root}" in
           /* | ?:*) # /a/b/c or C:\Windows
               validate_supports_docker() {
-                  echo "Docker only supported with relative paths for the opam root, not: ${opam_root}" >&2
+                  echo "Docker only supported with relative paths for the opam root, not: ${opam_root}"
                   exit 3
               }
               ;;
@@ -1120,11 +1049,9 @@ variables:
               cat >.ci/sd4/run-in-docker <<EOF
       #!/bin/sh
       set -euf
-      export PATH="/work/.ci/local/bin:/work/.ci/sd4/bs/bin:/work/.ci/sd4/opamexe:\$PATH"
+      export PATH="/work/.ci/local/bin:/work/.ci/sd4/bs/bin:\$PATH"
       export OPAMROOT=/work/${opam_root}
       export OPAMROOTISOK=1
-      if [ "${PATCH_OS_DISTRIBUTION_WIN32}" = true ]; then export OPAMVAR_os_distribution=win32; fi
-      if [ "${PATCH_EXE_WIN32}" = true ]; then export OPAMVAR_exe=.exe; fi
 
       # Reset environment so no conflicts with a parent Opam or OCaml system
       unset OPAM_SWITCH_PREFIX
@@ -1206,9 +1133,9 @@ variables:
               validate_supports_docker
 
               # Bundle for consumers of setup-dkml.yml
-              echo '__ run-in-docker __' >&2
-              cat .ci/sd4/run-in-docker >&2
-              echo '___________________' >&2
+              echo '__ run-in-docker __'
+              cat .ci/sd4/run-in-docker
+              echo '___________________'
               do_tar_rf .ci/sd4/dist/run-with-env.tar .ci/sd4/run-with-env .ci/sd4/run-in-docker .ci/sd4/edr
 
           elif [ "${in_docker:-}" = "true" ] && [ -n "${docker_runner:-}" ]; then
@@ -1223,12 +1150,12 @@ variables:
               validate_supports_docker
 
               # Bundle for consumers of setup-dkml.yml
-              echo '__ run-in-docker __' >&2
-              cat .ci/sd4/run-in-docker >&2
-              echo '________________________' >&2
-              echo '__ deescalate __' >&2
-              cat .ci/sd4/deescalate >&2
-              echo '________________' >&2
+              echo '__ run-in-docker __'
+              cat .ci/sd4/run-in-docker
+              echo '________________________'
+              echo '__ deescalate __'
+              cat .ci/sd4/deescalate
+              echo '________________'
               do_tar_rf .ci/sd4/dist/run-with-env.tar .ci/sd4/run-with-env .ci/sd4/run-in-docker .ci/sd4/deescalate
 
           else
@@ -1241,11 +1168,9 @@ variables:
       HERE=\$(cd "\$HERE" && pwd)
       PROJECT_DIR=\$(cd "\$HERE"/../.. && pwd)
 
-      export PATH="\${PROJECT_DIR}/.ci/local/bin:\${PROJECT_DIR}/.ci/sd4/bs/bin:\${PROJECT_DIR}/.ci/sd4/opamexe:\$PATH"
+      export PATH="\${PROJECT_DIR}/.ci/local/bin:\${PROJECT_DIR}/.ci/sd4/bs/bin:\$PATH"
       export OPAMROOT='${opam_root}'
       export OPAMROOTISOK=1
-      if [ "${PATCH_OS_DISTRIBUTION_WIN32}" = true ]; then export OPAMVAR_os_distribution=win32; fi
-      if [ "${PATCH_EXE_WIN32}" = true ]; then export OPAMVAR_exe=.exe; fi
 
       # Reset environment so no conflicts with a parent Opam or OCaml system
       unset OPAM_SWITCH_PREFIX
@@ -1279,9 +1204,9 @@ variables:
               do_tar_rf .ci/sd4/dist/run-with-env.tar .ci/sd4/run-with-env
 
           fi
-          echo '__ run-with-env __' >&2
-          cat .ci/sd4/run-with-env >&2
-          echo '__________________' >&2
+          echo '__ run-with-env __'
+          cat .ci/sd4/run-with-env
+          echo '__________________'
 
           # ------
           # cmdrun
@@ -1322,9 +1247,15 @@ variables:
           PATH="/usr/bin:\$PATH"
       fi
 
+      # Propagate important CI environment variables
+      export CI='${CI:-}'
+
       exec "\${PROJECT_DIR}/.ci/sd4/run-with-env" "\$@"
       EOF
           chmod +x .ci/sd4/opamrun/cmdrun
+          echo '__ cmdrun __'
+          cat .ci/sd4/opamrun/cmdrun
+          echo '____________'
 
           # -------
           # opamrun
@@ -1342,6 +1273,9 @@ variables:
       exec "\${PROJECT_DIR}/.ci/sd4/opamrun/cmdrun" opam "\$@"
       EOF
           chmod +x .ci/sd4/opamrun/opamrun
+          echo '__ opamrun __'
+          cat .ci/sd4/opamrun/opamrun
+          echo '_____________'
 
           # Bundle for consumers of setup-dkml.yml
           do_tar_rf .ci/sd4/dist/run-with-env.tar .ci/sd4/opamrun
@@ -1495,7 +1429,7 @@ variables:
       do_opam_repositories_update() {
           section_begin "opam-repo-update" "Update opam repositories"
           # The default repository may be the initial 'eor' (empty) repository
-          opamrun repository set-url default https://opam.ocaml.org --yes
+          opamrun repository set-url default git+https://github.com/ocaml/opam-repository.git --yes
           # Always set the `diskuv` repository url since it can change
           opamrun repository set-url diskuv "git+https://github.com/diskuv/diskuv-opam-repository.git#${DISKUV_OPAM_REPOSITORY:-$DEFAULT_DISKUV_OPAM_REPOSITORY_TAG}" --yes --dont-select
           # Update both `default` and `diskuv` Opam repositories
@@ -1521,6 +1455,7 @@ variables:
           opamrun pin add --switch "$do_pins_NAME"  --yes --no-action -k version camlp-streams "${PIN_CAMLP_STREAMS}"
           opamrun pin add --switch "$do_pins_NAME"  --yes --no-action -k version chrome-trace "${PIN_CHROME_TRACE}"
           opamrun pin add --switch "$do_pins_NAME"  --yes --no-action -k version cmdliner "${PIN_CMDLINER}"
+          opamrun pin add --switch "$do_pins_NAME"  --yes --no-action -k version conf-bash "${PIN_CONF_BASH}"
           opamrun pin add --switch "$do_pins_NAME"  --yes --no-action -k version conf-dkml-sys-opam "${PIN_CONF_DKML_SYS_OPAM}"
           opamrun pin add --switch "$do_pins_NAME"  --yes --no-action -k version conf-pkg-config "${PIN_CONF_PKG_CONFIG}"
           opamrun pin add --switch "$do_pins_NAME"  --yes --no-action -k version conf-sqlite3 "${PIN_CONF_SQLITE3}"
@@ -1591,7 +1526,9 @@ variables:
           opamrun pin add --switch "$do_pins_NAME"  --yes --no-action -k version fpath "${PIN_FPATH}"
           opamrun pin add --switch "$do_pins_NAME"  --yes --no-action -k version graphics "${PIN_GRAPHICS}"
           opamrun pin add --switch "$do_pins_NAME"  --yes --no-action -k version hex "${PIN_HEX}"
+          opamrun pin add --switch "$do_pins_NAME"  --yes --no-action -k version hmap "${PIN_HMAP}"
           opamrun pin add --switch "$do_pins_NAME"  --yes --no-action -k version integers "${PIN_INTEGERS}"
+          opamrun pin add --switch "$do_pins_NAME"  --yes --no-action -k version iostream "${PIN_IOSTREAM}"
           opamrun pin add --switch "$do_pins_NAME"  --yes --no-action -k version jane-street-headers "${PIN_JANE_STREET_HEADERS}"
           opamrun pin add --switch "$do_pins_NAME"  --yes --no-action -k version jingoo "${PIN_JINGOO}"
           opamrun pin add --switch "$do_pins_NAME"  --yes --no-action -k version jsonm "${PIN_JSONM}"
@@ -1605,6 +1542,7 @@ variables:
           opamrun pin add --switch "$do_pins_NAME"  --yes --no-action -k version mccs "${PIN_MCCS}"
           opamrun pin add --switch "$do_pins_NAME"  --yes --no-action -k version mdx "${PIN_MDX}"
           opamrun pin add --switch "$do_pins_NAME"  --yes --no-action -k version menhir "${PIN_MENHIR}"
+          opamrun pin add --switch "$do_pins_NAME"  --yes --no-action -k version menhirCST "${PIN_MENHIRCST}"
           opamrun pin add --switch "$do_pins_NAME"  --yes --no-action -k version menhirLib "${PIN_MENHIRLIB}"
           opamrun pin add --switch "$do_pins_NAME"  --yes --no-action -k version menhirSdk "${PIN_MENHIRSDK}"
           opamrun pin add --switch "$do_pins_NAME"  --yes --no-action -k version merlin-lib "${PIN_MERLIN_LIB}"
@@ -1629,6 +1567,7 @@ variables:
           opamrun pin add --switch "$do_pins_NAME"  --yes --no-action -k version odoc-parser "${PIN_ODOC_PARSER}"
           opamrun pin add --switch "$do_pins_NAME"  --yes --no-action -k version ordering "${PIN_ORDERING}"
           opamrun pin add --switch "$do_pins_NAME"  --yes --no-action -k version parsexp "${PIN_PARSEXP}"
+          opamrun pin add --switch "$do_pins_NAME"  --yes --no-action -k version posixat "${PIN_POSIXAT}"
           opamrun pin add --switch "$do_pins_NAME"  --yes --no-action -k version pp "${PIN_PP}"
           opamrun pin add --switch "$do_pins_NAME"  --yes --no-action -k version ppx_assert "${PIN_PPX_ASSERT}"
           opamrun pin add --switch "$do_pins_NAME"  --yes --no-action -k version ppx_base "${PIN_PPX_BASE}"
@@ -1659,6 +1598,7 @@ variables:
           opamrun pin add --switch "$do_pins_NAME"  --yes --no-action -k version sexplib "${PIN_SEXPLIB}"
           opamrun pin add --switch "$do_pins_NAME"  --yes --no-action -k version sexplib0 "${PIN_SEXPLIB0}"
           opamrun pin add --switch "$do_pins_NAME"  --yes --no-action -k version sha "${PIN_SHA}"
+          opamrun pin add --switch "$do_pins_NAME"  --yes --no-action -k version shexp "${PIN_SHEXP}"
           opamrun pin add --switch "$do_pins_NAME"  --yes --no-action -k version spawn "${PIN_SPAWN}"
           opamrun pin add --switch "$do_pins_NAME"  --yes --no-action -k version sqlite3 "${PIN_SQLITE3}"
           opamrun pin add --switch "$do_pins_NAME"  --yes --no-action -k version stdcompat "${PIN_STDCOMPAT}"
@@ -1666,6 +1606,7 @@ variables:
           opamrun pin add --switch "$do_pins_NAME"  --yes --no-action -k version stdlib-shims "${PIN_STDLIB_SHIMS}"
           opamrun pin add --switch "$do_pins_NAME"  --yes --no-action -k version stdune "${PIN_STDUNE}"
           opamrun pin add --switch "$do_pins_NAME"  --yes --no-action -k version time_now "${PIN_TIME_NOW}"
+          opamrun pin add --switch "$do_pins_NAME"  --yes --no-action -k version tiny_httpd "${PIN_TINY_HTTPD}"
           opamrun pin add --switch "$do_pins_NAME"  --yes --no-action -k version topkg "${PIN_TOPKG}"
           opamrun pin add --switch "$do_pins_NAME"  --yes --no-action -k version traverse "${PIN_TRAVERSE}"
           opamrun pin add --switch "$do_pins_NAME"  --yes --no-action -k version trie "${PIN_TRIE}"
@@ -1707,7 +1648,7 @@ variables:
               4.12.1) true ;;
               4.14.0) true ;;
               *)
-                  echo "OCAML_COMPILER version ${OCAML_COMPILER:-} is not supported" >&2
+                  echo "OCAML_COMPILER version ${OCAML_COMPILER:-} is not supported"
                   exit 109
                   ;;
               esac
@@ -1776,7 +1717,7 @@ variables:
                   echo "  [DKML_COMPILE_VS_CMAKEGENERATOR = \"$E_VS_CMAKEGENERATOR\"]" >>"$OPSC"
                   echo "  [DKML_HOST_ABI = \"${dkml_host_abi}\"]" >>"$OPSC"
                   echo ']' >>"$OPSC"
-                  cat "$OPSC" >&2 # print
+                  cat "$OPSC" # print
                   ;;
               *)
                   opamrun option --switch "$do_use_vsstudio_NAME" setenv= # reset
@@ -1850,7 +1791,7 @@ variables:
                       MSYS2_DIR_NATIVE=$(/usr/bin/cygpath -aw /)
                   else
                       # If we are already inside MSYS2 then MSYSTEM_PREFIX should be set. But cygpath should be there as well!!
-                      echo "FATAL: Could not locate MSYS2: there was no cygpath" >&2
+                      echo "FATAL: Could not locate MSYS2: there was no cygpath"
                       exit 3
                   fi
                   MSYS2_DIR_NATIVE_ESCAPED=$(printf "%s" "$MSYS2_DIR_NATIVE" | sed 's/\\/\\\\/g')
@@ -1900,7 +1841,7 @@ variables:
 
       '@
       Set-Content -Path ".ci\sd4\run-setup-dkml.sh" -Encoding Unicode -Value $Content
-    - msys64\usr\bin\bash -lc 'dos2unix .ci/sd4/run-setup-dkml.sh'
+      & "${env:MSYS2_BASEDIR}\msys64\usr\bin\dos2unix" .ci/sd4/run-setup-dkml.sh
 
     - |
       $Content = @'
@@ -1915,7 +1856,7 @@ variables:
 
       '@
       Set-Content -Path ".ci\sd4\msvcenv.awk" -Encoding Unicode -Value $Content
-    - msys64\usr\bin\bash -lc 'dos2unix .ci/sd4/msvcenv.awk'
+      & "${env:MSYS2_BASEDIR}\msys64\usr\bin\dos2unix" .ci/sd4/msvcenv.awk
 
     - |
       $Content = @'
@@ -1928,7 +1869,7 @@ variables:
       }
       '@
       Set-Content -Path ".ci\sd4\msvcpath.awk" -Encoding Unicode -Value $Content
-    - msys64\usr\bin\bash -lc 'dos2unix .ci/sd4/msvcpath.awk'
+      & "${env:MSYS2_BASEDIR}\msys64\usr\bin\dos2unix" .ci/sd4/msvcpath.awk
 
     #   PowerShell (UTF-16) and Batch (ANSI) scripts
 
@@ -2038,16 +1979,15 @@ variables:
 
       REM * We can't use `bash -lc` directly to query for all MSVC environment variables
       REM   because it stomps over the PATH. So we are inside a Batch script to do the query.
-      msys64\usr\bin\bash -lc "set | grep -v '^PATH=' | awk -f .ci/sd4/msvcenv.awk > .ci/sd4/msvcenv"
+      "%MSYS2_BASEDIR%\msys64\usr\bin\bash" -lc "set | grep -v '^PATH=' | awk -f .ci/sd4/msvcenv.awk > .ci/sd4/msvcenv"
       '@
       Set-Content -Path ".ci\sd4\get-msvcpath-into-msys2.bat" -Encoding Default -Value $Content
 
     # ------------------ SECTION END Write pre scripts
     - Write-Host "${esc}[0Ksection_end:$(Get-CurrentEpochSecs):write-pre-scripts${cr}${esc}[0K"
 
-    - msys64\usr\bin\bash -lc "sh .ci/sd4/run-checkout-code.sh CI_PROJECT_DIR '${env:CI_PROJECT_DIR}'"
-
-
+    - |
+      & "${env:MSYS2_BASEDIR}\msys64\usr\bin\bash" -lc "sh .ci/sd4/run-checkout-code.sh CI_PROJECT_DIR '${env:CI_PROJECT_DIR}'"
 
     # ------------------ SECTION BEGIN Detect Visual Studio
     - Write-Host "${esc}[0Ksection_start:$(Get-CurrentEpochSecs):detect-vs[collapsed=true]${cr}${esc}[0K"$TXT_SECTION"Detect Visual Studio"
@@ -2070,20 +2010,24 @@ variables:
           $allinstances | ConvertTo-Json -Depth 5
       }
     - .ci\sd4\config-vsstudio.ps1
-    - msys64\usr\bin\bash -lc "dos2unix .ci/sd4/vsenv.sh"
+    - |
+      & "${env:MSYS2_BASEDIR}\msys64\usr\bin\dos2unix" .ci/sd4/vsenv.sh
     - Get-Content .ci/sd4/vsenv.sh
     - Get-Content .ci/sd4/vsenv.ps1
 
       # Capture Visual Studio compiler environment
     - '& .ci\sd4\vsenv.ps1'
     - '& .ci\sd4\get-msvcpath-into-msys2.bat'
-    - msys64\usr\bin\bash -lc "cat .ci/sd4/msvcpath | tr -d '\r' | cygpath --path -f - | awk -f .ci/sd4/msvcpath.awk >> .ci/sd4/msvcenv"
-    - msys64\usr\bin\bash -lc "tail -n100 .ci/sd4/msvcpath .ci/sd4/msvcenv"
+    - |
+      & "${env:MSYS2_BASEDIR}\msys64\usr\bin\bash" -lc "cat .ci/sd4/msvcpath | tr -d '\r' | cygpath --path -f - | awk -f .ci/sd4/msvcpath.awk >> .ci/sd4/msvcenv"
+    - |
+      & "${env:MSYS2_BASEDIR}\msys64\usr\bin\bash" -lc "tail -n100 .ci/sd4/msvcpath .ci/sd4/msvcenv"
 
     # ------------------ SECTION END Detect Visual Studio
     - Write-Host "${esc}[0Ksection_end:$(Get-CurrentEpochSecs):detect-vs${cr}${esc}[0K"
 
-    - msys64\usr\bin\bash -lc "sh .ci/sd4/run-setup-dkml.sh CI_PROJECT_DIR '${env:CI_PROJECT_DIR}'"
+    - |
+      & "${env:MSYS2_BASEDIR}\msys64\usr\bin\bash" -lc "sh .ci/sd4/run-setup-dkml.sh CI_PROJECT_DIR '${env:CI_PROJECT_DIR}'"
   script:
     - 'Write-Host "Override the .gitlab-ci.yml configuration ...`n  build_win32:`n    script:`nto configure your Windows build."'
   after_script:
@@ -2241,12 +2185,13 @@ variables:
 
       '@
       Set-Content -Path ".ci\sd4\run-teardown-dkml.sh" -Encoding Unicode -Value $Content
-    - if (Test-Path -Path msys64\usr\bin\bash.exe) { msys64\usr\bin\bash -lc 'dos2unix .ci/sd4/run-teardown-dkml.sh' }
+    - if (Test-Path -Path "${env:MSYS2_BASEDIR}\msys64\usr\bin\dos2unix.exe") { & "${env:MSYS2_BASEDIR}\msys64\usr\bin\dos2unix" .ci/sd4/run-teardown-dkml.sh }
 
     # ------------------ SECTION END Write post scripts
     - Write-Host "${esc}[0Ksection_end:$(Get-CurrentEpochSecs):write-post-scripts${cr}${esc}[0K"
 
-    - if (Test-Path -Path msys64\usr\bin\bash.exe) { msys64\usr\bin\bash -lc "sh .ci/sd4/run-teardown-dkml.sh CI_PROJECT_DIR '${env:CI_PROJECT_DIR}'" }
+    - |
+      & "${env:MSYS2_BASEDIR}\msys64\usr\bin\bash" -lc "sh .ci/sd4/run-teardown-dkml.sh CI_PROJECT_DIR '${env:CI_PROJECT_DIR}'"
 
 # Advanced job: Typically you use .win32:setup-dkml, but sometimes you have to
 # work around GitLab bugs with declaring dependencies on parallel jobs, where
@@ -2266,7 +2211,6 @@ variables:
       msys2_system: 'MINGW32',
       msys2_packages: 'mingw-w64-i686-pkg-config',
       exe_ext: '.exe',
-      bootstrap_opam_version: '2.2.0-alpha-20221228',
       opam_abi: 'windows_x86',
       dkml_host_abi: 'windows_x86',
       opam_root: 'C:/o',
@@ -2287,7 +2231,6 @@ variables:
       msys2_system: 'CLANG64',
       msys2_packages: 'mingw-w64-clang-x86_64-pkg-config',
       exe_ext: '.exe',
-      bootstrap_opam_version: '2.2.0-alpha-20221228',
       opam_abi: 'windows_x86_64',
       dkml_host_abi: 'windows_x86_64',
       opam_root: 'C:/o',
@@ -2309,7 +2252,6 @@ variables:
         msys2_system: 'MINGW32',
         msys2_packages: 'mingw-w64-i686-pkg-config',
         exe_ext: '.exe',
-        bootstrap_opam_version: '2.2.0-alpha-20221228',
         opam_abi: 'windows_x86',
         dkml_host_abi: 'windows_x86',
         opam_root: 'C:/o',
@@ -2323,7 +2265,6 @@ variables:
         msys2_system: 'CLANG64',
         msys2_packages: 'mingw-w64-clang-x86_64-pkg-config',
         exe_ext: '.exe',
-        bootstrap_opam_version: '2.2.0-alpha-20221228',
         opam_abi: 'windows_x86_64',
         dkml_host_abi: 'windows_x86_64',
         opam_root: 'C:/o',
@@ -2342,13 +2283,12 @@ variables:
         abi_pattern: 'macos-darwin_all-silicon',
         no_gh: 'true',
         gl_image: 'macos-13-xcode-14',
-        bootstrap_opam_version: '2.2.0-alpha-20221228',
         dkml_host_abi: 'darwin_arm64',
         opam_root: '${CI_PROJECT_DIR}/.ci/o' },
         
     ]
   image: $gl_image
-  tags: [shared-macos-amd64]
+  tags: [saas-macos-medium-m1]
   extends: .common:setup-dkml
   before_script:
     - echo "Writing pre scripts ..."
@@ -2443,8 +2383,8 @@ variables:
                   TEMP=$(cygpath -am "$RUNNER_TEMP")
               else
                   # GitLab CI/CD or desktop
-                  install -d .ci/tmp
-                  TEMP=$(cygpath -am ".ci/tmp")
+                  install -d .ci/sd4/tmp
+                  TEMP=$(cygpath -am ".ci/sd4/tmp")
               fi
               export TEMP
           fi
@@ -2596,9 +2536,6 @@ variables:
       #!/bin/sh
       set -euf
 
-      # Constants
-      SHA512_DEVNULL='cf83e1357eefb8bdf1542850d66d8007d620e4050b5715dc83f4a921d36ce9ce47d0d13c5d85f2b0ff8318d2877eec2f63b931bd47417a81a538327af927da3e'
-
       setup_WORKSPACE_VARNAME=$1
       shift
       setup_WORKSPACE=$1
@@ -2655,12 +2592,17 @@ variables:
       dockcross_cli_image_args=
       if [ "${in_docker:-}" = "true" ] && [ -n "${dockcross_image:-}" ]; then
           echo "Doing docker build"
-          section_begin docker-build "Summary: docker build -t ${docker_fqin_preusername}dkml-workflows/dockcross"
+          section_begin docker-build "Summary: docker build --quiet --tag ${docker_fqin_preusername}dkml-workflows/dockcross"
 
           install -d .ci/sd4/docker-image
-          printf "FROM %s\nENV DEFAULT_DOCKCROSS_IMAGE %sdkml-workflows/dockcross:latest\nRUN if command -v apt-get; then apt-get install -y rsync %s && rm -rf /var/lib/apt/lists/*; fi\nRUN if command -v yum; then yum install -y rsync %s && yum clean all && rm -rf /var/cache/yum; fi" \
-              "${dockcross_image:-}" "${docker_fqin_preusername}" "${dockcross_packages_apt:-}" "${dockcross_packages_yum:-}" >.ci/sd4/docker-image/Dockerfile
-          docker build -t "${docker_fqin_preusername}dkml-workflows/dockcross:latest" .ci/sd4/docker-image
+          #   Since GitLab CI limits environment variables to 255 characters, if you need to exceed that there are five (5)
+          #   variations of `dockcross_packages_apt` and `dockcross_packages_yum` to spread the packages over.
+          printf "FROM %s\nENV DEFAULT_DOCKCROSS_IMAGE %sdkml-workflows/dockcross:latest\nRUN if command -v apt-get; then apt-get install -y rsync %s %s %s %s %s && rm -rf /var/lib/apt/lists/*; fi\nRUN if command -v yum; then yum install -y rsync %s %s %s %s %s && yum clean all && rm -rf /var/cache/yum; fi" \
+              "${dockcross_image:-}" "${docker_fqin_preusername}" \
+              "${dockcross_packages_apt:-}" "${dockcross_packages_apt2:-}" "${dockcross_packages_apt3:-}" "${dockcross_packages_apt4:-}" "${dockcross_packages_apt5:-}" \
+              "${dockcross_packages_yum:-}" "${dockcross_packages_yum2:-}" "${dockcross_packages_yum3:-}" "${dockcross_packages_yum4:-}" "${dockcross_packages_yum5:-}" \
+              >.ci/sd4/docker-image/Dockerfile
+          docker build --quiet --tag "${docker_fqin_preusername}dkml-workflows/dockcross:latest" .ci/sd4/docker-image
 
           # Save image id to re-use for all remaining dockcross invocations
           docker images --format "{{.ID}} {{.CreatedAt}}" | sort -rk 2 | awk 'NR==1{print $1}' | tee .ci/sd4/docker-image-id
@@ -2691,7 +2633,6 @@ variables:
       ------
       Inputs
       ------
-      FDOPEN_OPAMEXE_BOOTSTRAP=${FDOPEN_OPAMEXE_BOOTSTRAP:-}
       DISKUV_OPAM_REPOSITORY=${DISKUV_OPAM_REPOSITORY:-}
       DKML_COMPILER=${DKML_COMPILER:-}
       OCAML_COMPILER=${OCAML_COMPILER:-}
@@ -2703,18 +2644,18 @@ variables:
       DKML_HOME=${DKML_HOME:-}
       VERBOSE=${VERBOSE:-}
       .
-      -------------------
-      Generated Constants
-      -------------------
+      ----------------------
+      DkML Release Constants
+      ----------------------
       DKML_VERSION=$DKML_VERSION
       DEFAULT_DISKUV_OPAM_REPOSITORY_TAG=$DEFAULT_DISKUV_OPAM_REPOSITORY_TAG
       DEFAULT_DKML_COMPILER=$DEFAULT_DKML_COMPILER
+      BOOTSTRAP_OPAM_VERSION=$BOOTSTRAP_OPAM_VERSION
       .
       ------
       Matrix
       ------
       dkml_host_abi=$dkml_host_abi
-      bootstrap_opam_version=$bootstrap_opam_version
       abi_pattern=$abi_pattern
       opam_root=${opam_root}
       opam_root_cacheable=${opam_root_cacheable}
@@ -2755,122 +2696,26 @@ variables:
       section_end setup-info
 
       do_bootstrap() {
-          # Bootstrap from historical release
-          runit_BOOTSTRAPPED=0
+          install -d .ci/sd4/bs
+          cd .ci/sd4/bs
 
-          #   Bootstrap opam from fdopen (Windows)
-          if [ "$runit_BOOTSTRAPPED" = 0 ] && [ "${FDOPEN_OPAMEXE_BOOTSTRAP:-}" = "true" ]; then
-              if [ -e .ci/sd4/opam64/bin/opam.exe ] && [ -e .ci/sd4/opam64/bin/opam-installer.exe ]; then
-                  runit_BOOTSTRAPPED=1
+          if [ ! -e stamp ] || [ "$(cat stamp)" != "${BOOTSTRAP_OPAM_VERSION}${dkml_host_abi}" ]; then
+              echo 'Bootstrap opam from dkml-component-opam release ...'
+              if command -v curl > /dev/null 2> /dev/null; then
+                  curl -s -L -o opam.tar.gz "https://github.com/diskuv/dkml-component-opam/releases/download/${BOOTSTRAP_OPAM_VERSION}/dkml-component-staging-opam.tar.gz"
               else
-                  case "$dkml_host_abi" in
-                  windows_*)
-                      echo 'Bootstrap opam from fdopen (Windows) ...'
-                      install -d .ci/sd4/bs/bin
-                      wget -O "$setup_WORKSPACE"/.ci/sd4/opam64.tar.xz https://github.com/fdopen/opam-repository-mingw/releases/download/0.0.0.2/opam64.tar.xz
-
-                      # this stalls: tar xvCfJ "$setup_WORKSPACE"/.ci/sd4 "$setup_WORKSPACE"/.ci/sd4/opam64.tar.xz
-                      xz -v -d "$setup_WORKSPACE"/.ci/sd4/opam64.tar.xz
-                      tar xvCf .ci/sd4 .ci/sd4/opam64.tar
-
-                      rm -rf "$setup_WORKSPACE"/.ci/sd4/bs/bin/Opam.Runtime.amd64
-                      mv -v "$setup_WORKSPACE"/.ci/sd4/opam64/bin/Opam.Runtime.amd64/ "$setup_WORKSPACE"/.ci/sd4/bs/bin/
-                      mv -v "$setup_WORKSPACE"/.ci/sd4/opam64/bin/opam.exe "$setup_WORKSPACE"/.ci/sd4/bs/bin/
-                      mv -v "$setup_WORKSPACE"/.ci/sd4/opam64/bin/opam-installer.exe "$setup_WORKSPACE"/.ci/sd4/bs/bin/
-
-                      # diagnostics
-                      ldd "$setup_WORKSPACE"/.ci/sd4/bs/bin/opam.exe
-                      ldd "$setup_WORKSPACE"/.ci/sd4/bs/bin/opam-installer.exe
-
-                      runit_BOOTSTRAPPED=1
-                      ;;
-                  esac
+                  wget -q -O opam.tar.gz "https://github.com/diskuv/dkml-component-opam/releases/download/${BOOTSTRAP_OPAM_VERSION}/dkml-component-staging-opam.tar.gz"
               fi
+              tar tfz opam.tar.gz
+              tar xfz opam.tar.gz "./staging-files/${dkml_host_abi}/"
+              rm -rf bin/
+              mv "staging-files/${dkml_host_abi}/bin" .
+              rm -rf "${abi_pattern}"
+              printf "%s" "${BOOTSTRAP_OPAM_VERSION}${dkml_host_abi}" >stamp
           fi
 
-          #   Bootstrap from historical release
-          if [ "$runit_BOOTSTRAPPED" = 0 ] && [ "$bootstrap_opam_version" != "os" ]; then
-              install -d .ci/sd4/bs
-              cd .ci/sd4/bs
-
-              if [ ! -e version ] || [ "$(cat version)" != "$bootstrap_opam_version" ]; then
-                  echo 'Bootstrap opam from historical release (non-Windows; Windows non-fdopen) ...'
-                  if command -v curl > /dev/null 2> /dev/null; then
-                      curl -L -o opam.tar.gz "https://github.com/diskuv/dkml-component-opam/releases/download/v${bootstrap_opam_version}/dkml-component-staging-opam.tar.gz"
-                  else
-                      wget -O opam.tar.gz "https://github.com/diskuv/dkml-component-opam/releases/download/v${bootstrap_opam_version}/dkml-component-staging-opam.tar.gz"
-                  fi
-                  tar tvfz opam.tar.gz
-                  tar xfz opam.tar.gz "./staging-files/${dkml_host_abi}/"
-                  rm -rf bin/
-                  mv "staging-files/${dkml_host_abi}/bin" .
-                  rm -rf "${abi_pattern}"
-                  printf "%s" "${bootstrap_opam_version}" >version
-              fi
-
-              rm -f opam.tar.gz
-              cd ../../..
-
-              runit_BOOTSTRAPPED=1
-          fi
-
-          #   Bootstrap from package manager or GitHub ocaml/opam release
-          case "$runit_BOOTSTRAPPED,$bootstrap_opam_version,$dkml_host_abi" in
-          0,os,darwin_*)
-              if ! command -v opam; then
-                  echo 'Bootstrap opam from package manager (macOS) ...'
-                  brew install gpatch
-                  brew install opam
-              fi
-              runit_BOOTSTRAPPED=1
-              ;;
-          0,os,linux_x86)
-              if [ ! -x .ci/sd4/bs/bin/opam ]; then
-                  echo 'Bootstrap opam from GitHub ocaml/opam release (Linux x86) ...'
-                  install -d .ci/sd4/bs/bin
-                  if command -v curl > /dev/null 2> /dev/null; then
-                      curl -L -o .ci/sd4/bs/bin/opam.tmp https://github.com/ocaml/opam/releases/download/2.1.2/opam-2.1.2-i686-linux
-                  else
-                      wget -O .ci/sd4/bs/bin/opam.tmp https://github.com/ocaml/opam/releases/download/2.1.2/opam-2.1.2-i686-linux
-                  fi
-                  sha512_check=$(openssl sha512 2>&1 </dev/null | cut -f 2 -d ' ')
-                  if [ "$SHA512_DEVNULL" = "$sha512_check" ]; then
-                      sha512=$(openssl sha512 ".ci/sd4/bs/bin/opam.tmp" 2>/dev/null | cut -f 2 -d ' ')
-                      check="85a480d60e09a7d37fa0d0434ed97a3187434772ceb4e7e8faa5b06bc18423d004af3ad5849c7d35e72dca155103257fd6b1178872df8291583929eb8f884b6a"
-                      test "$sha512" = "$check"
-                      chmod +x .ci/sd4/bs/bin/opam.tmp
-                      mv .ci/sd4/bs/bin/opam.tmp .ci/sd4/bs/bin/opam
-                  else
-                      echo "openssl 512 option unsupported."
-                      exit 61
-                  fi
-              fi
-              runit_BOOTSTRAPPED=1
-              ;;
-          0,os,linux_x86_64)
-              if [ ! -x .ci/sd4/bs/bin/opam ]; then
-                  echo 'Bootstrap opam from GitHub ocaml/opam release (Linux x86_64) ...'
-                  install -d .ci/sd4/bs/bin
-                  if command -v curl > /dev/null 2> /dev/null; then
-                      curl -L -o .ci/sd4/bs/bin/opam.tmp https://github.com/ocaml/opam/releases/download/2.1.2/opam-2.1.2-x86_64-linux
-                  else
-                      wget -O .ci/sd4/bs/bin/opam.tmp https://github.com/ocaml/opam/releases/download/2.1.2/opam-2.1.2-x86_64-linux
-                  fi
-                  sha512_check=$(openssl sha512 2>&1 </dev/null | cut -f 2 -d ' ')
-                  if [ "$SHA512_DEVNULL" = "$sha512_check" ]; then
-                      sha512=$(openssl sha512 ".ci/sd4/bs/bin/opam.tmp" 2>/dev/null | cut -f 2 -d ' ')
-                      check="c0657ecbd4dc212587a4da70c5ff0402df95d148867be0e1eb1be8863a2851015f191437c3c99b7c2b153fcaa56cac99169c76ec94c5787750d7a59cd1fbb68b"
-                      test "$sha512" = "$check"
-                      chmod +x .ci/sd4/bs/bin/opam.tmp
-                      mv .ci/sd4/bs/bin/opam.tmp .ci/sd4/bs/bin/opam
-                  else
-                      echo "openssl 512 option unsupported."
-                      exit 61
-                  fi
-              fi
-              runit_BOOTSTRAPPED=1
-              ;;
-          esac
+          rm -f opam.tar.gz
+          cd ../../..
       }
       section_begin bootstrap-opam 'Bootstrap opam'
       do_bootstrap
@@ -2981,12 +2826,40 @@ variables:
               shift
           fi
 
+          # Handle: dockcross --args "-v X:Y --platform P" --image "..." --
+          # Confer: https://github.com/dockcross/dockcross/blob/96d87416f639af0204bdd42553e4b99315ca8476/imagefiles/dockcross#L97C1-L134
+          ARG_ARGS=
+          ARG_IMAGE="${dockcross_image_id}"
+          while [[ \$# != 0 ]]; do
+              case \$1 in
+                  --)
+                      shift
+                      break
+                      ;;
+                  --args|-a)
+                      ARG_ARGS="\$2"
+                      shift 2
+                      ;;
+                  --image|-i)
+                      ARG_IMAGE="\$2"
+                      shift 2
+                      ;;
+                  -*)
+                      echo Unknown option \"\$1\" >&2
+                      exit 67
+                      ;;
+                  *)
+                      break
+                      ;;
+              esac
+          done
+
           # Directly invoke entrypoint
           exec docker run --entrypoint /bin/bash \
               --rm \
-              \${ARGS:-} \
+              \${ARG_ARGS} \
                -v "\$HOST_PWD":/work \
-              "${dockcross_image_id}" ${dockcross_entrypoint} "\$@"
+              "\${ARG_IMAGE}" ${dockcross_entrypoint} "\$@"
       else
           HERE=\$(dirname "\$0")
           HERE=\$(cd "\$HERE" && pwd)
@@ -3019,23 +2892,6 @@ variables:
       # Setup Opam
 
       do_write_opam_scripts() {
-          case "${FDOPEN_OPAMEXE_BOOTSTRAP:-},$dkml_host_abi" in
-          true,windows_*)
-              # With fdopen's opam.exe, 'os-distribution = "cygwinports"'. But native Windows opam.exe has 'os-distribution = "win32"'.
-              # But on Windows we always want MSYS2 or native Windows libraries, not Cygwin. If cygwinports then
-              # code like https://github.com/ocaml/opam-repository/blob/08cbb8258bd4bf30cd6f307c958911a29d537b54/packages/conf-pkg-config/conf-pkg-config.2/opam#L36
-              # will fail. So always set 'os-distribution = "win32"' on Windows.
-              PATCH_OS_DISTRIBUTION_WIN32=true
-              # With fdopen's opam.exe, no 'exe = ".exe"' is set because Cygwin does not need file extensions.
-              # Native Windows requires a .exe extension.
-              PATCH_EXE_WIN32=true
-              ;;
-          *)
-              PATCH_OS_DISTRIBUTION_WIN32=false
-              PATCH_EXE_WIN32=false
-              ;;
-          esac
-
           # ---------------------
           # Empty opam repository
           # ---------------------
@@ -3076,8 +2932,7 @@ variables:
 
           # ---------------
           # Create Opam support scripts (not needed for all platforms)
-          #   The PATH to find opam must work internally in setup-dkml.yml (sd4/bs/bin) and
-          #   by consumers of setup-dkml.yml (sd4/opamexe)
+          #   The PATH to find opam must work internally in setup-dkml.yml (sd4/bs/bin)
           # ---------------
 
           USER_ID=$(id -u)
@@ -3088,7 +2943,7 @@ variables:
           case "${opam_root}" in
           /* | ?:*) # /a/b/c or C:\Windows
               validate_supports_docker() {
-                  echo "Docker only supported with relative paths for the opam root, not: ${opam_root}" >&2
+                  echo "Docker only supported with relative paths for the opam root, not: ${opam_root}"
                   exit 3
               }
               ;;
@@ -3099,11 +2954,9 @@ variables:
               cat >.ci/sd4/run-in-docker <<EOF
       #!/bin/sh
       set -euf
-      export PATH="/work/.ci/local/bin:/work/.ci/sd4/bs/bin:/work/.ci/sd4/opamexe:\$PATH"
+      export PATH="/work/.ci/local/bin:/work/.ci/sd4/bs/bin:\$PATH"
       export OPAMROOT=/work/${opam_root}
       export OPAMROOTISOK=1
-      if [ "${PATCH_OS_DISTRIBUTION_WIN32}" = true ]; then export OPAMVAR_os_distribution=win32; fi
-      if [ "${PATCH_EXE_WIN32}" = true ]; then export OPAMVAR_exe=.exe; fi
 
       # Reset environment so no conflicts with a parent Opam or OCaml system
       unset OPAM_SWITCH_PREFIX
@@ -3185,9 +3038,9 @@ variables:
               validate_supports_docker
 
               # Bundle for consumers of setup-dkml.yml
-              echo '__ run-in-docker __' >&2
-              cat .ci/sd4/run-in-docker >&2
-              echo '___________________' >&2
+              echo '__ run-in-docker __'
+              cat .ci/sd4/run-in-docker
+              echo '___________________'
               do_tar_rf .ci/sd4/dist/run-with-env.tar .ci/sd4/run-with-env .ci/sd4/run-in-docker .ci/sd4/edr
 
           elif [ "${in_docker:-}" = "true" ] && [ -n "${docker_runner:-}" ]; then
@@ -3202,12 +3055,12 @@ variables:
               validate_supports_docker
 
               # Bundle for consumers of setup-dkml.yml
-              echo '__ run-in-docker __' >&2
-              cat .ci/sd4/run-in-docker >&2
-              echo '________________________' >&2
-              echo '__ deescalate __' >&2
-              cat .ci/sd4/deescalate >&2
-              echo '________________' >&2
+              echo '__ run-in-docker __'
+              cat .ci/sd4/run-in-docker
+              echo '________________________'
+              echo '__ deescalate __'
+              cat .ci/sd4/deescalate
+              echo '________________'
               do_tar_rf .ci/sd4/dist/run-with-env.tar .ci/sd4/run-with-env .ci/sd4/run-in-docker .ci/sd4/deescalate
 
           else
@@ -3220,11 +3073,9 @@ variables:
       HERE=\$(cd "\$HERE" && pwd)
       PROJECT_DIR=\$(cd "\$HERE"/../.. && pwd)
 
-      export PATH="\${PROJECT_DIR}/.ci/local/bin:\${PROJECT_DIR}/.ci/sd4/bs/bin:\${PROJECT_DIR}/.ci/sd4/opamexe:\$PATH"
+      export PATH="\${PROJECT_DIR}/.ci/local/bin:\${PROJECT_DIR}/.ci/sd4/bs/bin:\$PATH"
       export OPAMROOT='${opam_root}'
       export OPAMROOTISOK=1
-      if [ "${PATCH_OS_DISTRIBUTION_WIN32}" = true ]; then export OPAMVAR_os_distribution=win32; fi
-      if [ "${PATCH_EXE_WIN32}" = true ]; then export OPAMVAR_exe=.exe; fi
 
       # Reset environment so no conflicts with a parent Opam or OCaml system
       unset OPAM_SWITCH_PREFIX
@@ -3258,9 +3109,9 @@ variables:
               do_tar_rf .ci/sd4/dist/run-with-env.tar .ci/sd4/run-with-env
 
           fi
-          echo '__ run-with-env __' >&2
-          cat .ci/sd4/run-with-env >&2
-          echo '__________________' >&2
+          echo '__ run-with-env __'
+          cat .ci/sd4/run-with-env
+          echo '__________________'
 
           # ------
           # cmdrun
@@ -3301,9 +3152,15 @@ variables:
           PATH="/usr/bin:\$PATH"
       fi
 
+      # Propagate important CI environment variables
+      export CI='${CI:-}'
+
       exec "\${PROJECT_DIR}/.ci/sd4/run-with-env" "\$@"
       EOF
           chmod +x .ci/sd4/opamrun/cmdrun
+          echo '__ cmdrun __'
+          cat .ci/sd4/opamrun/cmdrun
+          echo '____________'
 
           # -------
           # opamrun
@@ -3321,6 +3178,9 @@ variables:
       exec "\${PROJECT_DIR}/.ci/sd4/opamrun/cmdrun" opam "\$@"
       EOF
           chmod +x .ci/sd4/opamrun/opamrun
+          echo '__ opamrun __'
+          cat .ci/sd4/opamrun/opamrun
+          echo '_____________'
 
           # Bundle for consumers of setup-dkml.yml
           do_tar_rf .ci/sd4/dist/run-with-env.tar .ci/sd4/opamrun
@@ -3474,7 +3334,7 @@ variables:
       do_opam_repositories_update() {
           section_begin "opam-repo-update" "Update opam repositories"
           # The default repository may be the initial 'eor' (empty) repository
-          opamrun repository set-url default https://opam.ocaml.org --yes
+          opamrun repository set-url default git+https://github.com/ocaml/opam-repository.git --yes
           # Always set the `diskuv` repository url since it can change
           opamrun repository set-url diskuv "git+https://github.com/diskuv/diskuv-opam-repository.git#${DISKUV_OPAM_REPOSITORY:-$DEFAULT_DISKUV_OPAM_REPOSITORY_TAG}" --yes --dont-select
           # Update both `default` and `diskuv` Opam repositories
@@ -3500,6 +3360,7 @@ variables:
           opamrun pin add --switch "$do_pins_NAME"  --yes --no-action -k version camlp-streams "${PIN_CAMLP_STREAMS}"
           opamrun pin add --switch "$do_pins_NAME"  --yes --no-action -k version chrome-trace "${PIN_CHROME_TRACE}"
           opamrun pin add --switch "$do_pins_NAME"  --yes --no-action -k version cmdliner "${PIN_CMDLINER}"
+          opamrun pin add --switch "$do_pins_NAME"  --yes --no-action -k version conf-bash "${PIN_CONF_BASH}"
           opamrun pin add --switch "$do_pins_NAME"  --yes --no-action -k version conf-dkml-sys-opam "${PIN_CONF_DKML_SYS_OPAM}"
           opamrun pin add --switch "$do_pins_NAME"  --yes --no-action -k version conf-pkg-config "${PIN_CONF_PKG_CONFIG}"
           opamrun pin add --switch "$do_pins_NAME"  --yes --no-action -k version conf-sqlite3 "${PIN_CONF_SQLITE3}"
@@ -3570,7 +3431,9 @@ variables:
           opamrun pin add --switch "$do_pins_NAME"  --yes --no-action -k version fpath "${PIN_FPATH}"
           opamrun pin add --switch "$do_pins_NAME"  --yes --no-action -k version graphics "${PIN_GRAPHICS}"
           opamrun pin add --switch "$do_pins_NAME"  --yes --no-action -k version hex "${PIN_HEX}"
+          opamrun pin add --switch "$do_pins_NAME"  --yes --no-action -k version hmap "${PIN_HMAP}"
           opamrun pin add --switch "$do_pins_NAME"  --yes --no-action -k version integers "${PIN_INTEGERS}"
+          opamrun pin add --switch "$do_pins_NAME"  --yes --no-action -k version iostream "${PIN_IOSTREAM}"
           opamrun pin add --switch "$do_pins_NAME"  --yes --no-action -k version jane-street-headers "${PIN_JANE_STREET_HEADERS}"
           opamrun pin add --switch "$do_pins_NAME"  --yes --no-action -k version jingoo "${PIN_JINGOO}"
           opamrun pin add --switch "$do_pins_NAME"  --yes --no-action -k version jsonm "${PIN_JSONM}"
@@ -3584,6 +3447,7 @@ variables:
           opamrun pin add --switch "$do_pins_NAME"  --yes --no-action -k version mccs "${PIN_MCCS}"
           opamrun pin add --switch "$do_pins_NAME"  --yes --no-action -k version mdx "${PIN_MDX}"
           opamrun pin add --switch "$do_pins_NAME"  --yes --no-action -k version menhir "${PIN_MENHIR}"
+          opamrun pin add --switch "$do_pins_NAME"  --yes --no-action -k version menhirCST "${PIN_MENHIRCST}"
           opamrun pin add --switch "$do_pins_NAME"  --yes --no-action -k version menhirLib "${PIN_MENHIRLIB}"
           opamrun pin add --switch "$do_pins_NAME"  --yes --no-action -k version menhirSdk "${PIN_MENHIRSDK}"
           opamrun pin add --switch "$do_pins_NAME"  --yes --no-action -k version merlin-lib "${PIN_MERLIN_LIB}"
@@ -3608,6 +3472,7 @@ variables:
           opamrun pin add --switch "$do_pins_NAME"  --yes --no-action -k version odoc-parser "${PIN_ODOC_PARSER}"
           opamrun pin add --switch "$do_pins_NAME"  --yes --no-action -k version ordering "${PIN_ORDERING}"
           opamrun pin add --switch "$do_pins_NAME"  --yes --no-action -k version parsexp "${PIN_PARSEXP}"
+          opamrun pin add --switch "$do_pins_NAME"  --yes --no-action -k version posixat "${PIN_POSIXAT}"
           opamrun pin add --switch "$do_pins_NAME"  --yes --no-action -k version pp "${PIN_PP}"
           opamrun pin add --switch "$do_pins_NAME"  --yes --no-action -k version ppx_assert "${PIN_PPX_ASSERT}"
           opamrun pin add --switch "$do_pins_NAME"  --yes --no-action -k version ppx_base "${PIN_PPX_BASE}"
@@ -3638,6 +3503,7 @@ variables:
           opamrun pin add --switch "$do_pins_NAME"  --yes --no-action -k version sexplib "${PIN_SEXPLIB}"
           opamrun pin add --switch "$do_pins_NAME"  --yes --no-action -k version sexplib0 "${PIN_SEXPLIB0}"
           opamrun pin add --switch "$do_pins_NAME"  --yes --no-action -k version sha "${PIN_SHA}"
+          opamrun pin add --switch "$do_pins_NAME"  --yes --no-action -k version shexp "${PIN_SHEXP}"
           opamrun pin add --switch "$do_pins_NAME"  --yes --no-action -k version spawn "${PIN_SPAWN}"
           opamrun pin add --switch "$do_pins_NAME"  --yes --no-action -k version sqlite3 "${PIN_SQLITE3}"
           opamrun pin add --switch "$do_pins_NAME"  --yes --no-action -k version stdcompat "${PIN_STDCOMPAT}"
@@ -3645,6 +3511,7 @@ variables:
           opamrun pin add --switch "$do_pins_NAME"  --yes --no-action -k version stdlib-shims "${PIN_STDLIB_SHIMS}"
           opamrun pin add --switch "$do_pins_NAME"  --yes --no-action -k version stdune "${PIN_STDUNE}"
           opamrun pin add --switch "$do_pins_NAME"  --yes --no-action -k version time_now "${PIN_TIME_NOW}"
+          opamrun pin add --switch "$do_pins_NAME"  --yes --no-action -k version tiny_httpd "${PIN_TINY_HTTPD}"
           opamrun pin add --switch "$do_pins_NAME"  --yes --no-action -k version topkg "${PIN_TOPKG}"
           opamrun pin add --switch "$do_pins_NAME"  --yes --no-action -k version traverse "${PIN_TRAVERSE}"
           opamrun pin add --switch "$do_pins_NAME"  --yes --no-action -k version trie "${PIN_TRIE}"
@@ -3686,7 +3553,7 @@ variables:
               4.12.1) true ;;
               4.14.0) true ;;
               *)
-                  echo "OCAML_COMPILER version ${OCAML_COMPILER:-} is not supported" >&2
+                  echo "OCAML_COMPILER version ${OCAML_COMPILER:-} is not supported"
                   exit 109
                   ;;
               esac
@@ -3755,7 +3622,7 @@ variables:
                   echo "  [DKML_COMPILE_VS_CMAKEGENERATOR = \"$E_VS_CMAKEGENERATOR\"]" >>"$OPSC"
                   echo "  [DKML_HOST_ABI = \"${dkml_host_abi}\"]" >>"$OPSC"
                   echo ']' >>"$OPSC"
-                  cat "$OPSC" >&2 # print
+                  cat "$OPSC" # print
                   ;;
               *)
                   opamrun option --switch "$do_use_vsstudio_NAME" setenv= # reset
@@ -3829,7 +3696,7 @@ variables:
                       MSYS2_DIR_NATIVE=$(/usr/bin/cygpath -aw /)
                   else
                       # If we are already inside MSYS2 then MSYSTEM_PREFIX should be set. But cygpath should be there as well!!
-                      echo "FATAL: Could not locate MSYS2: there was no cygpath" >&2
+                      echo "FATAL: Could not locate MSYS2: there was no cygpath"
                       exit 3
                   fi
                   MSYS2_DIR_NATIVE_ESCAPED=$(printf "%s" "$MSYS2_DIR_NATIVE" | sed 's/\\/\\\\/g')
@@ -4037,7 +3904,7 @@ variables:
     #   git: For checkout-code.sh, and for opam
     #   wget or curl: For setup-dkml.sh, for do_bootstrap() of opam
     # Distros
-    #   docker:20.10.16 (uses /sbin/apk)
+    #   docker:25.0.3 (uses /sbin/apk)
     #   debian:stable-slim (uses /usr/bin/apt-get)
     - |
       if [ -x /sbin/apk ]; then
@@ -4139,8 +4006,8 @@ variables:
                   TEMP=$(cygpath -am "$RUNNER_TEMP")
               else
                   # GitLab CI/CD or desktop
-                  install -d .ci/tmp
-                  TEMP=$(cygpath -am ".ci/tmp")
+                  install -d .ci/sd4/tmp
+                  TEMP=$(cygpath -am ".ci/sd4/tmp")
               fi
               export TEMP
           fi
@@ -4292,9 +4159,6 @@ variables:
       #!/bin/sh
       set -euf
 
-      # Constants
-      SHA512_DEVNULL='cf83e1357eefb8bdf1542850d66d8007d620e4050b5715dc83f4a921d36ce9ce47d0d13c5d85f2b0ff8318d2877eec2f63b931bd47417a81a538327af927da3e'
-
       setup_WORKSPACE_VARNAME=$1
       shift
       setup_WORKSPACE=$1
@@ -4351,12 +4215,17 @@ variables:
       dockcross_cli_image_args=
       if [ "${in_docker:-}" = "true" ] && [ -n "${dockcross_image:-}" ]; then
           echo "Doing docker build"
-          section_begin docker-build "Summary: docker build -t ${docker_fqin_preusername}dkml-workflows/dockcross"
+          section_begin docker-build "Summary: docker build --quiet --tag ${docker_fqin_preusername}dkml-workflows/dockcross"
 
           install -d .ci/sd4/docker-image
-          printf "FROM %s\nENV DEFAULT_DOCKCROSS_IMAGE %sdkml-workflows/dockcross:latest\nRUN if command -v apt-get; then apt-get install -y rsync %s && rm -rf /var/lib/apt/lists/*; fi\nRUN if command -v yum; then yum install -y rsync %s && yum clean all && rm -rf /var/cache/yum; fi" \
-              "${dockcross_image:-}" "${docker_fqin_preusername}" "${dockcross_packages_apt:-}" "${dockcross_packages_yum:-}" >.ci/sd4/docker-image/Dockerfile
-          docker build -t "${docker_fqin_preusername}dkml-workflows/dockcross:latest" .ci/sd4/docker-image
+          #   Since GitLab CI limits environment variables to 255 characters, if you need to exceed that there are five (5)
+          #   variations of `dockcross_packages_apt` and `dockcross_packages_yum` to spread the packages over.
+          printf "FROM %s\nENV DEFAULT_DOCKCROSS_IMAGE %sdkml-workflows/dockcross:latest\nRUN if command -v apt-get; then apt-get install -y rsync %s %s %s %s %s && rm -rf /var/lib/apt/lists/*; fi\nRUN if command -v yum; then yum install -y rsync %s %s %s %s %s && yum clean all && rm -rf /var/cache/yum; fi" \
+              "${dockcross_image:-}" "${docker_fqin_preusername}" \
+              "${dockcross_packages_apt:-}" "${dockcross_packages_apt2:-}" "${dockcross_packages_apt3:-}" "${dockcross_packages_apt4:-}" "${dockcross_packages_apt5:-}" \
+              "${dockcross_packages_yum:-}" "${dockcross_packages_yum2:-}" "${dockcross_packages_yum3:-}" "${dockcross_packages_yum4:-}" "${dockcross_packages_yum5:-}" \
+              >.ci/sd4/docker-image/Dockerfile
+          docker build --quiet --tag "${docker_fqin_preusername}dkml-workflows/dockcross:latest" .ci/sd4/docker-image
 
           # Save image id to re-use for all remaining dockcross invocations
           docker images --format "{{.ID}} {{.CreatedAt}}" | sort -rk 2 | awk 'NR==1{print $1}' | tee .ci/sd4/docker-image-id
@@ -4387,7 +4256,6 @@ variables:
       ------
       Inputs
       ------
-      FDOPEN_OPAMEXE_BOOTSTRAP=${FDOPEN_OPAMEXE_BOOTSTRAP:-}
       DISKUV_OPAM_REPOSITORY=${DISKUV_OPAM_REPOSITORY:-}
       DKML_COMPILER=${DKML_COMPILER:-}
       OCAML_COMPILER=${OCAML_COMPILER:-}
@@ -4399,18 +4267,18 @@ variables:
       DKML_HOME=${DKML_HOME:-}
       VERBOSE=${VERBOSE:-}
       .
-      -------------------
-      Generated Constants
-      -------------------
+      ----------------------
+      DkML Release Constants
+      ----------------------
       DKML_VERSION=$DKML_VERSION
       DEFAULT_DISKUV_OPAM_REPOSITORY_TAG=$DEFAULT_DISKUV_OPAM_REPOSITORY_TAG
       DEFAULT_DKML_COMPILER=$DEFAULT_DKML_COMPILER
+      BOOTSTRAP_OPAM_VERSION=$BOOTSTRAP_OPAM_VERSION
       .
       ------
       Matrix
       ------
       dkml_host_abi=$dkml_host_abi
-      bootstrap_opam_version=$bootstrap_opam_version
       abi_pattern=$abi_pattern
       opam_root=${opam_root}
       opam_root_cacheable=${opam_root_cacheable}
@@ -4451,122 +4319,26 @@ variables:
       section_end setup-info
 
       do_bootstrap() {
-          # Bootstrap from historical release
-          runit_BOOTSTRAPPED=0
+          install -d .ci/sd4/bs
+          cd .ci/sd4/bs
 
-          #   Bootstrap opam from fdopen (Windows)
-          if [ "$runit_BOOTSTRAPPED" = 0 ] && [ "${FDOPEN_OPAMEXE_BOOTSTRAP:-}" = "true" ]; then
-              if [ -e .ci/sd4/opam64/bin/opam.exe ] && [ -e .ci/sd4/opam64/bin/opam-installer.exe ]; then
-                  runit_BOOTSTRAPPED=1
+          if [ ! -e stamp ] || [ "$(cat stamp)" != "${BOOTSTRAP_OPAM_VERSION}${dkml_host_abi}" ]; then
+              echo 'Bootstrap opam from dkml-component-opam release ...'
+              if command -v curl > /dev/null 2> /dev/null; then
+                  curl -s -L -o opam.tar.gz "https://github.com/diskuv/dkml-component-opam/releases/download/${BOOTSTRAP_OPAM_VERSION}/dkml-component-staging-opam.tar.gz"
               else
-                  case "$dkml_host_abi" in
-                  windows_*)
-                      echo 'Bootstrap opam from fdopen (Windows) ...'
-                      install -d .ci/sd4/bs/bin
-                      wget -O "$setup_WORKSPACE"/.ci/sd4/opam64.tar.xz https://github.com/fdopen/opam-repository-mingw/releases/download/0.0.0.2/opam64.tar.xz
-
-                      # this stalls: tar xvCfJ "$setup_WORKSPACE"/.ci/sd4 "$setup_WORKSPACE"/.ci/sd4/opam64.tar.xz
-                      xz -v -d "$setup_WORKSPACE"/.ci/sd4/opam64.tar.xz
-                      tar xvCf .ci/sd4 .ci/sd4/opam64.tar
-
-                      rm -rf "$setup_WORKSPACE"/.ci/sd4/bs/bin/Opam.Runtime.amd64
-                      mv -v "$setup_WORKSPACE"/.ci/sd4/opam64/bin/Opam.Runtime.amd64/ "$setup_WORKSPACE"/.ci/sd4/bs/bin/
-                      mv -v "$setup_WORKSPACE"/.ci/sd4/opam64/bin/opam.exe "$setup_WORKSPACE"/.ci/sd4/bs/bin/
-                      mv -v "$setup_WORKSPACE"/.ci/sd4/opam64/bin/opam-installer.exe "$setup_WORKSPACE"/.ci/sd4/bs/bin/
-
-                      # diagnostics
-                      ldd "$setup_WORKSPACE"/.ci/sd4/bs/bin/opam.exe
-                      ldd "$setup_WORKSPACE"/.ci/sd4/bs/bin/opam-installer.exe
-
-                      runit_BOOTSTRAPPED=1
-                      ;;
-                  esac
+                  wget -q -O opam.tar.gz "https://github.com/diskuv/dkml-component-opam/releases/download/${BOOTSTRAP_OPAM_VERSION}/dkml-component-staging-opam.tar.gz"
               fi
+              tar tfz opam.tar.gz
+              tar xfz opam.tar.gz "./staging-files/${dkml_host_abi}/"
+              rm -rf bin/
+              mv "staging-files/${dkml_host_abi}/bin" .
+              rm -rf "${abi_pattern}"
+              printf "%s" "${BOOTSTRAP_OPAM_VERSION}${dkml_host_abi}" >stamp
           fi
 
-          #   Bootstrap from historical release
-          if [ "$runit_BOOTSTRAPPED" = 0 ] && [ "$bootstrap_opam_version" != "os" ]; then
-              install -d .ci/sd4/bs
-              cd .ci/sd4/bs
-
-              if [ ! -e version ] || [ "$(cat version)" != "$bootstrap_opam_version" ]; then
-                  echo 'Bootstrap opam from historical release (non-Windows; Windows non-fdopen) ...'
-                  if command -v curl > /dev/null 2> /dev/null; then
-                      curl -L -o opam.tar.gz "https://github.com/diskuv/dkml-component-opam/releases/download/v${bootstrap_opam_version}/dkml-component-staging-opam.tar.gz"
-                  else
-                      wget -O opam.tar.gz "https://github.com/diskuv/dkml-component-opam/releases/download/v${bootstrap_opam_version}/dkml-component-staging-opam.tar.gz"
-                  fi
-                  tar tvfz opam.tar.gz
-                  tar xfz opam.tar.gz "./staging-files/${dkml_host_abi}/"
-                  rm -rf bin/
-                  mv "staging-files/${dkml_host_abi}/bin" .
-                  rm -rf "${abi_pattern}"
-                  printf "%s" "${bootstrap_opam_version}" >version
-              fi
-
-              rm -f opam.tar.gz
-              cd ../../..
-
-              runit_BOOTSTRAPPED=1
-          fi
-
-          #   Bootstrap from package manager or GitHub ocaml/opam release
-          case "$runit_BOOTSTRAPPED,$bootstrap_opam_version,$dkml_host_abi" in
-          0,os,darwin_*)
-              if ! command -v opam; then
-                  echo 'Bootstrap opam from package manager (macOS) ...'
-                  brew install gpatch
-                  brew install opam
-              fi
-              runit_BOOTSTRAPPED=1
-              ;;
-          0,os,linux_x86)
-              if [ ! -x .ci/sd4/bs/bin/opam ]; then
-                  echo 'Bootstrap opam from GitHub ocaml/opam release (Linux x86) ...'
-                  install -d .ci/sd4/bs/bin
-                  if command -v curl > /dev/null 2> /dev/null; then
-                      curl -L -o .ci/sd4/bs/bin/opam.tmp https://github.com/ocaml/opam/releases/download/2.1.2/opam-2.1.2-i686-linux
-                  else
-                      wget -O .ci/sd4/bs/bin/opam.tmp https://github.com/ocaml/opam/releases/download/2.1.2/opam-2.1.2-i686-linux
-                  fi
-                  sha512_check=$(openssl sha512 2>&1 </dev/null | cut -f 2 -d ' ')
-                  if [ "$SHA512_DEVNULL" = "$sha512_check" ]; then
-                      sha512=$(openssl sha512 ".ci/sd4/bs/bin/opam.tmp" 2>/dev/null | cut -f 2 -d ' ')
-                      check="85a480d60e09a7d37fa0d0434ed97a3187434772ceb4e7e8faa5b06bc18423d004af3ad5849c7d35e72dca155103257fd6b1178872df8291583929eb8f884b6a"
-                      test "$sha512" = "$check"
-                      chmod +x .ci/sd4/bs/bin/opam.tmp
-                      mv .ci/sd4/bs/bin/opam.tmp .ci/sd4/bs/bin/opam
-                  else
-                      echo "openssl 512 option unsupported."
-                      exit 61
-                  fi
-              fi
-              runit_BOOTSTRAPPED=1
-              ;;
-          0,os,linux_x86_64)
-              if [ ! -x .ci/sd4/bs/bin/opam ]; then
-                  echo 'Bootstrap opam from GitHub ocaml/opam release (Linux x86_64) ...'
-                  install -d .ci/sd4/bs/bin
-                  if command -v curl > /dev/null 2> /dev/null; then
-                      curl -L -o .ci/sd4/bs/bin/opam.tmp https://github.com/ocaml/opam/releases/download/2.1.2/opam-2.1.2-x86_64-linux
-                  else
-                      wget -O .ci/sd4/bs/bin/opam.tmp https://github.com/ocaml/opam/releases/download/2.1.2/opam-2.1.2-x86_64-linux
-                  fi
-                  sha512_check=$(openssl sha512 2>&1 </dev/null | cut -f 2 -d ' ')
-                  if [ "$SHA512_DEVNULL" = "$sha512_check" ]; then
-                      sha512=$(openssl sha512 ".ci/sd4/bs/bin/opam.tmp" 2>/dev/null | cut -f 2 -d ' ')
-                      check="c0657ecbd4dc212587a4da70c5ff0402df95d148867be0e1eb1be8863a2851015f191437c3c99b7c2b153fcaa56cac99169c76ec94c5787750d7a59cd1fbb68b"
-                      test "$sha512" = "$check"
-                      chmod +x .ci/sd4/bs/bin/opam.tmp
-                      mv .ci/sd4/bs/bin/opam.tmp .ci/sd4/bs/bin/opam
-                  else
-                      echo "openssl 512 option unsupported."
-                      exit 61
-                  fi
-              fi
-              runit_BOOTSTRAPPED=1
-              ;;
-          esac
+          rm -f opam.tar.gz
+          cd ../../..
       }
       section_begin bootstrap-opam 'Bootstrap opam'
       do_bootstrap
@@ -4677,12 +4449,40 @@ variables:
               shift
           fi
 
+          # Handle: dockcross --args "-v X:Y --platform P" --image "..." --
+          # Confer: https://github.com/dockcross/dockcross/blob/96d87416f639af0204bdd42553e4b99315ca8476/imagefiles/dockcross#L97C1-L134
+          ARG_ARGS=
+          ARG_IMAGE="${dockcross_image_id}"
+          while [[ \$# != 0 ]]; do
+              case \$1 in
+                  --)
+                      shift
+                      break
+                      ;;
+                  --args|-a)
+                      ARG_ARGS="\$2"
+                      shift 2
+                      ;;
+                  --image|-i)
+                      ARG_IMAGE="\$2"
+                      shift 2
+                      ;;
+                  -*)
+                      echo Unknown option \"\$1\" >&2
+                      exit 67
+                      ;;
+                  *)
+                      break
+                      ;;
+              esac
+          done
+
           # Directly invoke entrypoint
           exec docker run --entrypoint /bin/bash \
               --rm \
-              \${ARGS:-} \
+              \${ARG_ARGS} \
                -v "\$HOST_PWD":/work \
-              "${dockcross_image_id}" ${dockcross_entrypoint} "\$@"
+              "\${ARG_IMAGE}" ${dockcross_entrypoint} "\$@"
       else
           HERE=\$(dirname "\$0")
           HERE=\$(cd "\$HERE" && pwd)
@@ -4715,23 +4515,6 @@ variables:
       # Setup Opam
 
       do_write_opam_scripts() {
-          case "${FDOPEN_OPAMEXE_BOOTSTRAP:-},$dkml_host_abi" in
-          true,windows_*)
-              # With fdopen's opam.exe, 'os-distribution = "cygwinports"'. But native Windows opam.exe has 'os-distribution = "win32"'.
-              # But on Windows we always want MSYS2 or native Windows libraries, not Cygwin. If cygwinports then
-              # code like https://github.com/ocaml/opam-repository/blob/08cbb8258bd4bf30cd6f307c958911a29d537b54/packages/conf-pkg-config/conf-pkg-config.2/opam#L36
-              # will fail. So always set 'os-distribution = "win32"' on Windows.
-              PATCH_OS_DISTRIBUTION_WIN32=true
-              # With fdopen's opam.exe, no 'exe = ".exe"' is set because Cygwin does not need file extensions.
-              # Native Windows requires a .exe extension.
-              PATCH_EXE_WIN32=true
-              ;;
-          *)
-              PATCH_OS_DISTRIBUTION_WIN32=false
-              PATCH_EXE_WIN32=false
-              ;;
-          esac
-
           # ---------------------
           # Empty opam repository
           # ---------------------
@@ -4772,8 +4555,7 @@ variables:
 
           # ---------------
           # Create Opam support scripts (not needed for all platforms)
-          #   The PATH to find opam must work internally in setup-dkml.yml (sd4/bs/bin) and
-          #   by consumers of setup-dkml.yml (sd4/opamexe)
+          #   The PATH to find opam must work internally in setup-dkml.yml (sd4/bs/bin)
           # ---------------
 
           USER_ID=$(id -u)
@@ -4784,7 +4566,7 @@ variables:
           case "${opam_root}" in
           /* | ?:*) # /a/b/c or C:\Windows
               validate_supports_docker() {
-                  echo "Docker only supported with relative paths for the opam root, not: ${opam_root}" >&2
+                  echo "Docker only supported with relative paths for the opam root, not: ${opam_root}"
                   exit 3
               }
               ;;
@@ -4795,11 +4577,9 @@ variables:
               cat >.ci/sd4/run-in-docker <<EOF
       #!/bin/sh
       set -euf
-      export PATH="/work/.ci/local/bin:/work/.ci/sd4/bs/bin:/work/.ci/sd4/opamexe:\$PATH"
+      export PATH="/work/.ci/local/bin:/work/.ci/sd4/bs/bin:\$PATH"
       export OPAMROOT=/work/${opam_root}
       export OPAMROOTISOK=1
-      if [ "${PATCH_OS_DISTRIBUTION_WIN32}" = true ]; then export OPAMVAR_os_distribution=win32; fi
-      if [ "${PATCH_EXE_WIN32}" = true ]; then export OPAMVAR_exe=.exe; fi
 
       # Reset environment so no conflicts with a parent Opam or OCaml system
       unset OPAM_SWITCH_PREFIX
@@ -4881,9 +4661,9 @@ variables:
               validate_supports_docker
 
               # Bundle for consumers of setup-dkml.yml
-              echo '__ run-in-docker __' >&2
-              cat .ci/sd4/run-in-docker >&2
-              echo '___________________' >&2
+              echo '__ run-in-docker __'
+              cat .ci/sd4/run-in-docker
+              echo '___________________'
               do_tar_rf .ci/sd4/dist/run-with-env.tar .ci/sd4/run-with-env .ci/sd4/run-in-docker .ci/sd4/edr
 
           elif [ "${in_docker:-}" = "true" ] && [ -n "${docker_runner:-}" ]; then
@@ -4898,12 +4678,12 @@ variables:
               validate_supports_docker
 
               # Bundle for consumers of setup-dkml.yml
-              echo '__ run-in-docker __' >&2
-              cat .ci/sd4/run-in-docker >&2
-              echo '________________________' >&2
-              echo '__ deescalate __' >&2
-              cat .ci/sd4/deescalate >&2
-              echo '________________' >&2
+              echo '__ run-in-docker __'
+              cat .ci/sd4/run-in-docker
+              echo '________________________'
+              echo '__ deescalate __'
+              cat .ci/sd4/deescalate
+              echo '________________'
               do_tar_rf .ci/sd4/dist/run-with-env.tar .ci/sd4/run-with-env .ci/sd4/run-in-docker .ci/sd4/deescalate
 
           else
@@ -4916,11 +4696,9 @@ variables:
       HERE=\$(cd "\$HERE" && pwd)
       PROJECT_DIR=\$(cd "\$HERE"/../.. && pwd)
 
-      export PATH="\${PROJECT_DIR}/.ci/local/bin:\${PROJECT_DIR}/.ci/sd4/bs/bin:\${PROJECT_DIR}/.ci/sd4/opamexe:\$PATH"
+      export PATH="\${PROJECT_DIR}/.ci/local/bin:\${PROJECT_DIR}/.ci/sd4/bs/bin:\$PATH"
       export OPAMROOT='${opam_root}'
       export OPAMROOTISOK=1
-      if [ "${PATCH_OS_DISTRIBUTION_WIN32}" = true ]; then export OPAMVAR_os_distribution=win32; fi
-      if [ "${PATCH_EXE_WIN32}" = true ]; then export OPAMVAR_exe=.exe; fi
 
       # Reset environment so no conflicts with a parent Opam or OCaml system
       unset OPAM_SWITCH_PREFIX
@@ -4954,9 +4732,9 @@ variables:
               do_tar_rf .ci/sd4/dist/run-with-env.tar .ci/sd4/run-with-env
 
           fi
-          echo '__ run-with-env __' >&2
-          cat .ci/sd4/run-with-env >&2
-          echo '__________________' >&2
+          echo '__ run-with-env __'
+          cat .ci/sd4/run-with-env
+          echo '__________________'
 
           # ------
           # cmdrun
@@ -4997,9 +4775,15 @@ variables:
           PATH="/usr/bin:\$PATH"
       fi
 
+      # Propagate important CI environment variables
+      export CI='${CI:-}'
+
       exec "\${PROJECT_DIR}/.ci/sd4/run-with-env" "\$@"
       EOF
           chmod +x .ci/sd4/opamrun/cmdrun
+          echo '__ cmdrun __'
+          cat .ci/sd4/opamrun/cmdrun
+          echo '____________'
 
           # -------
           # opamrun
@@ -5017,6 +4801,9 @@ variables:
       exec "\${PROJECT_DIR}/.ci/sd4/opamrun/cmdrun" opam "\$@"
       EOF
           chmod +x .ci/sd4/opamrun/opamrun
+          echo '__ opamrun __'
+          cat .ci/sd4/opamrun/opamrun
+          echo '_____________'
 
           # Bundle for consumers of setup-dkml.yml
           do_tar_rf .ci/sd4/dist/run-with-env.tar .ci/sd4/opamrun
@@ -5170,7 +4957,7 @@ variables:
       do_opam_repositories_update() {
           section_begin "opam-repo-update" "Update opam repositories"
           # The default repository may be the initial 'eor' (empty) repository
-          opamrun repository set-url default https://opam.ocaml.org --yes
+          opamrun repository set-url default git+https://github.com/ocaml/opam-repository.git --yes
           # Always set the `diskuv` repository url since it can change
           opamrun repository set-url diskuv "git+https://github.com/diskuv/diskuv-opam-repository.git#${DISKUV_OPAM_REPOSITORY:-$DEFAULT_DISKUV_OPAM_REPOSITORY_TAG}" --yes --dont-select
           # Update both `default` and `diskuv` Opam repositories
@@ -5196,6 +4983,7 @@ variables:
           opamrun pin add --switch "$do_pins_NAME"  --yes --no-action -k version camlp-streams "${PIN_CAMLP_STREAMS}"
           opamrun pin add --switch "$do_pins_NAME"  --yes --no-action -k version chrome-trace "${PIN_CHROME_TRACE}"
           opamrun pin add --switch "$do_pins_NAME"  --yes --no-action -k version cmdliner "${PIN_CMDLINER}"
+          opamrun pin add --switch "$do_pins_NAME"  --yes --no-action -k version conf-bash "${PIN_CONF_BASH}"
           opamrun pin add --switch "$do_pins_NAME"  --yes --no-action -k version conf-dkml-sys-opam "${PIN_CONF_DKML_SYS_OPAM}"
           opamrun pin add --switch "$do_pins_NAME"  --yes --no-action -k version conf-pkg-config "${PIN_CONF_PKG_CONFIG}"
           opamrun pin add --switch "$do_pins_NAME"  --yes --no-action -k version conf-sqlite3 "${PIN_CONF_SQLITE3}"
@@ -5266,7 +5054,9 @@ variables:
           opamrun pin add --switch "$do_pins_NAME"  --yes --no-action -k version fpath "${PIN_FPATH}"
           opamrun pin add --switch "$do_pins_NAME"  --yes --no-action -k version graphics "${PIN_GRAPHICS}"
           opamrun pin add --switch "$do_pins_NAME"  --yes --no-action -k version hex "${PIN_HEX}"
+          opamrun pin add --switch "$do_pins_NAME"  --yes --no-action -k version hmap "${PIN_HMAP}"
           opamrun pin add --switch "$do_pins_NAME"  --yes --no-action -k version integers "${PIN_INTEGERS}"
+          opamrun pin add --switch "$do_pins_NAME"  --yes --no-action -k version iostream "${PIN_IOSTREAM}"
           opamrun pin add --switch "$do_pins_NAME"  --yes --no-action -k version jane-street-headers "${PIN_JANE_STREET_HEADERS}"
           opamrun pin add --switch "$do_pins_NAME"  --yes --no-action -k version jingoo "${PIN_JINGOO}"
           opamrun pin add --switch "$do_pins_NAME"  --yes --no-action -k version jsonm "${PIN_JSONM}"
@@ -5280,6 +5070,7 @@ variables:
           opamrun pin add --switch "$do_pins_NAME"  --yes --no-action -k version mccs "${PIN_MCCS}"
           opamrun pin add --switch "$do_pins_NAME"  --yes --no-action -k version mdx "${PIN_MDX}"
           opamrun pin add --switch "$do_pins_NAME"  --yes --no-action -k version menhir "${PIN_MENHIR}"
+          opamrun pin add --switch "$do_pins_NAME"  --yes --no-action -k version menhirCST "${PIN_MENHIRCST}"
           opamrun pin add --switch "$do_pins_NAME"  --yes --no-action -k version menhirLib "${PIN_MENHIRLIB}"
           opamrun pin add --switch "$do_pins_NAME"  --yes --no-action -k version menhirSdk "${PIN_MENHIRSDK}"
           opamrun pin add --switch "$do_pins_NAME"  --yes --no-action -k version merlin-lib "${PIN_MERLIN_LIB}"
@@ -5304,6 +5095,7 @@ variables:
           opamrun pin add --switch "$do_pins_NAME"  --yes --no-action -k version odoc-parser "${PIN_ODOC_PARSER}"
           opamrun pin add --switch "$do_pins_NAME"  --yes --no-action -k version ordering "${PIN_ORDERING}"
           opamrun pin add --switch "$do_pins_NAME"  --yes --no-action -k version parsexp "${PIN_PARSEXP}"
+          opamrun pin add --switch "$do_pins_NAME"  --yes --no-action -k version posixat "${PIN_POSIXAT}"
           opamrun pin add --switch "$do_pins_NAME"  --yes --no-action -k version pp "${PIN_PP}"
           opamrun pin add --switch "$do_pins_NAME"  --yes --no-action -k version ppx_assert "${PIN_PPX_ASSERT}"
           opamrun pin add --switch "$do_pins_NAME"  --yes --no-action -k version ppx_base "${PIN_PPX_BASE}"
@@ -5334,6 +5126,7 @@ variables:
           opamrun pin add --switch "$do_pins_NAME"  --yes --no-action -k version sexplib "${PIN_SEXPLIB}"
           opamrun pin add --switch "$do_pins_NAME"  --yes --no-action -k version sexplib0 "${PIN_SEXPLIB0}"
           opamrun pin add --switch "$do_pins_NAME"  --yes --no-action -k version sha "${PIN_SHA}"
+          opamrun pin add --switch "$do_pins_NAME"  --yes --no-action -k version shexp "${PIN_SHEXP}"
           opamrun pin add --switch "$do_pins_NAME"  --yes --no-action -k version spawn "${PIN_SPAWN}"
           opamrun pin add --switch "$do_pins_NAME"  --yes --no-action -k version sqlite3 "${PIN_SQLITE3}"
           opamrun pin add --switch "$do_pins_NAME"  --yes --no-action -k version stdcompat "${PIN_STDCOMPAT}"
@@ -5341,6 +5134,7 @@ variables:
           opamrun pin add --switch "$do_pins_NAME"  --yes --no-action -k version stdlib-shims "${PIN_STDLIB_SHIMS}"
           opamrun pin add --switch "$do_pins_NAME"  --yes --no-action -k version stdune "${PIN_STDUNE}"
           opamrun pin add --switch "$do_pins_NAME"  --yes --no-action -k version time_now "${PIN_TIME_NOW}"
+          opamrun pin add --switch "$do_pins_NAME"  --yes --no-action -k version tiny_httpd "${PIN_TINY_HTTPD}"
           opamrun pin add --switch "$do_pins_NAME"  --yes --no-action -k version topkg "${PIN_TOPKG}"
           opamrun pin add --switch "$do_pins_NAME"  --yes --no-action -k version traverse "${PIN_TRAVERSE}"
           opamrun pin add --switch "$do_pins_NAME"  --yes --no-action -k version trie "${PIN_TRIE}"
@@ -5382,7 +5176,7 @@ variables:
               4.12.1) true ;;
               4.14.0) true ;;
               *)
-                  echo "OCAML_COMPILER version ${OCAML_COMPILER:-} is not supported" >&2
+                  echo "OCAML_COMPILER version ${OCAML_COMPILER:-} is not supported"
                   exit 109
                   ;;
               esac
@@ -5451,7 +5245,7 @@ variables:
                   echo "  [DKML_COMPILE_VS_CMAKEGENERATOR = \"$E_VS_CMAKEGENERATOR\"]" >>"$OPSC"
                   echo "  [DKML_HOST_ABI = \"${dkml_host_abi}\"]" >>"$OPSC"
                   echo ']' >>"$OPSC"
-                  cat "$OPSC" >&2 # print
+                  cat "$OPSC" # print
                   ;;
               *)
                   opamrun option --switch "$do_use_vsstudio_NAME" setenv= # reset
@@ -5525,7 +5319,7 @@ variables:
                       MSYS2_DIR_NATIVE=$(/usr/bin/cygpath -aw /)
                   else
                       # If we are already inside MSYS2 then MSYSTEM_PREFIX should be set. But cygpath should be there as well!!
-                      echo "FATAL: Could not locate MSYS2: there was no cygpath" >&2
+                      echo "FATAL: Could not locate MSYS2: there was no cygpath"
                       exit 3
                   fi
                   MSYS2_DIR_NATIVE_ESCAPED=$(printf "%s" "$MSYS2_DIR_NATIVE" | sed 's/\\/\\\\/g')
@@ -5728,7 +5522,6 @@ variables:
       { dkml_host_os: 'linux',
         opam_root_cacheable: '.ci/o',
         abi_pattern: 'manylinux2014-linux_x86',
-        bootstrap_opam_version: '2.2.0-alpha-20221228',
         dkml_host_abi: 'linux_x86',
         opam_root: '.ci/o',
         in_docker: 'true',
@@ -5738,7 +5531,6 @@ variables:
       { dkml_host_os: 'linux',
         opam_root_cacheable: '.ci/o',
         abi_pattern: 'manylinux2014-linux_x86_64',
-        bootstrap_opam_version: '2.2.0-alpha-20221228',
         dkml_host_abi: 'linux_x86_64',
         opam_root: '.ci/o',
         dockcross_image: 'dockcross/manylinux2014-x64',
@@ -5764,17 +5556,17 @@ variables:
   #           -e DOCKER_TLS_CERTDIR=/certs \
   #           -v gitlab-dind-certs-ca:/certs/ca \
   #           -v gitlab-dind-certs-client:/certs/client \
-  #       	  docker:20.10.16-dind
+  #       	  docker:25.0.3-dind
   #
   #       docker logs gitlab-dind
   #
   #       docker run -it --rm --network gitlab-dind-network \
   #           -e DOCKER_TLS_CERTDIR=/certs \
   #           -v gitlab-dind-certs-client:/certs/client:ro \
-  #           docker:20.10.16
-  image: docker:20.10.16
+  #           docker:25.0.3
+  image: docker:25.0.3
   services:
-    - docker:20.10.16-dind
+    - docker:25.0.3-dind
   variables:
     # Whether to use the ManyLinux Docker container.
     # Yes; we have Docker-in-Docker to support exactly this.
