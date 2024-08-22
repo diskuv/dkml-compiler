@@ -8,7 +8,7 @@ opam-version: "2.0"
 # - 4.14.0~prerel69 (legacy format) < 4.14.0~v0.4.0 < 4.14.0~v0.4.1~prerel69 < 4.14.0~v0.4.1
 # Confer: Version Ordering in https://opam.ocaml.org/doc/Manual.html#Package-Formulas
 version: "4.14.2~v2.1.2"
-synopsis: "OCaml cross-compiler and libraries from the DkML distribution."
+synopsis: "OCaml cross-compiler and libraries from the DkML distribution"
 description:
   """The DkML distribution of the OCaml bytecode and native compiler, Stdlib and the other OCaml libraries (str, unix, bigarray, etc.).
 
