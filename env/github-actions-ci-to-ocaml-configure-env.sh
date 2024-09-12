@@ -122,7 +122,8 @@ esac
 find "$TOOLCHAIN/bin" -type f -name '*-clang' >&2   # Show API versions for debugging
 find "$TOOLCHAIN/bin" -type f -name '*-as' >&2      # More debugging
 #       Dump of Android NDK r23 flags. And -g3 and -g for debugging.
-_android_cflags="-fPIE -fPIC -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security -fexceptions -g3 -g  -fno-limit-debug-info"
+_android_common_flags="-fPIE -fPIC -no-canonical-prefixes -Wformat -Werror=format-security -g3 -g"
+_android_cflags="$_android_common_flags -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -D_FORTIFY_SOURCE=2 -fexceptions -fno-limit-debug-info"
 AR="$TOOLCHAIN/bin/llvm-ar"
 autodetect_compiler_CC="$TOOLCHAIN/bin/${TOOLCHAIN_NAME_CLANG}${MIN_API}-clang"
 ! [ -x "$autodetect_compiler_CC" ] && printf "FATAL: No clang compiler at %s\n" "$autodetect_compiler_CC" >&2 && exit 107
@@ -145,10 +146,10 @@ autodetect_compiler_LDFLAGS=
 #
 #       But ... NDK 24 dropped the GNU AS assembler:
 #           https://github.com/android/ndk/wiki/Changelog-r24
-#       and the clang alternative might not work with OCaml:
 #           https://android.googlesource.com/platform/ndk/+/master/docs/ClangMigration.md#assembler-issues
-#       Regardless, if NDK 24+ just use the ASPP.
-ASPP="$TOOLCHAIN/bin/clang --target=${LLVM_TRIPLE}${MIN_API} $_android_cflags -c"
+#
+#       So when missing the GNU AS assembler (ie. NDK 24+) just use the ASPP.
+ASPP="$TOOLCHAIN/bin/clang --target=${LLVM_TRIPLE}${MIN_API} $_android_common_flags -c"
 autodetect_compiler_AS="$TOOLCHAIN/bin/$TOOLCHAIN_NAME_AS-as"
 if [ ! -x "$autodetect_compiler_AS" ]; then
     autodetect_compiler_AS="$ASPP"
