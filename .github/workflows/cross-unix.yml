@@ -68,6 +68,14 @@ jobs:
         restore-keys: |
           ${{ runner.os }}-dist-${{ env.cache-name }}-
 
+    # ================ Diagnostics ==========
+    - name: Android diagnostics
+      run: |
+        set -x
+        [ -d /usr/local/lib/android/sdk/ndk/ ] && ls /usr/local/lib/android/sdk/ndk/
+        [ -d /usr/local/lib/android/sdk/ndk/27.1.12297006/toolchains/llvm/prebuilt/ ] && ls /usr/local/lib/android/sdk/ndk/27.1.12297006/toolchains/llvm/prebuilt/
+        [ -d /usr/local/lib/android/sdk/ndk/27.1.12297006/toolchains/llvm/prebuilt/linux-x86_64/bin/ ] && ls /usr/local/lib/android/sdk/ndk/27.1.12297006/toolchains/llvm/prebuilt/linux-x86_64/bin/
+
     # ================ Setup ================
     - name: Install compiler on Debian/Ubuntu
       if: ${{ startsWith(matrix.os, 'debian-') || startsWith(matrix.os, 'ubuntu-') }}
