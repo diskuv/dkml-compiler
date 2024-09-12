@@ -72,9 +72,9 @@ jobs:
     - name: Android diagnostics
       run: |
         set -x
-        [ -d /usr/local/lib/android/sdk/ndk/ ] && ls /usr/local/lib/android/sdk/ndk/
-        [ -d /usr/local/lib/android/sdk/ndk/27.1.12297006/toolchains/llvm/prebuilt/ ] && ls /usr/local/lib/android/sdk/ndk/27.1.12297006/toolchains/llvm/prebuilt/
-        [ -d /usr/local/lib/android/sdk/ndk/27.1.12297006/toolchains/llvm/prebuilt/linux-x86_64/bin/ ] && ls /usr/local/lib/android/sdk/ndk/27.1.12297006/toolchains/llvm/prebuilt/linux-x86_64/bin/
+        if [ -d "$ANDROID_NDK_LATEST_HOME" ]; then ls "$ANDROID_NDK_LATEST_HOME"; fi
+        if [ -d "$ANDROID_NDK_LATEST_HOME/toolchains/llvm/prebuilt/" ]; then ls "$ANDROID_NDK_LATEST_HOME/toolchains/llvm/prebuilt/"; fi
+        if [ -d "$ANDROID_NDK_LATEST_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/" ]; then ls "$ANDROID_NDK_LATEST_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/"; fi
 
     # ================ Setup ================
     - name: Install compiler on Debian/Ubuntu
