@@ -15,28 +15,61 @@
 # limitations under the License.
 # ----------------------------
 #
-# On entry the following non-exported environment variables will be available:
-# * DKML_TARGET_ABI. If the ABIs are not android_* then this script will exit with failure.
-# * DKMLDIR
-#
-# As well, on entry the Android Studio environment variables defined at
+# On entry the Android Studio environment variables defined at
 # https://github.com/actions/virtual-environments/blob/996eae034625eaa62cc81ce29faa04e11fa3e6cc/images/linux/Ubuntu2004-Readme.md#environment-variables-3
 # or
 # https://github.com/actions/virtual-environments/blob/996eae034625eaa62cc81ce29faa04e11fa3e6cc/images/macos/macos-11-Readme.md#environment-variables-2
 # must be available.
 #
-# DKML's autodetect_compiler() function will have already set common ./configure variables as
-# described in https://www.gnu.org/software/make/manual/html_node/Implicit-Variables.html. However
-# the variables are ignored and overwritten by this script.
+# ----------------------------
 #
-# On exit the variables needed for github.com/ocaml/ocaml/configure will be set and exported.
+# Used by DkML's autodetect_compiler() function to customize compiler
+# variables before the variables are written to a launcher script.
+#
+# On entry autodetect_compiler() will have populated some or all of the
+# following non-export variables:
+#
+# * DKML_TARGET_ABI. Always available
+# * autodetect_compiler_CC
+# * autodetect_compiler_CFLAGS
+# * autodetect_compiler_CXX
+# * autodetect_compiler_CFLAGS
+# * autodetect_compiler_CXXFLAGS
+# * autodetect_compiler_AS
+# * autodetect_compiler_ASFLAGS
+# * autodetect_compiler_LD
+# * autodetect_compiler_LDFLAGS
+# * autodetect_compiler_LDLIBS
+# * autodetect_compiler_MSVS_NAME
+# * autodetect_compiler_MSVS_INC. Separated by semicolons. No trailing semicolon.
+# * autodetect_compiler_MSVS_LIB. Separated by semicolons. No trailing semicolon.
+# * autodetect_compiler_MSVS_PATH. Unix PATH format with no trailing colon.
+#
+# Generally the variables conform to the description in
+# https://www.gnu.org/software/make/manual/html_node/Implicit-Variables.html.
+# The compiler will have been chosen from:
+# a) find the compiler selected/validated in the DkML installation
+#    (Windows) or on first-use (Unix)
+# b) the specific architecture that has been given in DKML_TARGET_ABI
+#
+# Also the function `export_binding NAME VALUE` will be available for you to
+# add custom variables (like AR, NM, OBJDUMP, etc.) to the launcher script.
+#
+# On exit the `autodetect_compiler_VARNAME` variables may be changed by this
+# script. They will then be used for github.com/ocaml/ocaml/configure.
+#
+# That is, you influence variables written to the launcher script by either:
+# a) Changing autodetect_compiler_CFLAGS (etc.). Those values will be named as
+#    CFLAGS (etc.) in the launcher script
+# b) Explicitly adding names and values with `export_binding`
 
 # -----------------------------------------------------
 
 set -euf
 
-# shellcheck disable=SC1091
-. "$DKMLDIR"/vendor/drc/unix/crossplatform-functions.sh
+# Microsoft cl.exe and link.exe use forward slash (/) options; do not ever let MSYS2 interpret
+# the forward slash and try to convert it to a Windows path.
+disambiguate_filesystem_paths
 
 # Get BUILDHOST_ARCH
 autodetect_buildhost_arch
@@ -53,7 +86,7 @@ fi
 #   Minimum API
 #       The default is 23 but you can override it with the environment
 #       variable ANDROID_API.
-API=${ANDROID_API:-23}
+MIN_API=${ANDROID_API:-23}
 
 #   Toolchain
 case "$BUILDHOST_ARCH" in
@@ -76,7 +109,7 @@ case "$DKML_TARGET_ABI" in
     android_x86)      TOOLCHAIN_NAME_CLANG=i686-linux-android ;       TOOLCHAIN_NAME_AS=i686-linux-android ;    LLVM_TRIPLE=i686-none-linux-android;;
     android_x86_64)   TOOLCHAIN_NAME_CLANG=x86_64-linux-android ;     TOOLCHAIN_NAME_AS=x86_64-linux-android ;  LLVM_TRIPLE=x86_64-none-linux-android ;;
     *)
-        printf "FATAL: The DKML_TARGET_ABI must be an DKML Android ABI, not %s\n" "$DKML_TARGET_ABI" >&2
+        printf "FATAL: The DKML_TARGET_ABI must be an DkML Android ABI, not %s\n" "$DKML_TARGET_ABI" >&2
         exit 107
         ;;
 esac
@@ -87,23 +120,45 @@ find "$TOOLCHAIN/bin" -type f -name '*-clang' # Show API versions for debugging
 find "$TOOLCHAIN/bin" -type f -name '*-as'    # More debugging
 #       Dump of Android NDK r23 flags. And -g3 and -g for debugging.
 _android_cflags="-fPIE -fPIC -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security -fexceptions -g3 -g  -fno-limit-debug-info"
-export AR="$TOOLCHAIN/bin/llvm-ar"
-export CC="$TOOLCHAIN/bin/$TOOLCHAIN_NAME_CLANG$API-clang"
-! [ -x "$CC" ] && printf "FATAL: No clang compiler at %s\n" "$CC" >&2 && exit 107
-export LD="$TOOLCHAIN/bin/ld"
-export DIRECT_LD="$LD"
-export RANLIB="$TOOLCHAIN/bin/llvm-ranlib"
-export STRIP="$TOOLCHAIN/bin/llvm-strip"
-export NM="$TOOLCHAIN/bin/llvm-nm"
-export OBJDUMP="$TOOLCHAIN/bin/llvm-objdump"
-export CFLAGS="$_android_cflags"
-export LDFLAGS=
+AR="$TOOLCHAIN/bin/llvm-ar"
+autodetect_compiler_CC="$TOOLCHAIN/bin/${TOOLCHAIN_NAME_CLANG}${MIN_API}-clang"
+! [ -x "$autodetect_compiler_CC" ] && printf "FATAL: No clang compiler at %s\n" "$autodetect_compiler_CC" >&2 && exit 107
+autodetect_compiler_LD="$TOOLCHAIN/bin/ld"
+DIRECT_LD="$autodetect_compiler_LD"
+RANLIB="$TOOLCHAIN/bin/llvm-ranlib"
+STRIP="$TOOLCHAIN/bin/llvm-strip"
+NM="$TOOLCHAIN/bin/llvm-nm"
+OBJDUMP="$TOOLCHAIN/bin/llvm-objdump"
+#   shellcheck disable=SC2034
+autodetect_compiler_CFLAGS="$_android_cflags"
+#   shellcheck disable=SC2034
+autodetect_compiler_LDFLAGS=
 #       Android NDK comes with a) a Clang compiler and b) a GNU AS assembler and c) sometimes a YASM assembler
 #       in its bin folder
 #       (ex. ndk/23.1.7779620/toolchains/llvm/prebuilt/linux-x86_64/bin/{clang,arm-linux-androideabi-as,yasm}).
 #
 #       The GNU AS assembler (https://sourceware.org/binutils/docs/as/index.html) does not support preprocessing
 #       so it cannot be used as the `ASPP` ./configure variable.
-export AS="$TOOLCHAIN/bin/$TOOLCHAIN_NAME_AS-as"
-! [ -x "$AS" ] && printf "FATAL: No assembler at %s\n" "$AS" >&2 && exit 107
-export ASPP="$TOOLCHAIN/bin/clang --target=$LLVM_TRIPLE$API $_android_cflags -c"
+#
+#       But ... NDK 24 dropped the GNU AS assembler:
+#           https://github.com/android/ndk/wiki/Changelog-r24
+#       and the clang alternative might not work with OCaml:
+#           https://android.googlesource.com/platform/ndk/+/master/docs/ClangMigration.md#assembler-issues
+#       Regardless, if NDK 24+ just use the ASPP.
+ASPP="$TOOLCHAIN/bin/clang --target=$LLVM_TRIPLE$API $_android_cflags -c"
+autodetect_compiler_AS="$TOOLCHAIN/bin/$TOOLCHAIN_NAME_AS-as"
+if [ ! -x "$autodetect_compiler_AS" ]; then
+    autodetect_compiler_AS="$ASPP"
+fi
+
+# Bind non-standard variables into launcher scripts
+export_binding ASPP "$ASPP"
+export_binding DIRECT_LD "${DIRECT_LD:-}"
+export_binding AR "${AR:-}"
+export_binding STRIP "${STRIP:-}"
+export_binding RANLIB "${RANLIB:-}"
+export_binding NM "${NM:-}"
+export_binding OBJDUMP "${OBJDUMP:-}"
+
+# The [export_binding] and the [autodetect_compiler_*] variables will be read by
+# dkml-runtime-common's crossplatform-functions.sh:autodetect_compiler_write_output()
