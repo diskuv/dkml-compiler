@@ -37,6 +37,9 @@ env:
   # diskuv-opam-repository bump-repository.cmake) without CI failing.
   DISKUV_OPAM_REPOSITORY: "main"
   PRIMARY_SWITCH_SKIP_INSTALL: "true"
+  # Use the main branch of dkml-runtime-common since dkml-compiler has
+  # a strict version constraint on dkml-runtime-common.
+  PIN_DKML_RUNTIME_COMMON: "main"
 
 on:
   # trigger on any push
