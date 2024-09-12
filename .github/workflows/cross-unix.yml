@@ -47,8 +47,6 @@ jobs:
     name: ${{ matrix.name }}
     env:
       BUILD_TYPE: Debug
-      #   OCaml 4.12.1
-      OCAML_GIT_REV: 46c947827ec2f6d6da7fe5e195ae5dda1d2ad0c5
       DKML_BUILD_TRACE: ON
       DIST_DIR: dist/${{ matrix.targetabi }}-on-${{ matrix.hostabi }}
     runs-on: ${{ matrix.os }}
@@ -84,13 +82,16 @@ jobs:
     # ================ Build ================
     - name: Setup ${{ env.BUILD_TYPE }} OCaml
       run: |
+        set -x
+        OCAMLVER=$(cat src/version.ocaml.txt | tr -d '\r')
         src/r-c-ocaml-1-setup.sh \
           -d . \
           -t "${{ env.DIST_DIR }}" \
-          -v "${{ env.OCAML_GIT_REV }}" \
+          -v "$OCAMLVER" \
           -e "${{ matrix.hostabi }}" \
           -a "${{ matrix.targetabi }}=${{ matrix.ocamlconfigure }}" \
           -k env/standard-compiler-env-to-ocaml-configure-env.sh
+        set +x
 
     - name: Build ${{ env.BUILD_TYPE }} OCaml for host ${{ matrix.hostabi }} ABI
       run: cd "${{ env.DIST_DIR }}" && share/dkml/repro/100co/vendor/dkml-compiler/src/r-c-ocaml-2-build_host-noargs.sh
