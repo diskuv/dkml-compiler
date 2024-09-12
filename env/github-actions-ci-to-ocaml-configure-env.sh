@@ -145,7 +145,7 @@ autodetect_compiler_LDFLAGS=
 #       and the clang alternative might not work with OCaml:
 #           https://android.googlesource.com/platform/ndk/+/master/docs/ClangMigration.md#assembler-issues
 #       Regardless, if NDK 24+ just use the ASPP.
-ASPP="$TOOLCHAIN/bin/clang --target=$LLVM_TRIPLE$API $_android_cflags -c"
+ASPP="$TOOLCHAIN/bin/clang --target=${LLVM_TRIPLE}${MIN_API} $_android_cflags -c"
 autodetect_compiler_AS="$TOOLCHAIN/bin/$TOOLCHAIN_NAME_AS-as"
 if [ ! -x "$autodetect_compiler_AS" ]; then
     autodetect_compiler_AS="$ASPP"
