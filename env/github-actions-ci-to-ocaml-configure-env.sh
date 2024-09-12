@@ -23,8 +23,11 @@
 #
 # ----------------------------
 #
-# Used by DkML's autodetect_compiler() function to customize compiler
-# variables before the variables are written to a launcher script.
+# This is a --post-transform script used by DkML's autodetect_compiler()
+# function to customize compiler variables before the variables are written
+# to a launcher script.
+#
+# Anything printed on stdout is ignored as of DkML 2.1.4.
 #
 # On entry autodetect_compiler() will have populated some or all of the
 # following non-export variables:
@@ -116,8 +119,8 @@ esac
 
 #   Exports necessary for OCaml's ./configure
 #       https://developer.android.com/ndk/guides/other_build_systems#autoconf
-find "$TOOLCHAIN/bin" -type f -name '*-clang' # Show API versions for debugging
-find "$TOOLCHAIN/bin" -type f -name '*-as'    # More debugging
+find "$TOOLCHAIN/bin" -type f -name '*-clang' >&2   # Show API versions for debugging
+find "$TOOLCHAIN/bin" -type f -name '*-as' >&2      # More debugging
 #       Dump of Android NDK r23 flags. And -g3 and -g for debugging.
 _android_cflags="-fPIE -fPIC -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security -fexceptions -g3 -g  -fno-limit-debug-info"
 AR="$TOOLCHAIN/bin/llvm-ar"
