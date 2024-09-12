@@ -32,3 +32,6 @@ stage/
 /.opam/
 #   Desktop testing on Windows uses MSYS2.
 /msys64/
+
+# ci: cross-unix.yml
+/vendor/drc/
