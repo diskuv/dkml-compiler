@@ -93,11 +93,11 @@ jobs:
     steps:
       - name: Checkout code
         if: matrix.enabled
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Cache DkML compilers code
         if: matrix.enabled
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         id: cache-dkml-compilers
         with:
           path: .ci/dkml-compilers
@@ -144,7 +144,7 @@ jobs:
         run: sh ci/build-test.sh
 
       # Capture the dist/ folder for the release job
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.dkml_host_abi }}
           path: dist/
@@ -176,9 +176,9 @@ jobs:
       - build
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
-      - uses: actions/download-artifact@v3
+      - uses: actions/download-artifact@v4
         with:
           path: dist
 
@@ -186,7 +186,7 @@ jobs:
         run: ci/prepare-release.sh
 
       - name: Release (only when Git tag pushed)
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         if: startsWith(github.ref, 'refs/tags/')
         with:
           files: |
