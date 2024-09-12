@@ -82,15 +82,15 @@ jobs:
     # ================ Build ================
     - name: Setup ${{ env.BUILD_TYPE }} OCaml
       run: |
-        set -x
         OCAMLVER=$(cat src/version.ocaml.txt | tr -d '\r')
         SEMVER=$(cat src/version.semver.txt | tr -d '\r')
 
         # Create a DKMLDIR
         printf 'dkml_root_version=%s\\n' "$SEMVER" | sed 's/[0-9.]*~v//; s/~/-/' > .dkmlroot
-        install -d vendor
-        git -C vendor clone https://github.com/diskuv/dkml-runtime-common.git drc
+        install -d vendor && git -C vendor clone https://github.com/diskuv/dkml-runtime-common.git drc
+        install -d vendor/dkml-compiler && cp -rp src vendor/dkml-compiler/
 
+        set -x
         src/r-c-ocaml-1-setup.sh \
           -d . \
           -t "${{ env.DIST_DIR }}" \
