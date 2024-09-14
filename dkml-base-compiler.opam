@@ -7,7 +7,7 @@ opam-version: "2.0"
 # Examples:
 # - 4.14.0~prerel69 (legacy format) < 4.14.0~v0.4.0 < 4.14.0~v0.4.1~prerel69 < 4.14.0~v0.4.1
 # Confer: Version Ordering in https://opam.ocaml.org/doc/Manual.html#Package-Formulas
-version: "4.14.2~v2.1.3"
+version: "4.14.2~v2.1.4"
 synopsis: "OCaml cross-compiler and libraries from the DkML distribution"
 description:
   """The DkML distribution of the OCaml bytecode and native compiler, Stdlib and the other OCaml libraries (str, unix, bigarray, etc.).
@@ -37,7 +37,7 @@ depends: [
   "base-bigarray" {post}
   "base-threads" {post}
 
-  "dkml-runtime-common" {= "2.1.3"}
+  "dkml-runtime-common" {= "2.1.4"}
 
   "dkml-host-abi"
   ("dkml-host-abi-darwin_arm64" |
