@@ -24,6 +24,7 @@
 # On entry autodetect_compiler() will have populated some or all of the
 # following non-export variables:
 #
+# * DKML_HOST_ABI. Always available
 # * DKML_TARGET_ABI. Always available
 # * autodetect_compiler_CC
 # * autodetect_compiler_CFLAGS
@@ -305,7 +306,7 @@ elif [ -n "${autodetect_compiler_AS:-}" ]; then
       # The GNU AS assembler (https://sourceware.org/binutils/docs/as/index.html) does not support preprocessing
       # so it cannot be used as the `ASPP` ./configure variable.
       #
-      # TODO: If no -as GNU assembler see "NDK 24+" comments in github-actions-ci-to-ocaml-configure-env.sh
+      # TODO: If no -as GNU assembler see "NDK 24+" comments in android-ndk-env-to-ocaml-configure-env.sh
 
       # XCode (macOS/iOS)
       # -----------------

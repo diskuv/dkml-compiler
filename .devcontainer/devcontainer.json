@@ -1,0 +1,16 @@
+{
+    "build": { "dockerfile": "Dockerfile" },
+    "customizations": {
+        "vscode": {
+            "extensions": [
+                "ocamllabs.ocaml-platform"
+            ]
+        }
+    }
+    // "runArgs": [
+    //     // linux/386 can build android_arm32v7a
+    //     // linux/amd64 can build android_x86_64, android_arm64v8a
+    //     // linux/arm64 can build android_x86_64, android_arm64v8a
+    //     "--platform", "linux/386"
+    // ]
+}

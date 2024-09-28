@@ -12,6 +12,6 @@ install -d "$targetdir"
 
 install \
     env/META \
-    env/github-actions-ci-to-ocaml-configure-env.sh \
+    env/android-ndk-env-to-ocaml-configure-env.sh \
     env/standard-compiler-env-to-ocaml-configure-env.sh \
     "$targetdir"

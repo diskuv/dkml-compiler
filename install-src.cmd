@@ -79,7 +79,7 @@ IF %ERRORLEVEL% NEQ 0 (ECHO Error during COPY &EXIT /B 1)
 
 
 IF NOT EXIST "%TARGETDIR%\env" MKDIR %TARGETDIR%\env
-COPY /Y /B env\github-actions-ci-to-ocaml-configure-env.sh %TARGETDIR%\env
+COPY /Y /B env\android-ndk-env-to-ocaml-configure-env.sh %TARGETDIR%\env
 IF %ERRORLEVEL% NEQ 0 (ECHO Error during COPY &EXIT /B 1)
 COPY /Y /B env\standard-compiler-env-to-ocaml-configure-env.sh %TARGETDIR%\env
 IF %ERRORLEVEL% NEQ 0 (ECHO Error during COPY &EXIT /B 1)

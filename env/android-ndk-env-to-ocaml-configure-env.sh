@@ -15,11 +15,17 @@
 # limitations under the License.
 # ----------------------------
 #
-# On entry the Android Studio environment variables defined at
+# ANDROID NDK
+# -----------
+#
+# On entry the Android NDK environment variables defined at
 # https://github.com/actions/virtual-environments/blob/996eae034625eaa62cc81ce29faa04e11fa3e6cc/images/linux/Ubuntu2004-Readme.md#environment-variables-3
 # or
 # https://github.com/actions/virtual-environments/blob/996eae034625eaa62cc81ce29faa04e11fa3e6cc/images/macos/macos-11-Readme.md#environment-variables-2
-# must be available.
+# must be available. You DO NOT need to be on GitHub Actions to use this script.
+#
+# In particular:
+# - ANDROID_NDK_LATEST_HOME
 #
 # ----------------------------
 #
@@ -32,6 +38,7 @@
 # On entry autodetect_compiler() will have populated some or all of the
 # following non-export variables:
 #
+# * DKML_HOST_ABI. Always available
 # * DKML_TARGET_ABI. Always available
 # * autodetect_compiler_CC
 # * autodetect_compiler_CFLAGS
@@ -74,9 +81,6 @@ set -euf
 # the forward slash and try to convert it to a Windows path.
 disambiguate_filesystem_paths
 
-# Get BUILDHOST_ARCH
-autodetect_buildhost_arch
-
 # -----------------------------------------------------
 
 # Documentation: https://developer.android.com/ndk/guides/other_build_systems
@@ -92,12 +96,13 @@ fi
 MIN_API=${ANDROID_API:-23}
 
 #   Toolchain
-case "$BUILDHOST_ARCH" in
+case "$DKML_HOST_ABI" in
     # HOST_TAG in https://developer.android.com/ndk/guides/other_build_systems#overview
     darwin_x86_64|darwin_arm64) HOST_TAG=darwin-x86_64 ;;
-    linux_x86_64)               HOST_TAG=linux-x86_64 ;;
+    #   NDK 27 and probably earlier do not bundle prebuilt/linux-x86 into their NDK.
+    linux_x86|linux_x86_64)     HOST_TAG=linux-x86_64 ;;
     *)
-        printf "FATAL: The build host architecture %s does not have a Android Studio toolchain\n" "$BUILDHOST_ARCH"
+        printf "FATAL: The host ABI %s does not have a Android Studio toolchain\n" "$DKML_HOST_ABI"
         exit 107
 esac
 TOOLCHAIN=$ANDROID_NDK_LATEST_HOME/toolchains/llvm/prebuilt/$HOST_TAG

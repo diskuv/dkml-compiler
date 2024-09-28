@@ -53,6 +53,6 @@ install -v \
 
 install -d "$targetdir/env"
 install -v \
-    env/github-actions-ci-to-ocaml-configure-env.sh \
+    env/android-ndk-env-to-ocaml-configure-env.sh \
     env/standard-compiler-env-to-ocaml-configure-env.sh \
     "$targetdir/env"

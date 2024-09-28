@@ -306,7 +306,7 @@ build_world() {
   # applied.
   install -d "$build_world_BUILD_ROOT"/support
   #   Exports OCAML_HOST_TRIPLET and DKML_TARGET_SYSROOT
-  DKML_TARGET_ABI="$build_world_TARGET_ABI" \
+  DKML_HOST_ABI="$DKMLHOSTABI" DKML_TARGET_ABI="$build_world_TARGET_ABI" \
     autodetect_compiler \
     --post-transform "$build_world_POSTTRANSFORM" \
     "$build_world_BUILD_ROOT"/support/with-target-c-compiler.sh

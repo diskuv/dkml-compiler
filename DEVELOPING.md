@@ -97,3 +97,65 @@ env DKML_REPRODUCIBLE_SYSTEM_BREWFILE=./Brewfile \
     share/dkml/repro/100co/vendor/dkml-compiler/src/r-c-ocaml-3-build_cross-noargs.sh 2>&1 | \
     tee build_cross.log)
 ```
+
+### Android
+
+Your host machine will need Docker. Windows as a host is fine.
+
+FIRST, pick one of the following (for Windows prepend `dk Ml.Use --` to the `bash` line):
+
+1. Use the Dev Container inside Visual Studio Code.
+2. ```sh
+   $ docker run --rm -it debian:stable-slim
+   root@12b9f953b5fd:/# apt update
+   root@12b9f953b5fd:/# apt-get -q install -y --no-install-recommends build-essential gcc-multilib g++-multilib git
+   ```
+
+3. ```sh
+   $ docker run --rm dockcross/manylinux2014-x86  > ./dockcross-manylinux2014-x86
+   $ bash dockcross-manylinux2014-x86 --args "--platform linux/386 -it" bash
+   [you:/work] main(+1/-0)+ ±
+   ```
+
+4. ```sh
+   $ docker run --rm dockcross/manylinux2014-x64  > ./dockcross-manylinux2014-x64
+   $ dk Ml.Use -- bash dockcross-manylinux2014-x64 --args "--platform linux/amd64 -it" bash
+   [you:/work] main(+1/-0)+ ±
+   ```
+
+5. ```sh
+   $ docker run --rm dockcross/manylinux_2_28-x64  > ./dockcross-manylinux_2_28-x64
+   $ dk Ml.Use -- bash dockcross-manylinux_2_28-x64 --args "--platform linux/amd64 -it" bash
+   [you:/work] main(+1/-0)+ ±
+   ```
+
+SECOND, run the following (change the first line to `android_arm32v7a`, `android_x86_64` or `android_arm64v8a`):
+
+```sh
+TARGETABI=android_arm32v7a # You have to set this correctly
+OCAMLVER=$(cat src/version.ocaml.txt | tr -d '\r')
+SEMVER=$(cat src/version.semver.txt | tr -d '\r')
+case $(uname -m) in
+    i686) HOSTABI=linux_x86 ;;
+    *) HOSTABI=linux_x86_64 ;;
+esac
+case "$TARGETABI" in
+    android_arm32v7a) HOSTABI=linux_x86 ;;
+    *) HOSTABI=linux_x86_64 ;;
+esac
+
+# Create a DKMLDIR
+printf 'dkml_root_version=%s\\n' "$SEMVER" | sed 's/[0-9.]*~v//; s/~/-/' > .dkmlroot
+install -d vendor && test -d vendor/drc || git -C vendor clone https://github.com/diskuv/dkml-runtime-common.git drc
+rm -rf vendor/dkml-compiler && install -d vendor/dkml-compiler && cp -rp src vendor/dkml-compiler/
+
+src/r-c-ocaml-1-setup.sh \
+    -d . \
+    -t "dist-$TARGETABI-on-$HOSTABI" \
+    -v "$OCAMLVER" \
+    -e "$HOSTABI" \
+    -a "$TARGETABI=env/android-ndk-env-to-ocaml-configure-env.sh" \
+    -k env/standard-compiler-env-to-ocaml-configure-env.sh
+(cd "dist-$TARGETABI-on-$HOSTABI" && share/dkml/repro/100co/vendor/dkml-compiler/src/r-c-ocaml-2-build_host-noargs.sh)
+(cd "dist-$TARGETABI-on-$HOSTABI" && env DKML_BUILD_TRACE=ON share/dkml/repro/100co/vendor/dkml-compiler/src/r-c-ocaml-3-build_cross-noargs.sh)
+```
