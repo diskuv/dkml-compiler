@@ -466,7 +466,7 @@ set_ocaml_version_stems() {
         4.*) VERSION_STEMS+=("4") ;;
         5.*) VERSION_STEMS+=("5") ;;
         *)
-            echo "FATAL: Unsupported stemming case 1 for version $set_version_stems_VER" >&2
+            echo "FATAL: Unsupported stemming case 1 for ocaml version $set_version_stems_VER" >&2
             exit 123
             ;;
     esac
@@ -480,7 +480,7 @@ set_ocaml_version_stems() {
         5.1.*) VERSION_STEMS+=("5_1") ;;
         5.2.*) VERSION_STEMS+=("5_2") ;;
         *)
-            echo "FATAL: Unsupported stemming case 2 for version $set_version_stems_VER" >&2
+            echo "FATAL: Unsupported stemming case 2 for ocaml version $set_version_stems_VER" >&2
             exit 123
             ;;
     esac
@@ -488,8 +488,9 @@ set_ocaml_version_stems() {
         4.14.0) VERSION_STEMS+=("4_14_0") ;;
         4.14.1) VERSION_STEMS+=("4_14_1") ;;
         4.14.2) VERSION_STEMS+=("4_14_2") ;;
+        4.14.3) VERSION_STEMS+=("4_14_3") ;;
         *)
-            echo "FATAL: Unsupported stemming case 3 for version $set_version_stems_VER" >&2
+            echo "FATAL: Unsupported stemming case 3 for ocaml version $set_version_stems_VER" >&2
             exit 123
             ;;
     esac
@@ -500,12 +501,20 @@ set_flexdll_version_stems() {
     VERSION_STEMS=()
     case "$set_version_stems_VER" in
         0.*) VERSION_STEMS+=("0") ;;
+        *)
+            echo "FATAL: Unsupported stemming case 1 for flexdll version $set_version_stems_VER" >&2
+            exit 123
+            ;;
     esac
     case "$set_version_stems_VER" in
         0.39) VERSION_STEMS+=("0_39") ;;
-    esac
-    case "$set_version_stems_VER" in
         0.42) VERSION_STEMS+=("0_42") ;;
+        0.43) VERSION_STEMS+=("0_43") ;;
+        0.44) VERSION_STEMS+=("0_44") ;;
+        *)
+            echo "FATAL: Unsupported stemming case 2 for flexdll version $set_version_stems_VER" >&2
+            exit 123
+            ;;
     esac
 }
 # Sets the array PATCHES and accumulates dkmldir/ relative paths, including
@@ -799,9 +808,9 @@ BUILD_HOST_ARGS+=( -s "$_OCAMLVER" )
 BUILD_CROSS_ARGS+=( -s "$_OCAMLVER" )
 
 # Find and apply patches to the host ABI
-apply_patches "$OCAMLSRC_UNIX"          ocaml    "$_OCAMLVER"    host
+apply_patches "$OCAMLSRC_UNIX"      ocaml    "$_OCAMLVER"    host
 if [ -e "$OCAMLSRC_UNIX"/flexdll/Makefile ] && is_unixy_windows_build_machine; then
-    apply_patches "$OCAMLSRC_UNIX/flexdll"  flexdll  "$_FLEXDLLVER"  host
+    apply_patches "$OCAMLSRC_UNIX"  flexdll  "$_FLEXDLLVER"  host
 fi
 
 if [ -z "$TARGETABIS" ]; then

@@ -1,7 +1,7 @@
-diff --git a/flexdll.c b/flexdll.c
+diff --git a/flexdll/flexdll.c b/flexdll/flexdll.c
 index b19fe2a..bcc922d 100644
---- a/flexdll.c
-+++ b/flexdll.c
+--- a/flexdll/flexdll.c
++++ b/flexdll/flexdll.c
 @@ -16,9 +16,9 @@
 
  /* Guard against compiling with the wrong cl! */

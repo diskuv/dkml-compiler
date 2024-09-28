@@ -2,6 +2,13 @@
 
 ## Pending
 
+* Support vendor-supplied patches for flexdll 0.43 and unreleased 0.44. Patches are
+  now relative to ocaml parent directory so all `git am` based patches are of form
+  `flexdll/flexdll.c`, etc. to make robust to the lack of `flexdll/.git`.
+   Vendor supplied patches are used by DkSDK CMake's `110-ocaml-lang`.
+
+## 2.1.3
+
 * Backport from 5.2.0 of [Linear computation of closure environments](https://github.com/ocaml/ocaml/pull/12222)
   to fix performance bug <https://discuss.ocaml.org/t/scaling-factors-when-compiling-mutually-recursive-definitions/14708>
 
