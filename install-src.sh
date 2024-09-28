@@ -32,8 +32,7 @@ install -v \
 
 install -d "$targetdir/src/p"
 install -v \
-    src/p/flexdll-cross-0_39-a01-arm64.patch \
-    src/p/flexdll-cross-0_42-a01-arm64.patch \
+    src/p/flexdll-cross-0_99-a01-arm64.patch \
     src/p/ocaml-common-4_12-a01-alignfiletime.patch \
     src/p/ocaml-common-4_14_0-a01-fmatest.patch \
     src/p/ocaml-common-4_14-a01-alignfiletime.patch \

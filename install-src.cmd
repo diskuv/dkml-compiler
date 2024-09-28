@@ -42,9 +42,7 @@ IF %ERRORLEVEL% NEQ 0 (ECHO Error during COPY &EXIT /B 1)
 
 
 IF NOT EXIST "%TARGETDIR%\src\p" MKDIR %TARGETDIR%\src\p
-COPY /Y /B src\p\flexdll-cross-0_39-a01-arm64.patch %TARGETDIR%\src\p
-IF %ERRORLEVEL% NEQ 0 (ECHO Error during COPY &EXIT /B 1)
-COPY /Y /B src\p\flexdll-cross-0_42-a01-arm64.patch %TARGETDIR%\src\p
+COPY /Y /B src\p\flexdll-cross-0_99-a01-arm64.patch %TARGETDIR%\src\p
 IF %ERRORLEVEL% NEQ 0 (ECHO Error during COPY &EXIT /B 1)
 COPY /Y /B src\p\ocaml-common-4_12-a01-alignfiletime.patch %TARGETDIR%\src\p
 IF %ERRORLEVEL% NEQ 0 (ECHO Error during COPY &EXIT /B 1)
