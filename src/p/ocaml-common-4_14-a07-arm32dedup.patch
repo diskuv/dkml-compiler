@@ -1,0 +1,41 @@
+diff --git a/asmcomp/arm/emit.mlp b/asmcomp/arm/emit.mlp
+index a8285d7363..16645da96e 100644
+--- a/asmcomp/arm/emit.mlp
++++ b/asmcomp/arm/emit.mlp
+@@ -884,10 +884,17 @@ let max_instruction_size i =
+ 
+ (* Emission of an instruction sequence *)
+ 
+-let rec emit_all env ninstr fallthrough i =
++let rec emit_all env ninstr fallthrough prev_desc i =
+   (* ninstr = number of 32-bit code words emitted since last constant island *)
+   (* fallthrough is true if previous instruction can fall through *)
+   if i.desc = Lend then () else begin
++  match prev_desc, i.desc with
++  | Some Lprologue, Llabel lbl when env.f.fun_tailrec_entry_point_label=lbl ->
++    (* Skip duplicate, consecutive labels which cause
++       > error: symbol '.L100' is already defined
++       with clang (ex. Android NDK 24+) but not with GNU AS. *)
++    emit_all env ninstr (has_fallthrough i.desc) (Some i.desc) i.next
++  | _ ->
+     (* Make sure literals not yet emitted remain addressable,
+        or emit them in a new constant island. *)
+     (* fldd can address up to +/-1KB, ldr can address up to +/-4KB *)
+@@ -908,7 +915,7 @@ let rec emit_all env ninstr fallthrough i =
+       end else
+         ninstr in
+     let n = emit_instr env i in
+-    emit_all env (ninstr' + n) (has_fallthrough i.desc) i.next
++    emit_all env (ninstr' + n) (has_fallthrough i.desc) (Some i.desc) i.next
+   end
+ 
+ (* Emission of a function declaration *)
+@@ -926,7 +933,7 @@ let fundecl fundecl =
+   `{emit_symbol fundecl.fun_name}:\n`;
+   emit_debug_info fundecl.fun_dbg;
+   cfi_startproc();
+-  emit_all env 0 true fundecl.fun_body;
++  emit_all env 0 true None fundecl.fun_body;
+   emit_literals env;
+   List.iter emit_call_gc env.call_gc_sites;
+   List.iter emit_call_bound_error env.bound_error_sites;

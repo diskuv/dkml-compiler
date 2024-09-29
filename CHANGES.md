@@ -7,6 +7,7 @@
   `flexdll/flexdll.c`, etc. to make robust to the lack of `flexdll/.git`.
    Vendor supplied patches are used by DkSDK CMake's `110-ocaml-lang`.
 * Supply `DKML_HOST_ABI` to post-transform configure scripts.
+* bugfix: De-duplicate consecutive ARM32 label. <https://github.com/diskuv/dkml-compiler/issues/6>
 
 ## 2.1.3
 
