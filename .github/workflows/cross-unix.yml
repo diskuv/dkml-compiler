@@ -34,7 +34,7 @@ jobs:
             targetabi: android_arm32v7a
             targetbits: 32
             ocamlconfigure: env/android-ndk-env-to-ocaml-configure-env.sh
-            expectfile: ELF 32-bit LSB shared object, ARM, EABI5 version 1 (SYSV), dynamically linked, interpreter /system/bin/linker, with debug_info, not stripped
+            expectfile: ELF 32-bit LSB pie executable, ARM, EABI5 version 1 (SYSV), dynamically linked, interpreter /system/bin/linker, with debug_info, not stripped
 
           - name: "[android] x86_64 on [linux] x86_64"
             hostabi: linux_x86_64
