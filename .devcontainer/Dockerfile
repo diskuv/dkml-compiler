@@ -10,7 +10,7 @@ RUN apt update && apt-get -q install -y --no-install-recommends \
     time
 
 ADD https://dl.google.com/android/repository/android-ndk-r27b-linux.zip /android.zip
-ENV ANDROID_NDK_LATEST_HOME=/usr/local/lib/android/sdk/android-ndk-r27b
+ENV ANDROID_NDK=/usr/local/lib/android/sdk/android-ndk-r27b
 RUN install -d /usr/local/lib/android/sdk && \
     unzip /android.zip -d /usr/local/lib/android/sdk
 

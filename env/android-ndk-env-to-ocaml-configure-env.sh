@@ -18,14 +18,15 @@
 # ANDROID NDK
 # -----------
 #
-# On entry the Android NDK environment variables defined at
-# https://github.com/actions/virtual-environments/blob/996eae034625eaa62cc81ce29faa04e11fa3e6cc/images/linux/Ubuntu2004-Readme.md#environment-variables-3
-# or
-# https://github.com/actions/virtual-environments/blob/996eae034625eaa62cc81ce29faa04e11fa3e6cc/images/macos/macos-11-Readme.md#environment-variables-2
-# must be available. You DO NOT need to be on GitHub Actions to use this script.
-#
-# In particular:
-# - ANDROID_NDK_LATEST_HOME
+# Environment variables
+# - ANDROID_NDK - In GitHub Actions, the ANDROID_NDK_LATEST_HOME will be set.
+#   You can use `echo "ANDROID_NDK=$ANDROID_NDK_LATEST_HOME" >> "$GITHUB_ENV"` to read it in one step
+#   and have it available in all subsequent steps.
+#   https://github.com/actions/virtual-environments/blob/996eae034625eaa62cc81ce29faa04e11fa3e6cc/images/linux/Ubuntu2004-Readme.md#environment-variables-3
+#   https://github.com/actions/virtual-environments/blob/996eae034625eaa62cc81ce29faa04e11fa3e6cc/images/macos/macos-11-Readme.md#environment-variables-2
+# - ANDROID_PLATFORM - The minimum API level. Defaults to 23.
+#   Any of the formats listed in https://developer.android.com/ndk/guides/cmake#android_platform
+#   is acceptable.
 #
 # ----------------------------
 #
@@ -85,15 +86,43 @@ disambiguate_filesystem_paths
 
 # Documentation: https://developer.android.com/ndk/guides/other_build_systems
 
-if [ -z "${ANDROID_NDK_LATEST_HOME:-}" ]; then
-    printf "FATAL: The ANDROID_NDK_LATEST_HOME environment variable has not been defined. It is ordinarily set on macOS and Linux GitHub Actions hosts.\n" >&2
+if [ -z "${ANDROID_NDK:-}" ]; then
+    printf "FATAL: The ANDROID_NDK environment variable has not been defined. It is ordinarily set on macOS and Linux GitHub Actions hosts.\n" >&2
     exit 107
 fi
 
-#   Minimum API
+#   Minimum API level
 #       The default is 23 but you can override it with the environment
-#       variable ANDROID_API.
-MIN_API=${ANDROID_API:-23}
+#       variable ANDROID_PLATFORM.
+#   https://developer.android.com/ndk/guides/cmake#android_platform
+#   https://apilevels.com/
+ANDROID_PLATFORM=${ANDROID_PLATFORM:-}
+ANDROID_PLATFORM=${ANDROID_PLATFORM##android-} # Remove any android- prefix
+case "${ANDROID_PLATFORM:-}" in
+    # > Jetpack/AndroidX libraries require a minSdk of 19 or higher since October 2023.
+    19|KITKAT) MIN_API_LEVEL=19;;
+    20|KITKAT_WATCH) MIN_API_LEVEL=20;;
+    21|LOLLIPOP|L) MIN_API_LEVEL=21;;
+    22|LOLLIPOP_MR1) MIN_API_LEVEL=22;;
+    23|M) MIN_API_LEVEL=23;;
+    24|N) MIN_API_LEVEL=24;;
+    25|N_MR1) MIN_API_LEVEL=25;;
+    26|O) MIN_API_LEVEL=26;;
+    27|O_MR1) MIN_API_LEVEL=27;;
+    28|P) MIN_API_LEVEL=28;;
+    29|Q) MIN_API_LEVEL=29;;
+    30|R) MIN_API_LEVEL=30;;
+    31|S) MIN_API_LEVEL=31;;
+    32|S_V2) MIN_API_LEVEL=32;;
+    33|TIRAMISU) MIN_API_LEVEL=33;;
+    34|UPSIDE_DOWN_CAKE) MIN_API_LEVEL=34;;
+    35|VANILLA_ICE_CREAM) MIN_API_LEVEL=35;;
+    36) MIN_API_LEVEL=36;;
+    37) MIN_API_LEVEL=37;;
+    38) MIN_API_LEVEL=38;;
+    39) MIN_API_LEVEL=39;;
+    *) MIN_API_LEVEL=23
+esac
 
 #   Toolchain
 case "$DKML_HOST_ABI" in
@@ -105,7 +134,7 @@ case "$DKML_HOST_ABI" in
         printf "FATAL: The host ABI %s does not have a Android Studio toolchain\n" "$DKML_HOST_ABI"
         exit 107
 esac
-TOOLCHAIN=$ANDROID_NDK_LATEST_HOME/toolchains/llvm/prebuilt/$HOST_TAG
+TOOLCHAIN=$ANDROID_NDK/toolchains/llvm/prebuilt/$HOST_TAG
 
 #   Triple
 case "$DKML_TARGET_ABI" in
@@ -130,7 +159,7 @@ find "$TOOLCHAIN/bin" -type f -name '*-as' >&2      # More debugging
 _android_common_flags="-fPIE -fPIC -no-canonical-prefixes -Wformat -Werror=format-security -g3 -g"
 _android_cflags="$_android_common_flags -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -D_FORTIFY_SOURCE=2 -fexceptions -fno-limit-debug-info"
 AR="$TOOLCHAIN/bin/llvm-ar"
-autodetect_compiler_CC="$TOOLCHAIN/bin/${TOOLCHAIN_NAME_CLANG}${MIN_API}-clang"
+autodetect_compiler_CC="$TOOLCHAIN/bin/${TOOLCHAIN_NAME_CLANG}${MIN_API_LEVEL}-clang"
 ! [ -x "$autodetect_compiler_CC" ] && printf "FATAL: No clang compiler at %s\n" "$autodetect_compiler_CC" >&2 && exit 107
 autodetect_compiler_LD="$TOOLCHAIN/bin/ld"
 DIRECT_LD="$autodetect_compiler_LD"
@@ -154,7 +183,7 @@ autodetect_compiler_LDFLAGS=
 #           https://android.googlesource.com/platform/ndk/+/master/docs/ClangMigration.md#assembler-issues
 #
 #       So when missing the GNU AS assembler (ie. NDK 24+) just use the ASPP.
-ASPP="$TOOLCHAIN/bin/clang --target=${LLVM_TRIPLE}${MIN_API} $_android_common_flags -c"
+ASPP="$TOOLCHAIN/bin/clang --target=${LLVM_TRIPLE}${MIN_API_LEVEL} $_android_common_flags -c"
 autodetect_compiler_AS="$TOOLCHAIN/bin/$TOOLCHAIN_NAME_AS-as"
 if [ ! -x "$autodetect_compiler_AS" ]; then
     autodetect_compiler_AS="$ASPP"

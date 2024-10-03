@@ -7,7 +7,7 @@ on:
       - 'next'
 
 jobs:
-  build:
+  build:    
     strategy:
       fail-fast: false
       matrix:
@@ -69,12 +69,13 @@ jobs:
           ${{ runner.os }}-dist-${{ env.cache-name }}-
 
     # ================ Diagnostics ==========
-    - name: Android diagnostics
+    - name: Set ANDROID_NDK
       run: |
         set -x
         if [ -d "$ANDROID_NDK_LATEST_HOME" ]; then ls "$ANDROID_NDK_LATEST_HOME"; fi
         if [ -d "$ANDROID_NDK_LATEST_HOME/toolchains/llvm/prebuilt/" ]; then ls "$ANDROID_NDK_LATEST_HOME/toolchains/llvm/prebuilt/"; fi
         if [ -d "$ANDROID_NDK_LATEST_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/" ]; then ls "$ANDROID_NDK_LATEST_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/"; fi
+        echo "ANDROID_NDK=$ANDROID_NDK_LATEST_HOME" >> "$GITHUB_ENV"
 
     # ================ Setup ================
     - name: Install compiler on Debian/Ubuntu

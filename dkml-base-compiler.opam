@@ -69,6 +69,11 @@ flags: [ compiler avoid-version ]
 available: [
   opam-version >= "2.1.0"
 ]
+build-env: [
+  # Used by android-ndk-env-to-ocaml-configure-env.sh
+  [ANDROID_PLATFORM = "%{ANDROID_PLATFORM}%"]
+  [ANDROID_NDK = "%{ANDROID_NDK}%"]
+]
 build: [
   # Dump Homebrew, which is needed for reproducible build auditing in drc's crossplatform-functions.sh.
   # TODO: Move the brewbundle.sh to drc, or in drc skip reproducible build auditing if bundle tap is not installable

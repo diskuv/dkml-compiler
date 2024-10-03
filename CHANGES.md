@@ -8,6 +8,14 @@
    Vendor supplied patches are used by DkSDK CMake's `110-ocaml-lang`.
 * Supply `DKML_HOST_ABI` to post-transform configure scripts.
 * bugfix: De-duplicate consecutive ARM32 label. <https://github.com/diskuv/dkml-compiler/issues/6>
+* The environment vars in android-ndk-env-to-ocaml-configure-env.sh now have the
+  same naming as Android NDK's CMake variables.
+  * `ANDROID_API` is now `ANDROID_PLATFORM`
+    and supports the formats `android-$API_LEVEL`, `$API_LEVEL` or `android-$API_LETTER`
+    as per <https://developer.android.com/ndk/guides/cmake#android_platform>.
+  * `ANDROID_NDK_LATEST_HOME` is now `ANDROID_NDK`.
+* opam global or switch vars `ANDROID_PLATFORM` and `ANDROID_NDK` will be read
+  by dkml-base-compiler. <https://github.com/diskuv/dkml-compiler/issues/7>
 
 ## 2.1.3
 
