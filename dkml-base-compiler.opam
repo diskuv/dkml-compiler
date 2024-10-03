@@ -131,11 +131,9 @@ build: [
   #   <dkmldir>/vendor/dkml-compiler/
   ["install" "-d" "dkmldir/vendor/dkml-compiler/src" "dkmldir/vendor/dkml-compiler/env"]
   #     only the standard compiler environment is needed for the base compiler. However options play a part.
-  ["install"
-    # default (unpatched) options
-    "env/standard-compiler-env-to-ocaml-configure-env.sh"
-    "dkmldir/vendor/dkml-compiler/env/"
-  ]
+  #     we install unpatched options, and edit them as needed below using opam flags.
+  ["install" "env/standard-compiler-env-to-ocaml-configure-env.sh" "dkmldir/vendor/dkml-compiler/env/"]
+  ["install" "env/android-ndk-env-to-ocaml-configure-env.sh" "dkmldir/vendor/dkml-compiler/env/"]
   ["sh" "-eufc"
     # https://learn.microsoft.com/en-us/cpp/build/reference/z7-zi-zi-debug-information-format?view=msvc-170
     # https://learn.microsoft.com/en-us/cpp/assembler/masm/ml-and-ml64-command-line-reference?view=msvc-170
