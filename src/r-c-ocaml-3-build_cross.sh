@@ -39,7 +39,40 @@
 #    See https://github.com/anmonteiro/nix-overlays/blob/79d36ea351edbaf6ee146d9bf46b09ee24ed6ece/cross/ocaml.nix for
 #    reference material and an alternate way of doing it on nix.
 #
-# -------------------------------------------------------
+######################################
+#
+# The generated findlib configuration file will be
+# <PREFIX_DIR>/lib/findlib.conf.d/<toolchain>.conf for compatibility
+# with Dune's `dune -x` option. The generation is mostly idempotent
+# since, if the file already exsts, entries are only added to FINDLIB_CONF.
+#
+# MLCROSS_DIR is the base directory for zero or more target DKML ABIs (ex.
+# android_arm32v7a) that contains bin/ and lib/ subfolders (ex.
+# android_arm32v7a/bin). It can be an environment variable, but a default value
+# must still be specified on the command line.
+#
+# findlib.conf on output
+# ----------------------
+#
+# path(<dkmlabi>) = "<MLCROSS_DIR>/<dkmlabi>/lib:<PREFIX_DIR>/<dkmlabi>-sysroot/lib"
+#   The META/package search path will start in the cross-compiled lib folder.
+#   There are no META packages in the cross-compiled folder today, but that may change.
+#   Opam installs packages into <PREFIX_DIR>/<dkmlabi>-sysroot/; precisely `dune -x`
+#   creates a <package>.install file containing that path, and the Opam install step
+#   runs those instructions.
+#   Finally, there are base packages like `threads/META` that come from ocamlfind's
+#   `make install-meta`. Use an Opam module like
+#   https://github.com/ocaml/opam-repository/blob/master/packages/ocamlfind-secondary/ocamlfind-secondary.1.9.1/opam
+#   to install those into <PREFIX_DIR>/<dkmlabi>-sysroot/lib.
+# stdlib(<dkmlabi>) = "<MLCROSS_DIR>/<dkmlabi>/lib"
+#   Built-in package libraries like `threads.cmxa` can be located
+#   in `<MLCROSS_DIR>/<dkmlabi>/lib/``.
+# destdir(<dkmlabi>) = "<MLCROSS_DIR>/<dkmlabi>/lib"
+#   Newly cross-compiled packages will be added to this `destdir`
+# ocamlc(<dkmlabi>) = "<MLCROSS_DIR>/<dkmlabi>/bin/ocamlc.opt"
+#   The cross-compiler ocamlc. Other binaries (ex. ocamlopt) are added as well.
+#   Some binaries may be bytecode executables while some may be native
+#   executables.
 set -euf
 
 # ------------------
@@ -499,6 +532,79 @@ build_world() {
   "$DKMLSYS_INSTALL" -v "$OCAMLSRC_MIXED/ocaml$build_world_TARGET_EXE_EXT" "$build_world_PREFIX/bin/"
 }
 
+add_text() {
+  add_text_FILE=$1
+  shift
+  #   shellcheck disable=SC2034
+  add_text_SEARCH=$1 # ignored this version
+  shift
+  add_text_TEXT_IF_MISSING=$1
+  shift
+  # if grep -q "$add_text_SEARCH" "$add_text_FILE"; then
+  #   return 0
+  # fi
+  printf "%s\n" "$add_text_TEXT_IF_MISSING" >> "$add_text_FILE"
+}
+
+add_findlib_conf() {
+    # ex. android_arm32v7a
+    add_findlib_conf_ABI=$1; shift
+    add_findlib_conf_MLCROSS=$1; shift
+
+    install -d "$TARGETDIR_UNIX/lib/findlib.conf.d"
+    add_findlib_conf_CONF="$TARGETDIR_UNIX/lib/findlib.conf.d/$add_findlib_conf_ABI.conf"
+
+    # Ex. path(android_arm32v7a)="C:\\source\\windows_x86_64\\lib"
+    # Any backslashes need to be escaped since it is an OCaml string
+    bin_buildhost="$add_findlib_conf_MLCROSS/bin"
+    lib_buildhost="$add_findlib_conf_MLCROSS/lib"
+    sysroot_lib_buildhost="$TARGETDIR_UNIX/$add_findlib_conf_ABI-sysroot/lib"
+    install -d "$sysroot_lib_buildhost" # needed for realpath to work, even if won't be populated until conf-dkml-cross-toolchain
+    _dirsep="/"
+    _findsep=":"
+    _exe=""
+    if [ -x /usr/bin/cygpath ]; then
+        bin_buildhost=$(/usr/bin/cygpath -aw "$bin_buildhost")
+        lib_buildhost=$(/usr/bin/cygpath -aw "$lib_buildhost")
+        sysroot_lib_buildhost=$(/usr/bin/cygpath -aw "$sysroot_lib_buildhost")
+        _dirsep="\\\\"
+        _exe=".exe"
+        _findsep=";"
+    elif [ -x /usr/bin/realpath ]; then
+        bin_buildhost=$(/usr/bin/realpath "$bin_buildhost")
+        lib_buildhost=$(/usr/bin/realpath "$lib_buildhost")
+        sysroot_lib_buildhost=$(/usr/bin/realpath "$sysroot_lib_buildhost")
+    fi
+    bin_buildhost=$(escape_arg_as_ocaml_string "$bin_buildhost")
+    lib_buildhost=$(escape_arg_as_ocaml_string "$lib_buildhost")
+
+    {
+      printf "%s\n"     "path($add_findlib_conf_ABI) = \"$lib_buildhost${_findsep}$sysroot_lib_buildhost\""
+      printf "%s\n"     "destdir($add_findlib_conf_ABI) = \"$sysroot_lib_buildhost\""
+      printf "%s\n"     "stdlib($add_findlib_conf_ABI) = \"$lib_buildhost${_dirsep}ocaml\""
+      if [ -e "$add_findlib_conf_MLCROSS/bin/flexlink.exe" ]; then
+          printf "%s\n" "flexlink($add_findlib_conf_ABI) = \"$bin_buildhost${_dirsep}flexlink.exe\""
+      fi
+      printf "%s\n"     "ocaml($add_findlib_conf_ABI) = \"$bin_buildhost${_dirsep}ocaml${_exe}\""
+      printf "%s\n"     "ocamlc($add_findlib_conf_ABI) = \"$bin_buildhost${_dirsep}ocamlc.opt${_exe}\""
+      printf "%s\n"     "ocamlcmt($add_findlib_conf_ABI) = \"$bin_buildhost${_dirsep}ocamlcmt${_exe}\""
+      printf "%s\n"     "ocamlcp($add_findlib_conf_ABI) = \"$bin_buildhost${_dirsep}ocamlcp.byte${_exe}\""
+      printf "%s\n"     "ocamldebug($add_findlib_conf_ABI) = \"$bin_buildhost${_dirsep}ocamldebug${_exe}\""
+      printf "%s\n"     "ocamldep($add_findlib_conf_ABI) = \"$bin_buildhost${_dirsep}ocamldep.byte${_exe}\""
+      printf "%s\n"     "ocamllex($add_findlib_conf_ABI) = \"$bin_buildhost${_dirsep}ocamllex.opt${_exe}\""
+      printf "%s\n"     "ocamlmklib($add_findlib_conf_ABI) = \"$bin_buildhost${_dirsep}ocamlmklib.byte${_exe}\""
+      printf "%s\n"     "ocamlmktop($add_findlib_conf_ABI) = \"$bin_buildhost${_dirsep}ocamlmktop.byte${_exe}\""
+      printf "%s\n"     "ocamlobjinfo($add_findlib_conf_ABI) = \"$bin_buildhost${_dirsep}ocamlobjinfo.byte${_exe}\""
+      printf "%s\n"     "ocamlopt($add_findlib_conf_ABI) = \"$bin_buildhost${_dirsep}ocamlopt.opt${_exe}\""
+      printf "%s\n"     "ocamloptp($add_findlib_conf_ABI) = \"$bin_buildhost${_dirsep}ocamloptp.byte${_exe}\""
+      printf "%s\n"     "ocamlprof($add_findlib_conf_ABI) = \"$bin_buildhost${_dirsep}ocamlprof.byte${_exe}\""
+      printf "%s\n"     "ocamlrun($add_findlib_conf_ABI) = \"$bin_buildhost${_dirsep}ocamlrun${_exe}\""
+      printf "%s\n"     "ocamlrund($add_findlib_conf_ABI) = \"$bin_buildhost${_dirsep}ocamlrund${_exe}\""
+      printf "%s\n"     "ocamlruni($add_findlib_conf_ABI) = \"$bin_buildhost${_dirsep}ocamlruni${_exe}\""
+      printf "%s\n"     "ocamlyacc($add_findlib_conf_ABI) = \"$bin_buildhost${_dirsep}ocamlyacc${_exe}\""
+    } > "$add_findlib_conf_CONF"
+}
+
 # Loop over each target abi script file; each file separated by semicolons, and each term with an equals
 printf "%s\n" "$TARGETABIS" | sed 's/;/\n/g' | sed 's/^\s*//; s/\s*$//' > "$WORK"/target-abis
 log_script "$WORK"/target-abis
@@ -514,8 +620,14 @@ while IFS= read -r _abientry; do
     ;;
   esac
 
+  # Compile the cross-compiler
   _CROSS_TARGETDIR=$TARGETDIR_UNIX/$CROSS_SUBDIR/$_targetabi
   _CROSS_SRCDIR=$_CROSS_TARGETDIR/$HOSTSRC_SUBDIR
   cd "$_CROSS_SRCDIR"
   build_world "$_CROSS_SRCDIR" "$_CROSS_TARGETDIR" "$_targetabi" "$_abiscript"
+
+  # Create lib/findlib.conf.d/android_arm64.conf (etc.)
+  cd "$TARGETDIR_UNIX"
+  add_findlib_conf "$_targetabi" "$_CROSS_SRCDIR"
+
 done <"$WORK"/target-abis

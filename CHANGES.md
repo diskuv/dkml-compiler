@@ -16,6 +16,7 @@
   * `ANDROID_NDK_LATEST_HOME` is now `ANDROID_NDK`.
 * opam global or switch vars `ANDROID_PLATFORM` and `ANDROID_NDK` will be read
   by dkml-base-compiler. <https://github.com/diskuv/dkml-compiler/issues/7>
+* The `lib/findlib.conf.d/<TARGETABI>` findlib configuration is generated for all cross-compilers.
 
 ## 2.1.3
 
