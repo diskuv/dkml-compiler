@@ -87,7 +87,7 @@ disambiguate_filesystem_paths
 # Documentation: https://developer.android.com/ndk/guides/other_build_systems
 
 if [ -z "${ANDROID_NDK:-}" ]; then
-    printf "FATAL: The ANDROID_NDK environment variable has not been defined. It is ordinarily set on macOS and Linux GitHub Actions hosts.\n" >&2
+    printf "FATAL: The ANDROID_NDK environment variable has not been defined. If you are installing dkml-base-compiler, set the opam global or switch var 'ANDROID_NDK' so the dkml-base-compiler can set the ANDROID_NDK environment variable.\n" >&2
     exit 107
 fi
 

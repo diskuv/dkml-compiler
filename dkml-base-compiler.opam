@@ -12,18 +12,31 @@ synopsis: "OCaml cross-compiler and libraries from the DkML distribution"
 description:
   """The DkML distribution of the OCaml bytecode and native compiler, Stdlib and the other OCaml libraries (str, unix, bigarray, etc.).
 
-A cross-compiler for macOS x86_64 to macOS arm64 is included; for build consistency the regular OCaml compiler will be for
-x86_64 regardless of whether the build machine is Apple Silicon.
+The following cross-compilers have been included:
+- from macOS x86_64 and macOS arm64, and vice versa
+- from Linux x86 to the android armeabi-v7a ABI
+- from Linux x86_64 to either the android arm64-v8a or x86_64 ABI
 
 To support cross-compilation, environment variables for compilers like CC and LDFLAGS have no effect on the 'host' ABI.
 The compiler for the 'host' ABI will be detected from conventional locations on the system and (for Visual Studio)
 from configuration stored in the DkML home directory.
 
+If you use cross-compilation, you should also install the conf-dkml-cross-toolchain package
+so that your findlib installation recognizes the cross-compilers.
+
+For Android compilation, the following opam global or switch variables are needed:
+- (required) ANDROID_NDK. This is the directory containing the Android NDK installation.
+  Examples: /opt/downloaded/ndk-23.1.7779620
+- (optional) ANDROID_PLATFORM. The minimum API level for the Android app or library. The default varies based on the version
+  of dkml-base-compiler, so it is best to set this. This version the default is 23.
+  Confer: https://developer.android.com/ndk/guides/cmake#android_platform.
+  Examples: android-23, 23, android-N, android-O_MR1
+
 Advanced: Set environment variables like DKML_TARGET_ABI and DKML_COMPILE_* to do cross-compilation from the 'host' ABI
 to a 'target' ABI. Those variables are documented in dkml-runtime-common's crossplatform-functions.sh script.
-Search for: autodetect_compiler() {
+Search for: autodetect_compiler()
 
-Install with something like:
+You can install dkml-base-compiler with something like:
   opam switch create dkml-4.14.2 '--formula="dkml-base-compiler" {>= "4.14.2~" & < "4.15.0~"}'"""
 maintainer: ["opensource+dkml@support.diskuv.com"]
 authors: ["Diskuv, Inc. <opensource+dkml@support.diskuv.com>"]
@@ -200,15 +213,12 @@ install: [
       "--disable-debug-runtime --disable-instrumented-runtime"  { !dkml-option-debuginfo:installed }
       #   Host architectures
       "-e%{dkml-host-abi:abi}%"
-      #   Target architectures (if cross-compiling; similar to dkml-component-staging-ocamlrun.opam)
-      "-adarwin_x86_64=vendor/dkml-compiler/env/standard-compiler-env-to-ocaml-configure-env.sh" { dkml-host-abi:abi != "darwin_x86_64" & dkml-target-abi-darwin_x86_64:installed }
-      "-adarwin_arm64=vendor/dkml-compiler/env/standard-compiler-env-to-ocaml-configure-env.sh"  { dkml-host-abi:abi != "darwin_arm64" & dkml-target-abi-darwin_arm64:installed }
-      #     TODO: Would be nice to bundle the 3 Android cross-compilers here since they are already supported
-      #     by DkML, but I (jonahbeckford@) doubt there is an Android NDK available on the Opam hosts.
-      #     Confer: https://github.com/diskuv/diskuv-ocaml-ghmirror/runs/4831077050
-      #     Perhaps the Android NDK should just be downloaded via an 'android-option-ndk23' package? That would give control of the NDK version.
-      # "-aandroid_arm64v8a=vendor/dkml-compiler/env/android-ndk-env-to-ocaml-configure-env.sh;android_arm64v8a=vendor/dkml-compiler/env/android-ndk-env-to-ocaml-configure-env.sh"] { dkml-target-abi-android_arm64v8a:installed }
-      # "-aandroid_arm32v7a=vendor/dkml-compiler/env/android-ndk-env-to-ocaml-configure-env.sh" { dkml-target-abi-android_arm32v7a:installed }
+      #   Target architectures
+      "-adarwin_x86_64=vendor/dkml-compiler/env/standard-compiler-env-to-ocaml-configure-env.sh"  { dkml-host-abi:abi != "darwin_x86_64" & dkml-target-abi-darwin_x86_64:installed }
+      "-adarwin_arm64=vendor/dkml-compiler/env/standard-compiler-env-to-ocaml-configure-env.sh"   { dkml-host-abi:abi != "darwin_arm64" & dkml-target-abi-darwin_arm64:installed }
+      "-aandroid_arm32v7a=vendor/dkml-compiler/env/android-ndk-env-to-ocaml-configure-env.sh"     { dkml-target-abi-android_arm32v7a:installed }
+      "-aandroid_arm64v8a=vendor/dkml-compiler/env/android-ndk-env-to-ocaml-configure-env.sh"     { dkml-target-abi-android_arm64v8a:installed }
+      "-aandroid_x86_64=vendor/dkml-compiler/env/android-ndk-env-to-ocaml-configure-env.sh"       { dkml-target-abi-android_x86_64:installed }
       "-k" "vendor/dkml-compiler/env/standard-compiler-env-to-ocaml-configure-env.sh"
   ]
 
