@@ -78,13 +78,16 @@ jobs:
           ${{ runner.os }}-dist-${{ env.cache-name }}-
 
     # ================ Diagnostics ==========
-    - name: Set ANDROID_NDK
+    - name: Set ANDROID_NDK and ANDROID_PLATFORM
+      env:
+        ANDROID_PLATFORM: '${{ matrix.ANDROID_PLATFORM }}'
       run: |
         set -x
         if [ -d "$ANDROID_NDK_LATEST_HOME" ]; then ls "$ANDROID_NDK_LATEST_HOME"; fi
         if [ -d "$ANDROID_NDK_LATEST_HOME/toolchains/llvm/prebuilt/" ]; then ls "$ANDROID_NDK_LATEST_HOME/toolchains/llvm/prebuilt/"; fi
         if [ -d "$ANDROID_NDK_LATEST_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/" ]; then ls "$ANDROID_NDK_LATEST_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/"; fi
         echo "ANDROID_NDK=$ANDROID_NDK_LATEST_HOME" >> "$GITHUB_ENV"
+        echo "ANDROID_PLATFORM=${ANDROID_PLATFORM:-}" >> "$GITHUB_ENV"
 
     # ================ Setup ================
     - name: Install compiler on Debian/Ubuntu
