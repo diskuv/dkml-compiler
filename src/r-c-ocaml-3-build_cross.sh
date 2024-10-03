@@ -549,15 +549,16 @@ add_text() {
 add_findlib_conf() {
     # ex. android_arm32v7a
     add_findlib_conf_ABI=$1; shift
-    add_findlib_conf_MLCROSS=$1; shift
+    # ex. <switch>/share/dkml-base-compiler/mlcross/android_arm64v8a
+    add_findlib_conf_CROSSTARGET=$1; shift
 
     install -d "$TARGETDIR_UNIX/lib/findlib.conf.d"
     add_findlib_conf_CONF="$TARGETDIR_UNIX/lib/findlib.conf.d/$add_findlib_conf_ABI.conf"
 
     # Ex. path(android_arm32v7a)="C:\\source\\windows_x86_64\\lib"
     # Any backslashes need to be escaped since it is an OCaml string
-    bin_buildhost="$add_findlib_conf_MLCROSS/bin"
-    lib_buildhost="$add_findlib_conf_MLCROSS/lib"
+    bin_buildhost="$add_findlib_conf_CROSSTARGET/bin"
+    lib_buildhost="$add_findlib_conf_CROSSTARGET/lib"
     sysroot_lib_buildhost="$TARGETDIR_UNIX/$add_findlib_conf_ABI-sysroot/lib"
     install -d "$sysroot_lib_buildhost" # needed for realpath to work, even if won't be populated until conf-dkml-cross-toolchain
     _dirsep="/"
@@ -582,7 +583,7 @@ add_findlib_conf() {
       printf "%s\n"     "path($add_findlib_conf_ABI) = \"$lib_buildhost${_findsep}$sysroot_lib_buildhost\""
       printf "%s\n"     "destdir($add_findlib_conf_ABI) = \"$sysroot_lib_buildhost\""
       printf "%s\n"     "stdlib($add_findlib_conf_ABI) = \"$lib_buildhost${_dirsep}ocaml\""
-      if [ -e "$add_findlib_conf_MLCROSS/bin/flexlink.exe" ]; then
+      if [ -e "$add_findlib_conf_CROSSTARGET/bin/flexlink.exe" ]; then
           printf "%s\n" "flexlink($add_findlib_conf_ABI) = \"$bin_buildhost${_dirsep}flexlink.exe\""
       fi
       printf "%s\n"     "ocaml($add_findlib_conf_ABI) = \"$bin_buildhost${_dirsep}ocaml${_exe}\""
@@ -628,6 +629,6 @@ while IFS= read -r _abientry; do
 
   # Create lib/findlib.conf.d/android_arm64.conf (etc.)
   cd "$TARGETDIR_UNIX"
-  add_findlib_conf "$_targetabi" "$_CROSS_SRCDIR"
+  add_findlib_conf "$_targetabi" "$_CROSS_TARGETDIR"
 
 done <"$WORK"/target-abis
