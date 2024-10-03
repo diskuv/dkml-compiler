@@ -88,6 +88,22 @@ build-env: [
   [ANDROID_NDK = "%{ANDROID_NDK}%"]
 ]
 build: [
+  # Fail-fast if ANDROID_NDK is not present but needs to be.
+  # It will also get checked much later in r-c-ocaml-3-build_cross.sh
+  # when android-ndk-env-to-ocaml-configure-env.sh is evaluated.
+  ["sh" "-c" """
+    echo 'FATAL: Installing an Android cross-compiler requires the ANDROID_NDK opam global or switch variable.';
+    echo 'It is recommended that you set ANDROID_PLATFORM (the minimum API level) as well.';
+    echo 'Try something like:';
+    echo '  OPAMCLI=2.0 opam config set-global ANDROID_NDK "/usr/local/lib/android/sdk/ndk/27.1.12297006"';
+    echo '  OPAMCLI=2.0 opam config set-global ANDROID_PLATFORM android-23';
+    exit 108"""]
+  { 
+    (!?ANDROID_NDK | ANDROID_NDK = "") &
+    (dkml-target-abi-android_arm32v7a:installed |
+     dkml-target-abi-android_arm64v8a:installed |
+     dkml-target-abi-android_x86_64:installed) }
+
   # Dump Homebrew, which is needed for reproducible build auditing in drc's crossplatform-functions.sh.
   # TODO: Move the brewbundle.sh to drc, or in drc skip reproducible build auditing if bundle tap is not installable
   # WAS: ["sh" "scripts/macos-bundle-dump.sh"] {os = "macos"}
