@@ -12,16 +12,20 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os:
-          - macos-latest
-          - ubuntu-latest
+        include:
+          - os: macos-latest
+            ocaml-compiler: dkml-base-compiler
+            dkml-host-abi: darwin_arm64
+            dkml-target-abi: darwin_arm64
+          - os: ubuntu-latest
+            ocaml-compiler: dkml-base-compiler
+            dkml-host-abi: linux_x86_64
+            dkml-target-abi: linux_x86_64
           # No Windows because ...
           #    Initialise the opam repositories
           #      D:\cygwin\bin\opam.exe repository add default https://opam.ocaml.org --all-switches --set-default
           #      [ERROR] Could not update repository "default": Failed to extract archive C:/Users/RUNNER~1/AppData/Local/Temp/opam-5188-5a61c5/index.tar.gz: "C:\\Windows\\system32\\tar.exe xfz /cygdrive/c/Users/RUNNER~1/AppData/Local/Temp/opam-5188-5a61c5/index.tar.gz -C /cygdrive/d/.opam/repo/default.new" exited with code 1 "tar.exe: Error opening archive: Failed to open '/cygdrive/c/Users/RUNNER~1/AppData/Local/Temp/opam-5188-5a61c5/index.tar.gz'"
           # - windows-latest
-        ocaml-compiler:
-          - dkml-base-compiler
 
     runs-on: ${{ matrix.os }}
 
@@ -32,7 +36,7 @@ jobs:
       - name: Use OCaml ${{ matrix.ocaml-compiler }}
         uses: ocaml/setup-ocaml@v2
         with:
-          ocaml-compiler: ${{ matrix.ocaml-compiler }}
+          ocaml-compiler: ${{ matrix.ocaml-compiler }},dkml-host-abi-${{ matrix.dkml-host-abi }},dkml-target-abi-${{ matrix.dkml-target-abi }}
           opam-depext: false
           opam-repositories: |
             diskuv: git+https://github.com/diskuv/diskuv-opam-repository.git#main
