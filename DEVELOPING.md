@@ -7,7 +7,7 @@ Everything in this document assumes you have done:
 make local-install
 
 # Windows
-with-dkml make local-install
+dk Ml.Use -- make local-install
 ```
 
 You may also add `--verbose` to the 'opam install' lines in the `Makefile`.

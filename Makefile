@@ -13,8 +13,8 @@ create-switch: _opam/.opam-switch/switch-config
 #   Force an update since 'opam switch create' only updates when it newly registers the repository.
 #	Upsert (remove + add) FLEXLINKFLAGS on MSVC for debugging
 _opam/.opam-switch/switch-config:
-	opam switch create . --empty --repos diskuv=git+https://github.com/diskuv/diskuv-opam-repository.git#main,default=https://opam.ocaml.org
-	opam update diskuv
+	opam switch create . --empty --repos diskuv-main=git+https://github.com/diskuv/diskuv-opam-repository.git#main,default-main=git+https://github.com/ocaml/opam-repository.git
+	opam update diskuv-main
 	OPAMSWITCH="$$PWD" && \
 	  if [ -x /usr/bin/cygpath ]; then OPAMSWITCH=$$(/usr/bin/cygpath -aw "$$OPAMSWITCH"); fi && \
 	  if [ -n "$${COMSPEC:-}" ]; then opam option 'setenv-=FLEXLINKFLAGS+=" -link /DEBUG:FULL"'; fi
