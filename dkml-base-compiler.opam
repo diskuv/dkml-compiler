@@ -174,8 +174,9 @@ build: [
     """
   ] {dkml-option-debuginfo:installed & dkml-host-abi-windows_arm64:installed}
   ["sh" "-eufc"
+    # /usr/bin/as -O0 is not supported in `GNU assembler (GNU Binutils for Ubuntu) 2.30` (ex. conanio/gcc8:*)
     """
-    sed 's/^INJECT_CFLAGS=$/INJECT_CFLAGS="-g -O0"/; s/^INJECT_ASFLAGS=$/INJECT_ASFLAGS="-g -O0"/' \
+    sed 's/^INJECT_CFLAGS=$/INJECT_CFLAGS="-g -O0"/; s/^INJECT_ASFLAGS=$/INJECT_ASFLAGS="-g"/' \
       env/standard-compiler-env-to-ocaml-configure-env.sh > \
       dkmldir/vendor/dkml-compiler/env/standard-compiler-env-to-ocaml-configure-env.sh
     """
