@@ -38,3 +38,8 @@ The patch does the following:
 
 1. Starts the file numbering from 2, not 1.
 2. Changes `.file ""` to `.file 1 ""` to avoid `Error: unassigned file number 1`.
+
+NOTE: There are more extensive file number changes done in `ocaml-cross-4_14_2-a02-a32`
+that could be merged into `ocaml-common-4_14-a09-debuggasx86`. But lets not refactor
+unless a new change needs to be ported from `ocaml-cross-4_14_2-a02-a32` into
+`ocaml-common-4_14-a09-debuggasx86`.
