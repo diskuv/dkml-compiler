@@ -198,11 +198,11 @@ if [ -n "${autodetect_compiler_CC:-}" ]; then
       autodetect_compiler_CFLAGS=$(printf "%s" " $autodetect_compiler_CFLAGS " | PATH=/usr/bin:/bin sed 's/ -Os / /g')
   fi
 
-  # -Z7 is an option that should be in CC for OCaml
+  # /Z7 or normalized -Z7 is an option that should be in CC for OCaml
   # Confer: https://learn.microsoft.com/en-us/cpp/build/reference/z7-zi-zi-debug-information-format?view=msvc-170
-  if printf "%s" " ${autodetect_compiler_CFLAGS:-} " | PATH=/usr/bin:/bin grep -q ' -Z7 '; then
+  if printf "%s" " ${autodetect_compiler_CFLAGS:-} " | PATH=/usr/bin:/bin grep -q ' [/-]Z7 '; then
       autodetect_compiler_CC="$autodetect_compiler_CC -Z7"
-      autodetect_compiler_CFLAGS=$(printf "%s" " $autodetect_compiler_CFLAGS " | PATH=/usr/bin:/bin sed 's/ -Z7 / /g')
+      autodetect_compiler_CFLAGS=$(printf "%s" " $autodetect_compiler_CFLAGS " | PATH=/usr/bin:/bin sed 's/ [/-]Z7 / /g')
   fi
 
   # -mmacosx-version-min=MM.NN needs to be in CC for OCaml
