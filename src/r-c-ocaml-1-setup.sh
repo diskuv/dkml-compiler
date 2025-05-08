@@ -696,7 +696,8 @@ get_ocaml_source() {
             log_trace rm -rf "$get_ocaml_source_SRCUNIX" # clean any partial downloads
             log_trace cp -rp "$get_ocaml_source_COMMIT_TAG_OR_DIR" "$get_ocaml_source_SRCUNIX"
             #   we do not want complicated submodules for a local directory copy
-            log_trace rm -f "$get_ocaml_source_SRCUNIX/.gitmodules" "$get_ocaml_source_SRCUNIX/flexdll/.git"
+            log_trace rm -f "$get_ocaml_source_SRCUNIX/.gitmodules"
+            log_trace rm -rf "$get_ocaml_source_SRCUNIX/flexdll/.git"
         fi
 
         # Ensure git patchable
