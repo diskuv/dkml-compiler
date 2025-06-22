@@ -45,6 +45,7 @@ usage() {
         printf "%s\n" "   -d DIR: DKML directory containing a .dkmlroot file"
         printf "%s\n" "   -t DIR: Target directory for the reproducible directory tree"
         printf "%s\n" "   -b PREF: Required and used only for the MSVC compiler. See r-c-ocaml-1-setup.sh"
+        printf "%s\n" "   -B Only build bytecode compiler and libraries."
         printf "%s\n" "   -c OCAMLC_OPT_EXE: If a possibly older 'ocamlc.opt' is specified, it speeds up compilation of the new OCaml compiler"
         printf "%s\n" "   -e DKMLHOSTABI: Uses the DkML compiler detector find a host ABI compiler"
         printf "%s\n" "   -f HOSTSRC_SUBDIR: Use HOSTSRC_SUBDIR subdirectory of -t DIR to place the source code of the host ABI"
@@ -73,8 +74,9 @@ HOST_ONLY=OFF
 OCAMLC_OPT_EXE=
 FLEXLINKFLAGS=
 DISABLE_EXTRAS=0
+BYTECODEONLY=OFF
 export MSVS_PREFERENCE=
-while getopts ":s:d:t:b:c:e:m:k:l:rf:p:q:wh" opt; do
+while getopts ":s:d:t:Bb:c:e:m:k:l:rf:p:q:wh" opt; do
     case ${opt} in
         h )
             usage
@@ -94,6 +96,7 @@ while getopts ":s:d:t:b:c:e:m:k:l:rf:p:q:wh" opt; do
         t )
             TARGETDIR="$OPTARG"
         ;;
+        B ) BYTECODEONLY=ON ;;
         b )
             MSVS_PREFERENCE="$OPTARG"
         ;;
@@ -111,9 +114,7 @@ while getopts ":s:d:t:b:c:e:m:k:l:rf:p:q:wh" opt; do
             ;;
         l ) FLEXLINKFLAGS="$OPTARG" ;;
         q ) HOST_ONLY="$OPTARG" ;;
-        r)
-            RUNTIMEONLY=ON
-            ;;
+        r ) RUNTIMEONLY=ON ;;
         \? )
             printf "%s\n" "This is not an option: -$OPTARG" >&2
             usage
@@ -223,6 +224,8 @@ $DKMLSYS_INSTALL "$HOSTABISCRIPT" "$OCAMLHOST_UNIX/share/dkml/detect/post-transf
 # Output: OCAML_CONFIGURE_NEEDS_MAKE_FLEXDLL
 if [ "$RUNTIMEONLY" = ON ]; then
     CONFIGUREARGS="$CONFIGUREARGS --disable-native-compiler --disable-stdlib-manpages --disable-ocamldoc"
+elif [ "$BYTECODEONLY" = ON ]; then
+    CONFIGUREARGS="$CONFIGUREARGS --disable-native-compiler --disable-ocamldoc"
 else
     case "$DISABLE_EXTRAS,$_OCAMLVER" in
         0,4.14.*|0,5.*)
@@ -260,7 +263,7 @@ fi
 log_trace "$DKMLSYS_CHMOD" -R ug+w      stdlib/
 
 # Make non-boot ./ocamlc and ./ocamlopt compiler
-if [ "$OCAML_CONFIGURE_NEEDS_MAKE_FLEXDLL" = ON ]; then
+if [ "${BYTECODEONLY:-OFF}" = OFF ] && [ "$OCAML_CONFIGURE_NEEDS_MAKE_FLEXDLL" = ON ]; then
     #   trigger `flexlink` target, especially its making of boot/ocamlrun.exe
     log_trace touch flexdll/Makefile
     log_trace rm -f flexdll/flexlink.exe
@@ -281,12 +284,16 @@ if [ "$RUNTIMEONLY" = ON ]; then
     # Finished the runtime parts
     exit 0
 fi
-log_trace ocaml_make "$DKMLHOSTABI" opt-core
-log_trace ocaml_make "$DKMLHOSTABI" ocamlc.opt
+if [ "${BYTECODEONLY:-OFF}" = OFF ]; then
+    log_trace ocaml_make "$DKMLHOSTABI" opt-core
+    log_trace ocaml_make "$DKMLHOSTABI" ocamlc.opt
+fi
 #   Generated ./ocamlc for some reason has a shebang reference to the bin/ocamlrun install
 #   location. So install the runtime.
 log_trace ocaml_make "$DKMLHOSTABI"     -C runtime install
-log_trace ocaml_make "$DKMLHOSTABI"     ocamlopt.opt       # Can use ./ocamlc (depends on exact sequence above; doesn't now though)
+if [ "${BYTECODEONLY:-OFF}" = OFF ]; then
+    log_trace ocaml_make "$DKMLHOSTABI"     ocamlopt.opt       # Can use ./ocamlc (depends on exact sequence above; doesn't now though)
+fi
 
 # Probe the artifacts from ./configure + ./ocamlc
 init_hostvars
@@ -361,7 +368,9 @@ build_with_support_for_cross_compiling() {
     #   Since the Makefile is sensitive to timestamps, we must make sure the wrappers have timestamps
     #   before any generated code (or else it will recompile).
     create_ocamlc_wrapper               -compile-stdlib
-    create_ocamlopt_wrapper             -compile-stdlib
+    if [ "${BYTECODEONLY:-OFF}" = OFF ]; then
+        create_ocamlopt_wrapper             -compile-stdlib
+    fi
     case "$DKMLHOSTABI" in
         windows_*)
             _unix_include="$OCAMLSRC_MIXED${HOST_DIRSEP}otherlibs${HOST_DIRSEP}win32unix"
@@ -370,10 +379,12 @@ build_with_support_for_cross_compiling() {
             _unix_include="$OCAMLSRC_MIXED${HOST_DIRSEP}otherlibs${HOST_DIRSEP}unix"
             ;;
     esac
-    create_ocamlc_wrapper               -compile-ocamlopt   -I "$OCAMLSRC_MIXED${HOST_DIRSEP}stdlib" -I "$_unix_include" -nostdlib
-    create_ocamlrun_ocamlopt_wrapper    -compile-ocamlopt   -I "$OCAMLSRC_MIXED${HOST_DIRSEP}stdlib" -I "$_unix_include" -nostdlib
+    if [ "${BYTECODEONLY:-OFF}" = OFF ]; then
+        create_ocamlc_wrapper               -compile-ocamlopt   -I "$OCAMLSRC_MIXED${HOST_DIRSEP}stdlib" -I "$_unix_include" -nostdlib
+        create_ocamlrun_ocamlopt_wrapper    -compile-ocamlopt   -I "$OCAMLSRC_MIXED${HOST_DIRSEP}stdlib" -I "$_unix_include" -nostdlib
+        create_ocamlopt_wrapper             -final              -I "$OCAMLSRC_MIXED${HOST_DIRSEP}stdlib" -I "$_unix_include" -nostdlib
+    fi
     create_ocamlc_wrapper               -final              -I "$OCAMLSRC_MIXED${HOST_DIRSEP}stdlib" -I "$_unix_include" -nostdlib
-    create_ocamlopt_wrapper             -final              -I "$OCAMLSRC_MIXED${HOST_DIRSEP}stdlib" -I "$_unix_include" -nostdlib
 
     # Remove all OCaml compiled modules since they were compiled with boot/ocamlc
     #   We do not want _any_ `make inconsistent assumptions over interface Stdlib__format` during cross-compilation.
@@ -384,25 +395,31 @@ build_with_support_for_cross_compiling() {
     # Recompile stdlib (and flexdll if enabled)
     printf "+ INFO: Compiling stdlib in pass 1\n" >&2
     log_trace make_host -compile-stdlib     -C stdlib all
-    log_trace make_host -compile-stdlib     -C stdlib allopt
+    if [ "${BYTECODEONLY:-OFF}" = OFF ]; then
+        log_trace make_host -compile-stdlib     -C stdlib allopt
+    fi
     #   Any future Makefile target that uses ./ocamlc will try to recompile it because it depends
     #   on compilerlibs/ocamlcommon.cma (and other .cma files). And that will trigger a new
     #   recompilation of stdlib. So we have to recompile them both until no more surprise
     #   recompilations of stdlib (creating `make inconsistent assumptions`).
     printf "+ INFO: Recompiling ocamlc in pass 1\n" >&2
     log_trace make_host -final              ocamlc
-    printf "+ INFO: Recompiling ocamlopt in pass 1\n" >&2
-    log_trace make_host -final              ocamlopt
-    printf "+ INFO: Recompiling ocamlc.opt in pass 1\n" >&2
-    log_trace make_host -final              ocamlc.opt
-    printf "+ INFO: Recompiling ocamlopt.opt in pass 1\n" >&2
-    #   Since `make_host -final` uses ocamlopt.opt we should not (and cannot on Windows)
-    #   overwrite the executable which is producing the executable (even if it works on some OS).
-    #   So run the bytecode ocamlopt executable to produce the native code ocamlopt.opt
-    log_trace make_host -compile-ocamlopt    ocamlopt.opt
+    if [ "${BYTECODEONLY:-OFF}" = OFF ]; then
+        printf "+ INFO: Recompiling ocamlopt in pass 1\n" >&2
+        log_trace make_host -final              ocamlopt
+        printf "+ INFO: Recompiling ocamlc.opt in pass 1\n" >&2
+        log_trace make_host -final              ocamlc.opt
+        printf "+ INFO: Recompiling ocamlopt.opt in pass 1\n" >&2
+        #   Since `make_host -final` uses ocamlopt.opt we should not (and cannot on Windows)
+        #   overwrite the executable which is producing the executable (even if it works on some OS).
+        #   So run the bytecode ocamlopt executable to produce the native code ocamlopt.opt
+        log_trace make_host -compile-ocamlopt    ocamlopt.opt
+    fi
     printf "+ INFO: Recompiling stdlib in pass 2\n" >&2
     log_trace make_host -compile-stdlib     -C stdlib all
-    log_trace make_host -compile-stdlib     -C stdlib allopt
+    if [ "${BYTECODEONLY:-OFF}" = OFF ]; then
+        log_trace make_host -compile-stdlib     -C stdlib allopt
+    fi
     #   Bad things will happen if a subsequent make target like `all` recompiles
     #   stdlib. Stdlib should be 100% stabilized at this point. If it is not
     #   stabilized, we will get `make inconsistent assumptions` later and it
@@ -422,7 +439,9 @@ build_with_support_for_cross_compiling() {
     else
         log_trace make_host -final          all
     fi
-    log_trace make_host -final              "${BOOTSTRAP_OPT_TARGET:-opt.opt}"
+    if [ "${BYTECODEONLY:-OFF}" = OFF ]; then
+        log_trace make_host -final              "${BOOTSTRAP_OPT_TARGET:-opt.opt}"
+    fi
 
     # flexlink.opt _must_ be the last thing built. See discussion near the
     # beginning about "bad flexlink situation on Windows".
@@ -438,7 +457,9 @@ build_with_support_for_cross_compiling() {
 }
 build_for_host_only() {
     log_trace ocaml_make "$DKMLHOSTABI" all
-    log_trace ocaml_make "$DKMLHOSTABI" "${BOOTSTRAP_OPT_TARGET:-opt.opt}"
+    if [ "${BYTECODEONLY:-OFF}" = OFF ]; then
+        log_trace ocaml_make "$DKMLHOSTABI" "${BOOTSTRAP_OPT_TARGET:-opt.opt}"
+    fi
     log_trace ocaml_make "$DKMLHOSTABI" install
 }
 
@@ -463,16 +484,18 @@ esac
 #    FLEXDIR environment variable needs to be set.
 #    It is in the build directory boot/.
 #    Confer: https://github.com/ocaml/flexdll/blob/f5ccd9730d0766d0eb002cbe35a183f627044291/reloc.ml#L1407-L1428
-if [ "${OCAML_BYTECODE_ONLY:-OFF}" = OFF ] && [ -n "$FLEXLINK_CHAIN" ]; then
+if [ "${BYTECODEONLY:-OFF}" = OFF ] && [ -n "$FLEXLINK_CHAIN" ]; then
     log_trace install "boot/flexdll_initer_${FLEXLINK_CHAIN}${FLEXLINK_EXT}"   "$OCAMLHOST_UNIX"/bin/
     log_trace install "boot/flexdll_${FLEXLINK_CHAIN}${FLEXLINK_EXT}"          "$OCAMLHOST_UNIX"/bin/
 fi
 
 # Test executables that they were properly linked
-if [ "${OCAML_BYTECODE_ONLY:-OFF}" = OFF ] && [ -n "$FLEXLINK_CHAIN" ]; then
+if [ "${BYTECODEONLY:-OFF}" = OFF ] && [ -n "$FLEXLINK_CHAIN" ]; then
     log_trace "$OCAMLHOST_UNIX"/bin/flexlink.exe --help >&2
 fi
 log_trace "$OCAMLHOST_UNIX"/bin/ocamlc -config >&2
-log_trace "$OCAMLHOST_UNIX"/bin/ocamlopt -config >&2
-log_trace "$OCAMLHOST_UNIX"/bin/ocamlc.opt -config >&2
-log_trace "$OCAMLHOST_UNIX"/bin/ocamlopt.opt -config >&2
+if [ "${BYTECODEONLY:-OFF}" = OFF ]; then
+    log_trace "$OCAMLHOST_UNIX"/bin/ocamlc.opt -config >&2
+    log_trace "$OCAMLHOST_UNIX"/bin/ocamlopt -config >&2
+    log_trace "$OCAMLHOST_UNIX"/bin/ocamlopt.opt -config >&2
+fi

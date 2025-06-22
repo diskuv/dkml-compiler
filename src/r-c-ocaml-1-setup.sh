@@ -158,6 +158,7 @@ usage() {
         printf "%s\n" "      Defaults to '$OPT_MSVS_PREFERENCE' which, because it does not include '@',"
         printf "%s\n" "      will not choose a compiler based on environment variables that would disrupt reproducibility."
         printf "%s\n" "      Confer with https://github.com/metastack/msvs-tools#msvs-detect"
+        printf "%s\n" "   -B Only build bytecode compiler and libraries."
         printf "%s\n" "   -e DKMLHOSTABI: Optional. Use the DkML compiler detector find a host ABI compiler."
         printf "%s\n" "      Especially useful to find a 32-bit Windows host compiler that can use 64-bits of memory for the compiler."
         printf "%s\n" "      Values include: windows_x86, windows_x86_64, android_arm64v8a, darwin_x86_64, etc."
@@ -212,7 +213,8 @@ RUNTIMEONLY=OFF
 TEMPLATEDIR=
 HOSTABISCRIPT=
 OCAMLC_OPT_EXE=
-while getopts ":d:v:u:t:a:b:c:e:k:l:m:n:rf:p:g:o:wxzh" opt; do
+BYTECODEONLY=OFF
+while getopts ":d:v:u:t:a:Bb:c:e:k:l:m:n:rf:p:g:o:wxzh" opt; do
     case ${opt} in
         h )
             usage
@@ -250,6 +252,10 @@ while getopts ":d:v:u:t:a:b:c:e:k:l:m:n:rf:p:g:o:wxzh" opt; do
         ;;
         a )
             TARGETABIS="$OPTARG"
+        ;;
+        B )
+            BUILD_HOST_ARGS+=( -B )
+            BUILD_CROSS_ARGS+=( -B )
         ;;
         b )
             MSVS_PREFERENCE="$OPTARG"
