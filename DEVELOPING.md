@@ -48,14 +48,9 @@ with-dkml make local-install
 Otherwise, run the following inside a `with-dkml bash`, MSYS2 or Cygwin shell:
 
 ```sh
+sh scripts/mk-dkmldir.sh "" ""
+
 rm -rf _build/prefix
-
-# Create a DKMLDIR
-SEMVER=$(cat src/version.semver.txt | tr -d '\r')
-printf 'dkml_root_version=%s\\n' "$SEMVER" | sed 's/[0-9.]*~v//; s/~/-/' > .dkmlroot
-install -d vendor && test -d vendor/drc || git -C vendor clone https://github.com/diskuv/dkml-runtime-common.git drc
-install -d vendor/dkml-compiler && rsync -av --delete src dkmldir/vendor/dkml-compiler/
-
 env DKML_REPRODUCIBLE_SYSTEM_BREWFILE=./Brewfile \
     src/r-c-ocaml-1-setup.sh \
     -d dkmldir \
@@ -83,14 +78,9 @@ make local-install
 Otherwise:
 
 ```sh
+sh scripts/mk-dkmldir.sh "" ""
+
 rm -rf _build/prefix
-
-# Create a DKMLDIR
-SEMVER=$(cat src/version.semver.txt | tr -d '\r')
-printf 'dkml_root_version=%s\\n' "$SEMVER" | sed 's/[0-9.]*~v//; s/~/-/' > .dkmlroot
-install -d vendor && test -d vendor/drc || git -C vendor clone https://github.com/diskuv/dkml-runtime-common.git drc
-install -d vendor/dkml-compiler && rsync -av --delete src dkmldir/vendor/dkml-compiler/
-
 env DKML_REPRODUCIBLE_SYSTEM_BREWFILE=./Brewfile \
     src/r-c-ocaml-1-setup.sh \
     -d dkmldir \
@@ -108,6 +98,16 @@ env DKML_REPRODUCIBLE_SYSTEM_BREWFILE=./Brewfile \
 (cd '_build/prefix' && DKML_BUILD_TRACE=ON DKML_BUILD_TRACE_LEVEL=2 \
     share/dkml/repro/100co/vendor/dkml-compiler/src/r-c-ocaml-3-build_cross-noargs.sh 2>&1 | \
     tee build_cross.log)
+```
+
+### Linux
+
+```sh
+sh scripts/mk-dkmldir.sh "" ""
+
+env src/r-c-ocaml-1-setup.sh -d dkmldir -t "$PWD/_build/prefix" -f src-ocaml -v dl/ocaml -z -elinux_x86_64 -A -k vendor/dkml-compiler/env/standard-compiler-env-to-ocaml-configure-env.sh
+
+(export ASAN_OPTIONS=detect_leaks=0 && cd '_build/prefix' && share/dkml/repro/100co/vendor/dkml-compiler/src/r-c-ocaml-2-build_host-noargs.sh)
 ```
 
 ### Android
@@ -156,13 +156,10 @@ case "$TARGETABI" in
     *) HOSTABI=linux_x86_64 ;;
 esac
 
-# Create a DKMLDIR
-printf 'dkml_root_version=%s\\n' "$SEMVER" | sed 's/[0-9.]*~v//; s/~/-/' > .dkmlroot
-install -d vendor && test -d vendor/drc || git -C vendor clone https://github.com/diskuv/dkml-runtime-common.git drc
-install -d vendor/dkml-compiler && rsync -av --delete src dkmldir/vendor/dkml-compiler/
+sh scripts/mk-dkmldir.sh "" ""
 
 src/r-c-ocaml-1-setup.sh \
-    -d . \
+    -d dkmldir \
     -t "dist-$TARGETABI-on-$HOSTABI" \
     -v "$OCAMLVER" \
     -e "$HOSTABI" \

@@ -104,6 +104,8 @@ usage() {
     printf "%s\n" "      and --host will have already been set appropriately, but you can override the --host heuristic by adding it"
     printf "%s\n" "      to -n CONFIGUREARGS. Can be repeated."
     printf "%s\n" "   -w Disable non-essentials like the native toplevel and ocamldoc."
+    printf "%s\n" "   -A Enable Address Sanitizer"
+    printf "%s\n" "   -L Enable Leak Sanitizer"
   } >&2
 }
 
@@ -119,7 +121,9 @@ FLEXLINKFLAGS=
 DISABLE_EXTRAS=0
 BYTECODEONLY=OFF
 BYTECODE32=OFF
-while getopts ":s:d:t:a:B3n:e:f:g:l:wh" opt; do
+SANITIZE_ADDRESS=OFF
+SANITIZE_LEAK=OFF
+while getopts ":s:d:t:a:B3n:e:f:g:l:wALh" opt; do
   case ${opt} in
   h)
     usage
@@ -155,6 +159,8 @@ while getopts ":s:d:t:a:B3n:e:f:g:l:wh" opt; do
   f ) HOSTSRC_SUBDIR=$OPTARG ;;
   g ) CROSS_SUBDIR=$OPTARG ;;
   l ) FLEXLINKFLAGS="$OPTARG" ;;
+  A ) SANITIZE_ADDRESS=ON ;;
+  L ) SANITIZE_LEAK=ON ;;
   \?)
     printf "%s\n" "This is not an option: -$OPTARG" >&2
     usage
@@ -402,6 +408,9 @@ build_world() {
   else
     print_m_h_extensions "$build_world_TARGET_ABI" "" >> runtime/caml/m.h
   fi
+
+  # Extend Makefile.config
+  print_makefile_config_extensions "$SANITIZE_ADDRESS" "$SANITIZE_LEAK" >> Makefile.config
 
   # Build
   # -----

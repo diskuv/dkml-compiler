@@ -589,3 +589,22 @@ print_m_h_extensions() {
       ;;
   esac
 }
+
+print_makefile_config_extensions() {
+  print_makefile_config_extensions_SANITIZE_ADDRESS=$1; shift
+  print_makefile_config_extensions_SANITIZE_LEAK=$1; shift
+  case "$print_makefile_config_extensions_SANITIZE_ADDRESS" in
+    ON)
+      echo "OC_CFLAGS+=-fsanitize=address -fno-omit-frame-pointer -O1 -g"
+      echo "OCAMLC_CFLAGS+=-fsanitize=address -fno-omit-frame-pointer -O1 -g"
+      echo "OCAMLOPT_CFLAGS+=-fsanitize=address -fno-omit-frame-pointer -O1 -g"
+      ;;
+  esac
+  case "$print_makefile_config_extensions_SANITIZE_LEAK" in
+    ON)
+      echo "OC_CFLAGS+=-fsanitize=leak -fno-omit-frame-pointer -O1 -g"
+      echo "OCAMLC_CFLAGS+=-fsanitize=leak -fno-omit-frame-pointer -O1 -g"
+      echo "OCAMLOPT_CFLAGS+=-fsanitize=leak -fno-omit-frame-pointer -O1 -g"
+      ;;
+  esac
+}

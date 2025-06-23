@@ -124,6 +124,32 @@ There is another Opam package [conf-dkml-cross-toolchain](https://github.com/dis
 that can take the "mlcross" Opam directory structure and add it to
 `findlib` so that `ocamlfind -toolchain <ABI>` and `dune build -x <ABI>` work.
 
+## Options
+
+### ocaml-option-address-sanitizer
+
+The clang/gcc Address Sanitizer.
+
+To avoid stalls seen in WSL 2 (6.6.87.2-microsoft-standard-WSL2) Debian 11.6 it is not used during the `./configure` phase but when executables are being created in the `make` phase.
+
+On some machines you may see an endless stream of:
+
+```text
+AddressSanitizer:DEADLYSIGNAL
+```
+
+The solution is at https://github.com/actions/runner-images/issues/9524#issuecomment-2002475952 ... do the following:
+
+```sh
+sudo sysctl vm.mmap_rnd_bits=28
+```
+
+### ocaml-option-leak-sanitizer
+
+The clang/gcc Leak Sanitizer.
+
+To avoid stalls seen in WSL 2 (6.6.87.2-microsoft-standard-WSL2) Debian 11.6 it is not used during the `./configure` phase but when executables are being created in the `make` phase.
+
 ## Developing
 
 First run `with-dkml make local-install` on DkML on Windows, or

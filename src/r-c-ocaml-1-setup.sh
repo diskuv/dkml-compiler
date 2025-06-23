@@ -186,6 +186,8 @@ usage() {
         printf "%s\n" "   -w Disable non-essentials like the native toplevel and ocamldoc."
         printf "%s\n" "   -x Do not include temporary object files (only useful for debugging) in target directory"
         printf "%s\n" "   -z Do not include .git repositories in target directory"
+        printf "%s\n" "   -A Enable Address Sanitizer"
+        printf "%s\n" "   -L Enable Leak Sanitizer"
     } >&2
 }
 
@@ -214,7 +216,7 @@ RUNTIMEONLY=OFF
 TEMPLATEDIR=
 HOSTABISCRIPT=
 OCAMLC_OPT_EXE=
-while getopts ":d:v:u:t:a:B3b:c:e:k:l:m:n:rf:p:g:o:wxzh" opt; do
+while getopts ":d:v:u:t:a:B3b:c:e:k:l:m:n:rf:p:g:o:wxzALh" opt; do
     case ${opt} in
         h )
             usage
@@ -254,10 +256,12 @@ while getopts ":d:v:u:t:a:B3b:c:e:k:l:m:n:rf:p:g:o:wxzh" opt; do
             TARGETABIS="$OPTARG"
         ;;
         B )
+            SETUP_ARGS+=( -B )
             BUILD_HOST_ARGS+=( -B )
             BUILD_CROSS_ARGS+=( -B )
         ;;
         3 )
+            SETUP_ARGS+=( -3 )
             BUILD_HOST_ARGS+=( -3 )
             BUILD_CROSS_ARGS+=( -3 )
         ;;
@@ -273,6 +277,7 @@ while getopts ":d:v:u:t:a:B3b:c:e:k:l:m:n:rf:p:g:o:wxzh" opt; do
         p ) HOST_SUBDIR=$OPTARG ;;
         g ) CROSS_SUBDIR=$OPTARG ;;
         l )
+            SETUP_ARGS+=( -l "$OPTARG" )
             BUILD_HOST_ARGS+=( -l "$OPTARG" )
             BUILD_CROSS_ARGS+=( -l "$OPTARG" )
         ;;
@@ -306,6 +311,16 @@ while getopts ":d:v:u:t:a:B3b:c:e:k:l:m:n:rf:p:g:o:wxzh" opt; do
             SETUP_ARGS+=( -z )
             TRIM_ARGS+=( -z )
         ;;
+        A )
+            SETUP_ARGS+=( -A )
+            BUILD_HOST_ARGS+=( -A )
+            BUILD_CROSS_ARGS+=( -A )
+            ;;
+        L )
+            SETUP_ARGS+=( -L )
+            BUILD_HOST_ARGS+=( -L )
+            BUILD_CROSS_ARGS+=( -L )
+            ;;
         \? )
             printf "%s\n" "This is not an option: -$OPTARG" >&2
             usage

@@ -59,6 +59,8 @@ usage() {
         printf "%s\n" "   -q [ON|OFF]: Optional. Defaults to OFF. Only support host builds, not cross-compiling. Much quicker"
         printf "%s\n" "   -r Only build ocamlrun, Stdlib and the other libraries. Cannot be used with -a TARGETABIS."
         printf "%s\n" "   -w Disable non-essentials like the native toplevel and ocamldoc."
+        printf "%s\n" "   -A Enable Address Sanitizer"
+        printf "%s\n" "   -L Enable Leak Sanitizer"
     } >&2
 }
 
@@ -77,8 +79,10 @@ FLEXLINKFLAGS=
 DISABLE_EXTRAS=0
 BYTECODEONLY=OFF
 BYTECODE32=OFF
+SANITIZE_ADDRESS=OFF
+SANITIZE_LEAK=OFF
 export MSVS_PREFERENCE=
-while getopts ":s:d:t:B3b:c:e:m:k:l:rf:p:q:wh" opt; do
+while getopts ":s:d:t:B3b:c:e:m:k:l:rf:p:q:wALh" opt; do
     case ${opt} in
         h )
             usage
@@ -118,6 +122,8 @@ while getopts ":s:d:t:B3b:c:e:m:k:l:rf:p:q:wh" opt; do
         l ) FLEXLINKFLAGS="$OPTARG" ;;
         q ) HOST_ONLY="$OPTARG" ;;
         r ) RUNTIMEONLY=ON ;;
+        A ) SANITIZE_ADDRESS=ON ;;
+        L ) SANITIZE_LEAK=ON ;;
         \? )
             printf "%s\n" "This is not an option: -$OPTARG" >&2
             usage
@@ -250,6 +256,9 @@ if [ "$BYTECODEONLY" = ON ] && [ "$BYTECODE32" = ON ]; then
 else
     print_m_h_extensions "$DKMLHOSTABI" "" >> runtime/caml/m.h
 fi
+
+# Extend Makefile.config
+print_makefile_config_extensions "$SANITIZE_ADDRESS" "$SANITIZE_LEAK" >> Makefile.config
 
 # Skip bootstrapping if ocamlc.opt is present
 if [ -n "$OCAMLC_OPT_EXE" ]; then

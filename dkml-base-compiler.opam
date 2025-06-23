@@ -64,6 +64,8 @@ depends: [
 depopts: [
   "ocaml-option-32bit"
   "ocaml-option-bytecode-only"
+  "ocaml-option-address-sanitizer"
+  "ocaml-option-leak-sanitizer"
   "dkml-option-debuginfo"
   "dkml-option-minsize"
   "dkml-option-ex32"
@@ -88,6 +90,10 @@ build-env: [
   # Used by android-ndk-env-to-ocaml-configure-env.sh
   [ANDROID_PLATFORM = "%{ANDROID_PLATFORM}%"]
   [ANDROID_NDK = "%{ANDROID_NDK}%"]
+  # When building the OCaml compiler, which has known memory leaks, don't fail.
+  # And any sanitizer error ... just ignore it by using exit code 0.
+  [LSAN_OPTIONS = "detect_leaks=0,exitcode=0"]
+  [ASAN_OPTIONS = "detect_leaks=0,exitcode=0"]
 ]
 build: [
   # Fail-fast if ANDROID_NDK is not present but needs to be.
@@ -135,23 +141,9 @@ build: [
   ["install" "debug/env.ml" "debug/persistent_env.ml" "dl/ocaml/typing/"] {dkml-debug-env-failures & version > "4.14.2~v1.2.1~" & version <= "4.14.2"}
 
   # Create a DKMLDIR. Its structure mimics a git submodule setup.
-  #   <dkmldir>/.dkmlroot
-  ["install" "-d" "dkmldir"]
-  #     4.14.0~v0.4.1          --dkml-semver--> 0.4.1
-  #     4.14.0~v0.4.1~prerel69 --dkml-semver--> 0.4.1-prerel69
-  ["sh" "-eufc" "printf 'dkml_root_version=%s\\n' '%{version}%' | sed 's/[0-9.]*~v//; s/~/-/' > dkmldir/.dkmlroot"]
+  ["sh" "scripts/mk-dkmldir.sh" "%{version}%" "%{dkml-runtime-common:lib}%"]
 
-  #   <dkmldir>/vendor/drc/
-  ["install" "-d" "dkmldir/vendor/drc"]
-  #     tar through pipe is essentially an rsync (without requiring rsync)
-  ["sh" "-eufc" "tar cCf '%{dkml-runtime-common:lib}%/' - . | tar xCf dkmldir/vendor/drc/ -"]
-
-  #   <dkmldir>/vendor/dkml-compiler/
-  ["install" "-d" "dkmldir/vendor/dkml-compiler/src" "dkmldir/vendor/dkml-compiler/env"]
-  #     only the standard compiler environment is needed for the base compiler. However options play a part.
-  #     we install unpatched options, and edit them as needed below using opam flags.
-  ["install" "env/standard-compiler-env-to-ocaml-configure-env.sh" "dkmldir/vendor/dkml-compiler/env/"]
-  ["install" "env/android-ndk-env-to-ocaml-configure-env.sh" "dkmldir/vendor/dkml-compiler/env/"]
+  #     -------------- BEGIN compile flags: mutually exclusive set 1 --------------------
   ["sh" "-eufc"
     # https://learn.microsoft.com/en-us/cpp/build/reference/z7-zi-zi-debug-information-format?view=msvc-170
     # https://learn.microsoft.com/en-us/cpp/assembler/masm/ml-and-ml64-command-line-reference?view=msvc-170
@@ -189,8 +181,7 @@ build: [
       env/standard-compiler-env-to-ocaml-configure-env.sh > \
       dkmldir/vendor/dkml-compiler/env/standard-compiler-env-to-ocaml-configure-env.sh"
   ] {dkml-option-minsize:installed & os = "linux"}
-  #     tar through pipe is essentially an rsync (without requiring rsync)
-  ["sh" "-eufc" "tar cCf src/ - . | tar xCf dkmldir/vendor/dkml-compiler/src/ -"]
+  #     -------------- END compile flags --------------------
 
   #   <dkmldir>/vendor/dkml-compiler/bin/bootstrap-ocamlc.opt.exe
   #   to speed up compile
@@ -227,6 +218,9 @@ install: [
       #   https://github.com/ocsigen/js_of_ocaml/blob/e6c8a9adf7a3cb5a3bbee21b753b6dab0a7c1c36/runtime/js/marshal.js#L360-L362)
       "-B" { ocaml-option-bytecode-only:installed }
       "-3" { dkml-option-ex32:installed }
+      #   Sanitizers
+      "-A" {ocaml-option-address-sanitizer:installed & os != "win32"}
+      "-L" {ocaml-option-leak-sanitizer:installed & os != "win32"}
       #   Windows flexlink flags that affect the built ocaml.exe, ocamlc.opt.exe, etc.
       #   It is nice with the toplevel ocaml.exe to be able to debug it when the toplevel
       #   loads in other (stublib) DLLs, for example.
