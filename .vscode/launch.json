@@ -5,7 +5,7 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "(gdb) Compile camlinternalFormatBasics.mli",
+            "name": "(gdb) Compile stdlib/camlinternalFormatBasics.mli",
             "type": "cppdbg",
             "request": "launch",
             "program": "${workspaceFolder}/_build/prefix/src-ocaml/runtime/ocamlrun",
@@ -25,7 +25,6 @@
                 "-principal",
                 "-safe-string",
                 "-strict-formats",
-                "",
                 "-nopervasives",
                 "-c",
                 "camlinternalFormatBasics.mli"
@@ -47,6 +46,78 @@
                     "ignoreFailures": true
                 }
             ]
+        },
+        {
+            "name": "(gdb) Compile stdlib/list.ml",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/_build/prefix/src-ocaml/runtime/ocamlrun",
+            "args": [
+                "../boot/ocamlc",
+                "-use-prims",
+                "../runtime/primitives",
+                "-strict-sequence",
+                "-absname",
+                "-w",
+                "+a-4-9-41-42-44-45-48-70",
+                "-g",
+                "-warn-error",
+                "+A",
+                "-bin-annot",
+                "-nostdlib",
+                "-principal",
+                "-safe-string",
+                "-strict-formats",
+                "-o",
+                "stdlib__List.cmo",
+                "-c",
+                "list.ml"
+            ],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}/_build/prefix/src-ocaml/stdlib",
+            "environment": [],
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                },
+                {
+                    "description": "Set Disassembly Flavor to Intel",
+                    "text": "-gdb-set disassembly-flavor intel",
+                    "ignoreFailures": true
+                }
+            ]
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "(lldb) Compile stdlib/list.ml",
+            "program": "${workspaceFolder}/_build/prefix/src-ocaml/runtime/ocamlrun",
+            "args": [
+                "../boot/ocamlc",
+                "-use-prims",
+                "../runtime/primitives",
+                "-strict-sequence",
+                "-absname",
+                "-w",
+                "+a-4-9-41-42-44-45-48-70",
+                "-g",
+                "-warn-error",
+                "+A",
+                "-bin-annot",
+                "-nostdlib",
+                "-principal",
+                "-safe-string",
+                "-strict-formats",
+                "-o",
+                "stdlib__List.cmo",
+                "-c",
+                "list.ml"
+            ],
+            "cwd": "${workspaceFolder}/_build/prefix/src-ocaml/stdlib",
         }
     ]
 }

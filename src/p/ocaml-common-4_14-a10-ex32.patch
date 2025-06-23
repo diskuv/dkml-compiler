@@ -1,0 +1,135 @@
+diff --git a/runtime/caml/address_class.h b/runtime/caml/address_class.h
+index 82e5cf7..6ad4003 100644
+--- a/runtime/caml/address_class.h
++++ b/runtime/caml/address_class.h
+@@ -96,7 +96,7 @@
+ #define In_young 2
+ #define In_static_data 4
+ 
+-#ifdef ARCH_SIXTYFOUR
++#ifdef TARGET_C_ARCH_SIXTYFOUR
+ 
+ /* 64 bits: Represent page table as a sparse hash table */
+ int caml_page_table_lookup(void * addr);
+diff --git a/runtime/extern.c b/runtime/extern.c
+index b713c40..c74bf90 100644
+--- a/runtime/extern.c
++++ b/runtime/extern.c
+@@ -154,7 +154,7 @@ static struct extern_item * extern_resize_stack(struct extern_item * sp)
+ /* Multiplicative Fibonacci hashing
+    (Knuth, TAOCP vol 3, section 6.4, page 518).
+    HASH_FACTOR is (sqrt(5) - 1) / 2 * 2^wordsize. */
+-#ifdef ARCH_SIXTYFOUR
++#ifdef TARGET_C_ARCH_SIXTYFOUR
+ #define HASH_FACTOR 11400714819323198486UL
+ #else
+ #define HASH_FACTOR 2654435769UL
+diff --git a/runtime/fix_code.c b/runtime/fix_code.c
+index 1259f53..6f0c0ae 100644
+--- a/runtime/fix_code.c
++++ b/runtime/fix_code.c
+@@ -25,6 +25,10 @@
+ #include <io.h>
+ #endif
+ 
++#if defined(TARGET_C_ARCH_SIXTYFOUR) && !defined(ARCH_SIXTYFOUR)
++#include <stdint.h>
++#endif
++
+ #include "caml/codefrag.h"
+ #include "caml/debugger.h"
+ #include "caml/fix_code.h"
+@@ -128,6 +132,7 @@ int* caml_init_opcode_nargs(void)
+ void caml_thread_code (code_t code, asize_t len)
+ {
+   code_t p;
++  intptr_t idx;
+   int* l = caml_init_opcode_nargs();
+   len /= sizeof(opcode_t);
+   for (p = code; p < code + len; /*nothing*/) {
+@@ -139,7 +144,15 @@ void caml_thread_code (code_t code, asize_t len)
+       */
+       instr = STOP;
+     }
+-    *p++ = (opcode_t)(caml_instr_table[instr] - caml_instr_base);
++    idx = (intptr_t)(caml_instr_table[instr] - caml_instr_base);
++#if defined(TARGET_C_ARCH_SIXTYFOUR) && !defined(ARCH_SIXTYFOUR)
++    if(idx < INT32_MIN || idx > INT32_MAX) {
++      /* >= 2147483648 (2GiB). Casting to 'typedef int32_t opcode_t'
++         will overflow.  */
++      caml_fatal_error ("in fix_code: threaded instruction table more than int32_t wide");
++    }
++#endif
++    *p++ = (opcode_t)idx;
+     if (instr == SWITCH) {
+       uint32_t sizes = *p++;
+       uint32_t const_size = sizes & 0xFFFF;
+diff --git a/runtime/interp.c b/runtime/interp.c
+index 9b18f3c..a96a83f 100644
+--- a/runtime/interp.c
++++ b/runtime/interp.c
+@@ -49,7 +49,7 @@ sp is a local copy of the global variable Caml_state->extern_sp. */
+ 
+ #ifdef THREADED_CODE
+ #  define Instruct(name) lbl_##name
+-#  if defined(ARCH_SIXTYFOUR) && !defined(ARCH_CODE32)
++#  if defined(TARGET_C_ARCH_SIXTYFOUR) && !defined(ARCH_CODE32)
+ #    define Jumptbl_base &&lbl_ACC0
+ #  else
+ #    define Jumptbl_base 0
+@@ -222,7 +222,7 @@ value caml_interprete(code_t prog, asize_t prog_size)
+   register value * sp;
+   register value accu;
+ #endif
+-#if defined(THREADED_CODE) && defined(ARCH_SIXTYFOUR) && !defined(ARCH_CODE32)
++#if defined(THREADED_CODE) && defined(TARGET_C_ARCH_SIXTYFOUR) && !defined(ARCH_CODE32)
+ #ifdef JUMPTBL_BASE_REG
+   register char * jumptbl_base JUMPTBL_BASE_REG;
+ #else
+@@ -254,7 +254,7 @@ value caml_interprete(code_t prog, asize_t prog_size)
+     return Val_unit;
+   }
+ 
+-#if defined(THREADED_CODE) && defined(ARCH_SIXTYFOUR) && !defined(ARCH_CODE32)
++#if defined(THREADED_CODE) && defined(TARGET_C_ARCH_SIXTYFOUR) && !defined(ARCH_CODE32)
+   jumptbl_base = Jumptbl_base;
+ #endif
+   initial_local_roots = Caml_state->local_roots;
+diff --git a/runtime/ints.c b/runtime/ints.c
+index c9584e4..ec91ec6 100644
+--- a/runtime/ints.c
++++ b/runtime/ints.c
+@@ -706,7 +706,11 @@ static uintnat nativeint_deserialize(void * dst)
+   default:
+     caml_deserialize_error("input_value: ill-formed native integer");
+   }
++#if defined(TARGET_C_ARCH_SIXTYFOUR) && !defined(ARCH_SIXTYFOUR)
++  return 4;
++#else
+   return sizeof(intnat);
++#endif
+ }
+ 
+ static const struct custom_fixed_length nativeint_length = { 4, 8 };
+diff --git a/runtime/memory.c b/runtime/memory.c
+index 66d1c50..3a9e7bd 100644
+--- a/runtime/memory.c
++++ b/runtime/memory.c
+@@ -54,7 +54,7 @@ extern uintnat caml_percent_free;                   /* major_gc.c */
+ #define Page(p) ((uintnat) (p) >> Page_log)
+ #define Page_mask ((~(uintnat)0) << Page_log)
+ 
+-#ifdef ARCH_SIXTYFOUR
++#ifdef TARGET_C_ARCH_SIXTYFOUR
+ 
+ /* 64-bit implementation:
+    The page table is represented sparsely as a hash table
+@@ -80,7 +80,7 @@ static struct page_table caml_page_table;
+ /* Multiplicative Fibonacci hashing
+    (Knuth, TAOCP vol 3, section 6.4, page 518).
+    HASH_FACTOR is (sqrt(5) - 1) / 2 * 2^wordsize. */
+-#ifdef ARCH_SIXTYFOUR
++#ifdef TARGET_C_ARCH_SIXTYFOUR
+ #define HASH_FACTOR 11400714819323198486UL
+ #else
+ #define HASH_FACTOR 2654435769UL

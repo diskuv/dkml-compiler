@@ -50,6 +50,12 @@ Otherwise, run the following inside a `with-dkml bash`, MSYS2 or Cygwin shell:
 ```sh
 rm -rf _build/prefix
 
+# Create a DKMLDIR
+SEMVER=$(cat src/version.semver.txt | tr -d '\r')
+printf 'dkml_root_version=%s\\n' "$SEMVER" | sed 's/[0-9.]*~v//; s/~/-/' > .dkmlroot
+install -d vendor && test -d vendor/drc || git -C vendor clone https://github.com/diskuv/dkml-runtime-common.git drc
+install -d vendor/dkml-compiler && rsync -av --delete src dkmldir/vendor/dkml-compiler/
+
 env DKML_REPRODUCIBLE_SYSTEM_BREWFILE=./Brewfile \
     src/r-c-ocaml-1-setup.sh \
     -d dkmldir \
@@ -78,6 +84,12 @@ Otherwise:
 
 ```sh
 rm -rf _build/prefix
+
+# Create a DKMLDIR
+SEMVER=$(cat src/version.semver.txt | tr -d '\r')
+printf 'dkml_root_version=%s\\n' "$SEMVER" | sed 's/[0-9.]*~v//; s/~/-/' > .dkmlroot
+install -d vendor && test -d vendor/drc || git -C vendor clone https://github.com/diskuv/dkml-runtime-common.git drc
+install -d vendor/dkml-compiler && rsync -av --delete src dkmldir/vendor/dkml-compiler/
 
 env DKML_REPRODUCIBLE_SYSTEM_BREWFILE=./Brewfile \
     src/r-c-ocaml-1-setup.sh \
@@ -147,7 +159,7 @@ esac
 # Create a DKMLDIR
 printf 'dkml_root_version=%s\\n' "$SEMVER" | sed 's/[0-9.]*~v//; s/~/-/' > .dkmlroot
 install -d vendor && test -d vendor/drc || git -C vendor clone https://github.com/diskuv/dkml-runtime-common.git drc
-rm -rf vendor/dkml-compiler && install -d vendor/dkml-compiler && cp -rp src vendor/dkml-compiler/
+install -d vendor/dkml-compiler && rsync -av --delete src dkmldir/vendor/dkml-compiler/
 
 src/r-c-ocaml-1-setup.sh \
     -d . \
