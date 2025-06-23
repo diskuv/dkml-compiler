@@ -63,8 +63,10 @@ depends: [
 ]
 depopts: [
   "ocaml-option-32bit"
+  "ocaml-option-bytecode-only"
   "dkml-option-debuginfo"
   "dkml-option-minsize"
+  "dkml-option-ex32"
   "dkml-target-abi-android_arm64v8a"
   "dkml-target-abi-android_arm32v7a"
   "dkml-target-abi-android_x86_64"
@@ -216,6 +218,15 @@ install: [
       #   the option will be dropped by r-c-ocaml-1-setup.sh. Just an optimization!
       "-c" "vendor/dkml-compiler/bin/bootstrap-ocamlc.opt.exe"
       "-z"
+      #   32-bit bytecode only compiler? It works even on 64-bit machines that
+      #   don't have 32-bit capable CPUs like Apple Silicon. It avoids:
+      #     'input_value: integer too large'
+      #   when bytecode is generated on a 64-bit machine and then transferred to
+      #   a 32-bit machine (ex. dk cross-compilation, js_of_ocaml
+      #   and wasm_of_ocaml;
+      #   https://github.com/ocsigen/js_of_ocaml/blob/e6c8a9adf7a3cb5a3bbee21b753b6dab0a7c1c36/runtime/js/marshal.js#L360-L362)
+      "-B" { ocaml-option-bytecode-only:installed }
+      "-3" { dkml-option-ex32:installed }
       #   Windows flexlink flags that affect the built ocaml.exe, ocamlc.opt.exe, etc.
       #   It is nice with the toplevel ocaml.exe to be able to debug it when the toplevel
       #   loads in other (stublib) DLLs, for example.

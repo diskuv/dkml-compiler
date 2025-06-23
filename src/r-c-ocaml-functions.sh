@@ -358,7 +358,7 @@ ocaml_configure() {
   $DKMLSYS_INSTALL -d "$ocaml_configure_PREFIX/share/dkml/detect"
   echo "$ocaml_configure_ABI" > "$ocaml_configure_PREFIX/share/dkml/detect/abi.txt"
   (set | grep "^DKML_COMPILE_" || true) > "$ocaml_configure_PREFIX/share/dkml/detect/compile-vars.txt"
-  
+
   # ./configure and define make functions
   # -------------------------------------
 
@@ -567,4 +567,25 @@ make_host() {
 remove_compiled_objects_from_curdir() {
   # Exclude the testsuite which has checked-in .cmm and .cmi.invalid files, and exclude .cmd files.
   log_trace find . -type d \( -path ./testsuite/tests \) -prune -o -name '*.cmd' -prune -o -name '*.cm*' -exec rm {} \;
+}
+
+print_m_h_extensions() {
+  print_m_h_extensions_TARGETABI=$1; shift
+  print_m_h_extensions_TARGETABIMOD=$1; shift
+  echo
+  echo "/* Target ABI: $print_m_h_extensions_TARGETABI */"
+  case "$print_m_h_extensions_TARGETABI" in
+    *_x86_64|*_arm64)
+      echo "#define TARGET_C_ARCH_SIXTYFOUR"
+      ;;
+    *)
+      echo "#undef TARGET_C_ARCH_SIXTYFOUR"
+      ;;
+  esac
+  case "$print_m_h_extensions_TARGETABIMOD" in
+    __ex32)
+      echo "/* Target ABI modifier: __ex32. Applies to OCaml architecture */"
+      echo "#undef ARCH_SIXTYFOUR"
+      ;;
+  esac
 }

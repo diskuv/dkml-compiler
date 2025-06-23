@@ -1,0 +1,52 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "(gdb) Compile camlinternalFormatBasics.mli",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/_build/prefix/src-ocaml/runtime/ocamlrun",
+            "args": [
+                "../boot/ocamlc",
+                "-use-prims",
+                "../runtime/primitives",
+                "-strict-sequence",
+                "-absname",
+                "-w",
+                "+a-4-9-41-42-44-45-48-70",
+                "-g",
+                "-warn-error",
+                "+A",
+                "-bin-annot",
+                "-nostdlib",
+                "-principal",
+                "-safe-string",
+                "-strict-formats",
+                "",
+                "-nopervasives",
+                "-c",
+                "camlinternalFormatBasics.mli"
+            ],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}/_build/prefix/src-ocaml/stdlib",
+            "environment": [],
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                },
+                {
+                    "description": "Set Disassembly Flavor to Intel",
+                    "text": "-gdb-set disassembly-flavor intel",
+                    "ignoreFailures": true
+                }
+            ]
+        }
+    ]
+}

@@ -46,6 +46,7 @@ usage() {
         printf "%s\n" "   -t DIR: Target directory for the reproducible directory tree"
         printf "%s\n" "   -b PREF: Required and used only for the MSVC compiler. See r-c-ocaml-1-setup.sh"
         printf "%s\n" "   -B Only build bytecode compiler and libraries."
+        printf "%s\n" "   -3 Use __ex32 ABI modifier so OCaml (not C) is 32-bit. Effective only with -B, and works on 64-bit targets."
         printf "%s\n" "   -c OCAMLC_OPT_EXE: If a possibly older 'ocamlc.opt' is specified, it speeds up compilation of the new OCaml compiler"
         printf "%s\n" "   -e DKMLHOSTABI: Uses the DkML compiler detector find a host ABI compiler"
         printf "%s\n" "   -f HOSTSRC_SUBDIR: Use HOSTSRC_SUBDIR subdirectory of -t DIR to place the source code of the host ABI"
@@ -75,8 +76,9 @@ OCAMLC_OPT_EXE=
 FLEXLINKFLAGS=
 DISABLE_EXTRAS=0
 BYTECODEONLY=OFF
+BYTECODE32=OFF
 export MSVS_PREFERENCE=
-while getopts ":s:d:t:Bb:c:e:m:k:l:rf:p:q:wh" opt; do
+while getopts ":s:d:t:B3b:c:e:m:k:l:rf:p:q:wh" opt; do
     case ${opt} in
         h )
             usage
@@ -97,6 +99,7 @@ while getopts ":s:d:t:Bb:c:e:m:k:l:rf:p:q:wh" opt; do
             TARGETDIR="$OPTARG"
         ;;
         B ) BYTECODEONLY=ON ;;
+        3 ) BYTECODE32=ON ;;
         b )
             MSVS_PREFERENCE="$OPTARG"
         ;;
@@ -240,6 +243,13 @@ fi
 log_trace ocaml_configure "$OCAMLHOST_UNIX" "$DKMLHOSTABI" \
     "$OCAMLSRC_MIXED"/support/with-host-c-compiler.sh "$OCAML_HOST_TRIPLET" "$DKML_TARGET_SYSROOT" \
     "$CONFIGUREARGS"
+
+# Extend m.h
+if [ "$BYTECODEONLY" = ON ] && [ "$BYTECODE32" = ON ]; then
+    print_m_h_extensions "$DKMLHOSTABI" __ex32 >> runtime/caml/m.h
+else
+    print_m_h_extensions "$DKMLHOSTABI" "" >> runtime/caml/m.h
+fi
 
 # Skip bootstrapping if ocamlc.opt is present
 if [ -n "$OCAMLC_OPT_EXE" ]; then

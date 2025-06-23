@@ -95,6 +95,7 @@ usage() {
     printf "%s\n" "   -t DIR: Target directory for the reproducible directory tree"
     printf "%s\n" "   -a TARGETABIS: Optional. See r-c-ocaml-1-setup.sh"
     printf "%s\n" "   -B Only build bytecode compiler and libraries."
+    printf "%s\n" "   -3 Use __ex32 ABI modifier so OCaml (not C) is 32-bit. Effective only with -B, and works on 64-bit targets."
     printf "%s\n" "   -e DKMLHOSTABI: Uses the DkML compiler detector find a host ABI compiler"
     printf "%s\n" "   -f HOSTSRC_SUBDIR: Use HOSTSRC_SUBDIR subdirectory of -t DIR to place the source code of the host ABI"
     printf "%s\n" "   -g CROSS_SUBDIR: Use CROSS_SUBDIR subdirectory of -t DIR to place target ABIs"
@@ -117,7 +118,8 @@ CROSS_SUBDIR=
 FLEXLINKFLAGS=
 DISABLE_EXTRAS=0
 BYTECODEONLY=OFF
-while getopts ":s:d:t:a:Bn:e:f:g:l:wh" opt; do
+BYTECODE32=OFF
+while getopts ":s:d:t:a:B3n:e:f:g:l:wh" opt; do
   case ${opt} in
   h)
     usage
@@ -143,6 +145,7 @@ while getopts ":s:d:t:a:Bn:e:f:g:l:wh" opt; do
     TARGETABIS="$OPTARG"
     ;;
   B ) BYTECODEONLY=ON ;;
+  3 ) BYTECODE32=ON ;;
   n)
     CONFIGUREARGS="$CONFIGUREARGS $OPTARG"
     ;;
@@ -392,6 +395,13 @@ build_world() {
   log_trace ocaml_configure "$build_world_PREFIX" "$build_world_TARGET_ABI" \
     "$build_world_BUILD_ROOT"/support/with-target-c-compiler.sh "$OCAML_HOST_TRIPLET" "$DKML_TARGET_SYSROOT" \
     "--host=$build_world_HOST_TRIPLET $CONFIGUREARGS --disable-ocamldoc"
+
+  # Extend m.h
+  if [ "$BYTECODEONLY" = ON ] && [ "$BYTECODE32" = ON ]; then
+    print_m_h_extensions "$build_world_TARGET_ABI" __ex32 >> runtime/caml/m.h
+  else
+    print_m_h_extensions "$build_world_TARGET_ABI" "" >> runtime/caml/m.h
+  fi
 
   # Build
   # -----
