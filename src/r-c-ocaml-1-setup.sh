@@ -83,6 +83,7 @@ OPT_MSVS_PREFERENCE='VS16.*;VS15.*;VS14.0' # KEEP IN SYNC with 2-build.sh
 HOST_SUBDIR=.
 HOSTSRC_SUBDIR=src/ocaml
 CROSS_SUBDIR=opt/mlcross
+PATCH_CATEGORIES=(ocaml)
 
 usage() {
     {
@@ -188,6 +189,8 @@ usage() {
         printf "%s\n" "   -z Do not include .git repositories in target directory"
         printf "%s\n" "   -A Enable Address Sanitizer"
         printf "%s\n" "   -L Enable Leak Sanitizer"
+        printf "%s\n" "   -P CATEGORY: Add the patch category, which is the prefix of patches in the src/p directory. Can be repeated."
+        printf "%s\n" "      Defaults to 'ocaml'. The dash (-) will be added to each patch category."
     } >&2
 }
 
@@ -195,6 +198,7 @@ SETUP_ARGS=()
 BUILD_HOST_ARGS=()
 BUILD_CROSS_ARGS=()
 TRIM_ARGS=()
+PATCH_CATEGORIES=(ocaml)
 
 # Make repeatable environment variable specs
 if [ -n "${DKML_HOST_OCAML_CONFIGURE:-}" ]; then
@@ -216,7 +220,7 @@ RUNTIMEONLY=OFF
 TEMPLATEDIR=
 HOSTABISCRIPT=
 OCAMLC_OPT_EXE=
-while getopts ":d:v:u:t:a:B3b:c:e:k:l:m:n:rf:p:g:o:wxzALh" opt; do
+while getopts ":d:v:u:t:a:B3b:c:e:k:l:m:n:rf:p:g:o:wxzALP:h" opt; do
     case ${opt} in
         h )
             usage
@@ -321,6 +325,7 @@ while getopts ":d:v:u:t:a:B3b:c:e:k:l:m:n:rf:p:g:o:wxzALh" opt; do
             BUILD_HOST_ARGS+=( -L )
             BUILD_CROSS_ARGS+=( -L )
             ;;
+        P ) PATCH_CATEGORIES+=( "$OPTARG" ) ;;
         \? )
             printf "%s\n" "This is not an option: -$OPTARG" >&2
             usage
@@ -557,7 +562,7 @@ set_patches() {
     case "$set_patches_CATEGORY" in
         ocaml)   set_ocaml_version_stems "$set_patches_VER";;
         flexdll) set_flexdll_version_stems "$set_patches_VER";;
-        *) printf "FATAL: No category %s\n" "$set_patches_CATEGORY" >&2; exit 107
+        *)       set_ocaml_version_stems "$set_patches_VER";;
     esac
 
     PATCHES=()
@@ -834,7 +839,9 @@ BUILD_HOST_ARGS+=( -s "$_OCAMLVER" )
 BUILD_CROSS_ARGS+=( -s "$_OCAMLVER" )
 
 # Find and apply patches to the host ABI
-apply_patches "$OCAMLSRC_UNIX"      ocaml    "$_OCAMLVER"    host
+for cat in "${PATCH_CATEGORIES[@]}"; do
+    apply_patches "$OCAMLSRC_UNIX"  "$cat"   "$_OCAMLVER"    host
+done
 if [ -e "$OCAMLSRC_UNIX"/flexdll/Makefile ] && is_unixy_windows_build_machine; then
     apply_patches "$OCAMLSRC_UNIX"  flexdll  "$_FLEXDLLVER"  host
 fi
@@ -859,7 +866,9 @@ else
             _srcabidir_unix="$TARGETDIR_UNIX/$CROSS_SUBDIR/$_targetabi/$HOSTSRC_SUBDIR"
             get_ocaml_source "$GIT_COMMITID_TAG_OR_DIR" "$_srcabidir_unix" "$TARGETDIR_MIXED/$CROSS_SUBDIR/$_targetabi/$HOSTSRC_SUBDIR" "$_targetabi"
             # Find and apply patches to the target ABI
-            apply_patches "$_srcabidir_unix"            ocaml    "$_OCAMLVER"    cross
+            for cat in "${PATCH_CATEGORIES[@]}"; do
+                apply_patches "$_srcabidir_unix"            "$cat"   "$_OCAMLVER"    cross
+            done            
             if [ -e "$_srcabidir_unix"/flexdll/Makefile ] && is_unixy_windows_build_machine; then
                 apply_patches "$_srcabidir_unix/flexdll"    flexdll  "$_FLEXDLLVER"  cross
             fi

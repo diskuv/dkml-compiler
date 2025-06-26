@@ -108,13 +108,11 @@ env DKML_REPRODUCIBLE_SYSTEM_BREWFILE=./Brewfile \
 sh scripts/mk-ocamldir.sh
 sh scripts/mk-dkmldir.sh "" ""
 
-sed 's/^INJECT_CFLAGS=$/INJECT_CFLAGS="-g3 -Og"/; s/^INJECT_ASFLAGS=$/INJECT_ASFLAGS="-g"/' env/standard-compiler-env-to-ocaml-configure-env.sh > dkmldir/vendor/dkml-compiler/env/standard-compiler-env-to-ocaml-configure-env.sh
-
 # 32-bit bytecode
-env src/r-c-ocaml-1-setup.sh -d dkmldir -t "$PWD/_build/prefix" -f src-ocaml -v dl/ocaml -z -elinux_x86 -B -k vendor/dkml-compiler/env/standard-compiler-env-to-ocaml-configure-env.sh
+env src/r-c-ocaml-1-setup.sh -d dkmldir -t "$PWD/_build/prefix" -f src-ocaml -v dl/ocaml -z -elinux_x86 -P ocamldebug_gcc_clang -B -k vendor/dkml-compiler/env/standard-compiler-env-to-ocaml-configure-env.sh
 
 # ex32 ABI modification of 64-bit linux_x86_64
-env src/r-c-ocaml-1-setup.sh -d dkmldir -t "$PWD/_build/prefix" -f src-ocaml -v dl/ocaml -z -elinux_x86_64 -B -3 -k vendor/dkml-compiler/env/standard-compiler-env-to-ocaml-configure-env.sh
+env src/r-c-ocaml-1-setup.sh -d dkmldir -t "$PWD/_build/prefix" -f src-ocaml -v dl/ocaml -z -elinux_x86_64 -P ocamldebug_gcc_clang -B -3 -k vendor/dkml-compiler/env/standard-compiler-env-to-ocaml-configure-env.sh
 
 (export ASAN_OPTIONS=detect_leaks=0 && cd '_build/prefix' && share/dkml/repro/100co/vendor/dkml-compiler/src/r-c-ocaml-2-build_host-noargs.sh)
 ```
