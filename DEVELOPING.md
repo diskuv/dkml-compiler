@@ -105,7 +105,9 @@ env DKML_REPRODUCIBLE_SYSTEM_BREWFILE=./Brewfile \
 ```sh
 sh scripts/mk-dkmldir.sh "" ""
 
-env src/r-c-ocaml-1-setup.sh -d dkmldir -t "$PWD/_build/prefix" -f src-ocaml -v dl/ocaml -z -elinux_x86_64 -A -k vendor/dkml-compiler/env/standard-compiler-env-to-ocaml-configure-env.sh
+sed 's/^INJECT_CFLAGS=$/INJECT_CFLAGS="-g3 -Og"/; s/^INJECT_ASFLAGS=$/INJECT_ASFLAGS="-g"/' env/standard-compiler-env-to-ocaml-configure-env.sh > dkmldir/vendor/dkml-compiler/env/standard-compiler-env-to-ocaml-configure-env.sh
+
+env src/r-c-ocaml-1-setup.sh -d dkmldir -t "$PWD/_build/prefix" -f src-ocaml -v dl/ocaml -z -elinux_x86_64 -A -B -3 -k vendor/dkml-compiler/env/standard-compiler-env-to-ocaml-configure-env.sh
 
 (export ASAN_OPTIONS=detect_leaks=0 && cd '_build/prefix' && share/dkml/repro/100co/vendor/dkml-compiler/src/r-c-ocaml-2-build_host-noargs.sh)
 ```

@@ -5,7 +5,7 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "(gdb) Compile stdlib/camlinternalFormatBasics.mli",
+            "name": "(gdb) ocamlrun ocamlc stdlib/camlinternalFormatBasics.mli",
             "type": "cppdbg",
             "request": "launch",
             "program": "${workspaceFolder}/_build/prefix/src-ocaml/runtime/ocamlrun",
@@ -48,7 +48,94 @@
             ]
         },
         {
-            "name": "(gdb) Compile stdlib/list.ml",
+            "name": "(gdb) ocamlrund ocamlc stdlib/bytes.ml",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/_build/prefix/src-ocaml/runtime/ocamlrund",
+            "args": [
+                "../boot/ocamlc",
+                "-use-prims",
+                "../runtime/primitives",
+                "-strict-sequence",
+                "-absname",
+                "-w",
+                "+a-4-9-41-42-44-45-48-70",
+                "-g",
+                "-warn-error",
+                "+A",
+                "-bin-annot",
+                "-nostdlib",
+                "-principal",
+                "-safe-string",
+                "-strict-formats",
+                "-o",
+                "stdlib__Bytes.cmo",
+                "-c",
+                "bytes.ml"
+            ],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}/_build/prefix/src-ocaml/stdlib",
+            "environment": [],
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                },
+                {
+                    "description": "Set Disassembly Flavor to Intel",
+                    "text": "-gdb-set disassembly-flavor intel",
+                    "ignoreFailures": true
+                }
+            ]
+        },
+        {
+            "name": "(lldb) ocamlrund ocamlc stdlib/bytes.ml",
+            "type": "lldb",
+            "request": "launch",
+            "program": "${workspaceFolder}/_build/prefix/src-ocaml/runtime/ocamlrund",
+            "args": [
+                "../boot/ocamlc",
+                "-use-prims",
+                "../runtime/primitives",
+                "-strict-sequence",
+                "-absname",
+                "-w",
+                "+a-4-9-41-42-44-45-48-70",
+                "-g",
+                "-warn-error",
+                "+A",
+                "-bin-annot",
+                "-nostdlib",
+                "-principal",
+                "-safe-string",
+                "-strict-formats",
+                "-o",
+                "stdlib__Bytes.cmo",
+                "-c",
+                "bytes.ml"
+            ],
+            "cwd": "${workspaceFolder}/_build/prefix/src-ocaml/stdlib",
+        },
+        {
+            "type": "midas-rr",
+            "request": "attach",
+            "name": "Launch replay debug session",
+            "cwd": "${workspaceFolder}",
+            "trace": "Off",
+            "gdbPath": "/usr/bin/gdb",
+            "rrPath": "/usr/bin/rr",
+            "setupCommands": [
+                "set sysroot /",
+                "set debuginfod enabled off",
+                "set auto-load safe-path /"
+            ],
+            "ignoreStandardLibrary": true
+        },
+        {
+            "name": "(gdb) ocamlrun ocamlc stdlib/list.ml",
             "type": "cppdbg",
             "request": "launch",
             "program": "${workspaceFolder}/_build/prefix/src-ocaml/runtime/ocamlrun",
@@ -94,7 +181,7 @@
         {
             "type": "lldb",
             "request": "launch",
-            "name": "(lldb) Compile stdlib/list.ml",
+            "name": "(lldb) ocamlrun ocamlc stdlib/list.ml",
             "program": "${workspaceFolder}/_build/prefix/src-ocaml/runtime/ocamlrun",
             "args": [
                 "../boot/ocamlc",

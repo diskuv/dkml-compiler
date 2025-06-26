@@ -1,3 +1,16 @@
+diff --git a/otherlibs/systhreads/st_win32.h b/otherlibs/systhreads/st_win32.h
+index f53eca1..f943b1d 100644
+--- a/otherlibs/systhreads/st_win32.h
++++ b/otherlibs/systhreads/st_win32.h
+@@ -39,7 +39,7 @@ typedef DWORD st_retcode;
+ #define SIGPREEMPTION SIGTERM
+ 
+ /* Unique thread identifiers and atomic operations over them */
+-#ifdef ARCH_SIXTYFOUR
++#ifdef TARGET_C_ARCH_SIXTYFOUR
+ typedef LONG64 st_tid;
+ #define Tid_Atomic_Exchange InterlockedExchange64
+ #define Tid_Atomic_Compare_Exchange InterlockedCompareExchange64
 diff --git a/runtime/caml/address_class.h b/runtime/caml/address_class.h
 index 82e5cf7..6ad4003 100644
 --- a/runtime/caml/address_class.h
@@ -11,6 +24,23 @@ index 82e5cf7..6ad4003 100644
  
  /* 64 bits: Represent page table as a sparse hash table */
  int caml_page_table_lookup(void * addr);
+diff --git a/runtime/caml/misc.h b/runtime/caml/misc.h
+index 41c5e50..1c57d99 100644
+--- a/runtime/caml/misc.h
++++ b/runtime/caml/misc.h
+@@ -72,6 +72,12 @@ typedef size_t asize_t;
+ #define NULL 0
+ #endif
+ 
++#if defined(TARGET_C_ARCH_SIXTYFOUR) && !defined(ARCH_SIXTYFOUR)
++#define SIZEOF_NATIVE_INT() 4
++#else
++#define SIZEOF_NATIVE_INT() sizeof(intnat)
++#endif
++
+ #ifdef CAML_INTERNALS
+ CAMLdeprecated_typedef(addr, char *);
+ #endif /* CAML_INTERNALS */
 diff --git a/runtime/extern.c b/runtime/extern.c
 index b713c40..c74bf90 100644
 --- a/runtime/extern.c
@@ -96,21 +126,36 @@ index 9b18f3c..a96a83f 100644
  #endif
    initial_local_roots = Caml_state->local_roots;
 diff --git a/runtime/ints.c b/runtime/ints.c
-index c9584e4..ec91ec6 100644
+index c9584e4..928c5c8 100644
 --- a/runtime/ints.c
 +++ b/runtime/ints.c
-@@ -706,7 +706,11 @@ static uintnat nativeint_deserialize(void * dst)
+@@ -108,7 +108,7 @@ static intnat parse_intnat(value s, int nbits, const char *errmsg)
+   } else {
+     /* Unsigned representation expected, allow 0 to 2^nbits - 1
+        and tolerate -(2^nbits - 1) to 0 */
+-    if (nbits < sizeof(uintnat) * 8 && res >= (uintnat)1 << nbits)
++    if (nbits < SIZEOF_NATIVE_INT() * 8 && res >= (uintnat)1 << nbits)
+       caml_failwith(errmsg);
+   }
+   return sign < 0 ? -((intnat) res) : (intnat) res;
+@@ -706,7 +706,7 @@ static uintnat nativeint_deserialize(void * dst)
    default:
      caml_deserialize_error("input_value: ill-formed native integer");
    }
-+#if defined(TARGET_C_ARCH_SIXTYFOUR) && !defined(ARCH_SIXTYFOUR)
-+  return 4;
-+#else
-   return sizeof(intnat);
-+#endif
+-  return sizeof(intnat);
++  return SIZEOF_NATIVE_INT();
  }
  
  static const struct custom_fixed_length nativeint_length = { 4, 8 };
+@@ -740,7 +740,7 @@ CAMLprim value caml_nativeint_sub(value v1, value v2)
+ CAMLprim value caml_nativeint_mul(value v1, value v2)
+ { return caml_copy_nativeint(Nativeint_val(v1) * Nativeint_val(v2)); }
+ 
+-#define Nativeint_min_int ((intnat) 1 << (sizeof(intnat) * 8 - 1))
++#define Nativeint_min_int ((intnat) 1 << (SIZEOF_NATIVE_INT() * 8 - 1))
+ 
+ CAMLprim value caml_nativeint_div(value v1, value v2)
+ {
 diff --git a/runtime/memory.c b/runtime/memory.c
 index 66d1c50..3a9e7bd 100644
 --- a/runtime/memory.c
@@ -133,3 +178,16 @@ index 66d1c50..3a9e7bd 100644
  #define HASH_FACTOR 11400714819323198486UL
  #else
  #define HASH_FACTOR 2654435769UL
+diff --git a/runtime/misc.c b/runtime/misc.c
+index e817a6c..1ae5e3c 100644
+--- a/runtime/misc.c
++++ b/runtime/misc.c
+@@ -147,7 +147,7 @@ void caml_ext_table_free(struct ext_table * tbl, int free_entries)
+ #if ! (__GNUC__ >= 5 || Caml_has_builtin(__builtin_mul_overflow))
+ CAMLexport int caml_umul_overflow(uintnat a, uintnat b, uintnat * res)
+ {
+-#define HALF_SIZE (sizeof(uintnat) * 4)
++#define HALF_SIZE (SIZEOF_NATIVE_INT() * 4)
+ #define HALF_MASK (((uintnat)1 << HALF_SIZE) - 1)
+ #define LOW_HALF(x) ((x) & HALF_MASK)
+ #define HIGH_HALF(x) ((x) >> HALF_SIZE)
