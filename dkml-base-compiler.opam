@@ -118,9 +118,7 @@ build: [
   ["touch" "Brewfile"] {os = "macos"}
 
   # OCaml source code
-  ["install" "-d" "dl/ocaml/flexdll"]
-  ["tar" "xCfz" "dl/ocaml"          "dl/ocaml.tar.gz"   "--strip-components=1"]
-  ["tar" "xCfz" "dl/ocaml/flexdll"  "dl/flexdll.tar.gz" "--strip-components=1"]
+  ["sh" "scripts/mk-ocamldir.sh"]
 
   # Debugging for 4.14.2 `Env.Error(_)` and `Persistent_env.Error(_)`
   # Example:

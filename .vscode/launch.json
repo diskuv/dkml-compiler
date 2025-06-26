@@ -48,12 +48,12 @@
             ]
         },
         {
-            "name": "(gdb) ocamlrund ocamlc stdlib/bytes.ml",
+            "name": "(gdb) ocamlrund dkml-compiler-clone/.../ocamlc stdlib/bytes.ml",
             "type": "cppdbg",
             "request": "launch",
             "program": "${workspaceFolder}/_build/prefix/src-ocaml/runtime/ocamlrund",
             "args": [
-                "../boot/ocamlc",
+                "${workspaceFolder}/../dkml-compiler-clone/_build/prefix/src-ocaml/ocamlc",
                 "-use-prims",
                 "../runtime/primitives",
                 "-strict-sequence",
