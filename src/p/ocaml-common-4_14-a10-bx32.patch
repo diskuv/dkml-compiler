@@ -42,7 +42,7 @@ index 41c5e50..1c57d99 100644
  CAMLdeprecated_typedef(addr, char *);
  #endif /* CAML_INTERNALS */
 diff --git a/runtime/caml/mlvalues.h b/runtime/caml/mlvalues.h
-index 878b756..68448f7 100644
+index 878b756..afd6322 100644
 --- a/runtime/caml/mlvalues.h
 +++ b/runtime/caml/mlvalues.h
 @@ -298,7 +298,15 @@ CAMLextern int caml_string_is_c_safe (value);
@@ -50,9 +50,9 @@ index 878b756..68448f7 100644
  /* Floating-point numbers. */
  #define Double_tag 253
 +#if defined(TARGET_C_ARCH_SIXTYFOUR) && !defined(ARCH_SIXTYFOUR)
-+/*  ex32: Two 32-bit words in 32-bit OCaml make a 64-bit double. Must keep
++/*  bx32: Two 32-bit words in 32-bit OCaml make a 64-bit double. Must keep
 +    same number of words for demarshalling in intern.c:intern_rec:CODE_DOUBLE_*,
-+    which unfortunately means a ex32 double occupies two 64-bit words rather
++    which unfortunately means a bx32 double occupies two 64-bit words rather
 +    than just 1 in pure 64-bit OCaml. */
 +#define Double_wosize 2
 +#else
@@ -115,7 +115,7 @@ index 1259f53..6f0c0ae 100644
        uint32_t sizes = *p++;
        uint32_t const_size = sizes & 0xFFFF;
 diff --git a/runtime/intern.c b/runtime/intern.c
-index 1bb66ad..3831aa4 100644
+index 1bb66ad..0f1e8ea 100644
 --- a/runtime/intern.c
 +++ b/runtime/intern.c
 @@ -321,7 +321,7 @@ static void intern_rec(value *dest)
@@ -132,7 +132,7 @@ index 1bb66ad..3831aa4 100644
        len = (code & 0x1F);
      read_string:
 +#if defined(TARGET_C_ARCH_SIXTYFOUR) && !defined(ARCH_SIXTYFOUR)
-+      /* ex32 size is 32-bit OCaml size, but we need 64-bit C strings as well */
++      /* bx32 size is 32-bit OCaml size, but we need 64-bit C strings as well */
 +      size = (len + 8) / 8;
 +      size32 = (len + 4) / 4;
 +#else

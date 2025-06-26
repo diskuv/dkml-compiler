@@ -19,7 +19,7 @@
 * The `lib/findlib.conf.d/<TARGETABI>` findlib configuration is generated for all cross-compilers.
 * Remove `-O0` from `/usr/bin/as` when `dkml-option-debuginfo` is present since `GNU as 2.30` does not support it.
 * Add -B option to only build bytecode to r-c-ocaml-1-setup.sh
-* Add -3 option to build the `ex32` ABI modifier which compiles 32-bit OCaml on 64-bit C words
+* Add -X option to build the `bx32` ABI which compiles 32-bit OCaml on 64-bit C words
 
 ## 2.1.3
 

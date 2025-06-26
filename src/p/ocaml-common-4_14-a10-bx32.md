@@ -1,6 +1,6 @@
-# ocaml-common-4_14-a10-ex32
+# ocaml-common-4_14-a10-bx32
 
-The `_ex32` ABI modifier sets the OCaml architecture to 32-bit while the C architecture is 64-bit.
+The `bx32` ABI is the OCaml bytecode-only architecture with 32-bit OCaml types while the C architecture is 64-bit.
 
 ## Why choose this ABI modifier?
 
@@ -22,7 +22,7 @@ The 32-bit OCaml architecture has limits:
 * the maximum `string` length is 16 MiB (2^22-1 words; ie. `Max_wosize = (1 << 22) - 1`)
 * the maximum `int` is 2GiB (2^31 bytes)
 
-In addition, the ex32 modifications require:
+In addition, the bx32 modifications require:
 
 * The threaded interpreter requires that the interpreter instruction opcodes are within 2GiB (a signed int distance)
   of each other. Typically instruction opcodes like `lbl_GETSTRINGCHAR` are linked together in the same segment
@@ -41,7 +41,7 @@ Use:
 
 * A **page** is a 4096-byte (2^12) block of heap memory
 * The **page table** is a map whose keys are the addresses of *page* and whose values are 8-bit integers. The physical representation of a key is often a page index (the address divided by 4096-byte page size).
-* A **value** is the memory representation of an OCaml variable. It will be either an **integer value** or a **pointer value**. The ex32 OCaml `value` object is a 64-bit integer; that reflects the 64-bit C pointer size. Any tagged integers will occupy the lower 32-bits.
+* A **value** is the memory representation of an OCaml variable. It will be either an **integer value** or a **pointer value**. The bx32 OCaml `value` object is a 64-bit integer; that reflects the 64-bit C pointer size. Any tagged integers will occupy the lower 32-bits.
 * A **pointer value** is a pointer to the data words of the OCaml variable. For example, for an OCaml array the pointer value will be the pointer to the first element of the array, and for an OCaml string the pointer value will be the pointer to the first character of the string. Immediately preceding the data words is the 1-word header which contains, among other things, the number of data words for the OCaml variable in its `word_size` bits, and the runtime type of the OCaml variable in its 8 `tag` bits. The number of bits to encode the `word_size` is discussed in the [Header section](#header).
 * A **string value** is a pointer to a null-terminated string with trailing padding that encodes the string length modulus 4 or modulus 8 on 32-bit or 64-bit OCaml, respectively. Immediately preceding the string is the 1-word header that contains, among other things, the word size (the string length divided by 4 or 8 in 32-bit or 64-bit OCaml, respectively, plus the zero or one padding word). The encoding of padding words is complex and is not relevant to this document. The main takeaway is that the number of words in a 32-bit OCaml string value, to maintain portability with C strings, is greater than or equal to the number of words in a 64-bit OCaml string. This difference in size is the **32-bit string word overhead**, which is a nonnegative integer.
 * There is a **heap** which is a linked list of **heap chunk**s. Each heap chunk is a pointer to an aligned, append-only, bounded-memory array of *header* and *value* pairs, with a **head chunk header** preceding the array of *header + value* pairs. Each heap chunk is malloc'd in `memory.c:caml_alloc_for_heap()`.
@@ -60,7 +60,7 @@ and for 64-bit OCaml is:
 | ----------- | ------- | ------ |
 | 54 bits     | 2 bits  | 8 bits |
 
-With `ex32` the C ABI requires the use of 64-bit qwords (aka. 64-bit pointers) on a 64-bit CPU.
+With `bx32` the C ABI requires the use of 64-bit qwords (aka. 64-bit pointers) on a 64-bit CPU.
 So the header is the lower 32-bits of the 64-bit qword header on little-endian machines:
 
 |            | high dword (zeroed; unused) | `word_size` | `color` | `tag`  |
@@ -142,14 +142,14 @@ Integer overflow detection detects overflows for 32-bits just like 32-bit OCaml.
 
 ### Marshalling Goal - 32-bit OCaml read compatibility
 
-All values marshalled by a 32-bit OCaml bytecode process should be readable in an ex32 ABI process.
+All values marshalled by a 32-bit OCaml bytecode process should be readable in an bx32 ABI process.
 
 ### Marshalling Goal - 32-bit OCaml write compatibility
 
 > This is a soft goal as it is not strictly necessary.
 
-All values marshalled by an ex32 process should be readable in an 32-bit OCaml bytecode process.
+All values marshalled by an bx32 process should be readable in an 32-bit OCaml bytecode process.
 
 ### Marshalling Goal - Equivalent word offsets
 
-The number of words written during marshalling by a 32-bit OCaml bytecode process must be the same number of words occupied in memory by an ex32 process during unmarshalling. That simplifies the logic to adopt ex32.
+The number of words written during marshalling by a 32-bit OCaml bytecode process must be the same number of words occupied in memory by an bx32 process during unmarshalling. That simplifies the logic to adopt bx32.

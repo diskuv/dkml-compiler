@@ -68,7 +68,7 @@ depopts: [
   "ocaml-option-leak-sanitizer"
   "dkml-option-debuginfo"
   "dkml-option-minsize"
-  "dkml-option-ex32"
+  "dkml-option-bx32"
   "dkml-target-abi-android_arm64v8a"
   "dkml-target-abi-android_arm32v7a"
   "dkml-target-abi-android_x86_64"
@@ -215,7 +215,7 @@ install: [
       #   and wasm_of_ocaml;
       #   https://github.com/ocsigen/js_of_ocaml/blob/e6c8a9adf7a3cb5a3bbee21b753b6dab0a7c1c36/runtime/js/marshal.js#L360-L362)
       "-B" { ocaml-option-bytecode-only:installed }
-      "-3" { dkml-option-ex32:installed }
+      "-X" { dkml-option-bx32:installed }
       #   Sanitizers
       "-A" {ocaml-option-address-sanitizer:installed & os != "win32"}
       "-L" {ocaml-option-leak-sanitizer:installed & os != "win32"}

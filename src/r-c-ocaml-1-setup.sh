@@ -160,7 +160,7 @@ usage() {
         printf "%s\n" "      will not choose a compiler based on environment variables that would disrupt reproducibility."
         printf "%s\n" "      Confer with https://github.com/metastack/msvs-tools#msvs-detect"
         printf "%s\n" "   -B Only build bytecode compiler and libraries."
-        printf "%s\n" "   -3 Use __ex32 ABI modifier so OCaml (not C) is 32-bit. Effective only with -B, and works on 64-bit targets."
+        printf "%s\n" "   -X Use bx32 ABI so OCaml (not C) is 32-bit. Effective only with -B, and works on 64-bit targets."
         printf "%s\n" "   -e DKMLHOSTABI: Optional. Use the DkML compiler detector find a host ABI compiler."
         printf "%s\n" "      Especially useful to find a 32-bit Windows host compiler that can use 64-bits of memory for the compiler."
         printf "%s\n" "      Values include: windows_x86, windows_x86_64, android_arm64v8a, darwin_x86_64, etc."
@@ -220,7 +220,7 @@ RUNTIMEONLY=OFF
 TEMPLATEDIR=
 HOSTABISCRIPT=
 OCAMLC_OPT_EXE=
-while getopts ":d:v:u:t:a:B3b:c:e:k:l:m:n:rf:p:g:o:wxzALP:h" opt; do
+while getopts ":d:v:u:t:a:BXb:c:e:k:l:m:n:rf:p:g:o:wxzALP:h" opt; do
     case ${opt} in
         h )
             usage
@@ -264,10 +264,10 @@ while getopts ":d:v:u:t:a:B3b:c:e:k:l:m:n:rf:p:g:o:wxzALP:h" opt; do
             BUILD_HOST_ARGS+=( -B )
             BUILD_CROSS_ARGS+=( -B )
         ;;
-        3 )
-            SETUP_ARGS+=( -3 )
-            BUILD_HOST_ARGS+=( -3 )
-            BUILD_CROSS_ARGS+=( -3 )
+        X )
+            SETUP_ARGS+=( -X )
+            BUILD_HOST_ARGS+=( -X )
+            BUILD_CROSS_ARGS+=( -X )
         ;;
         b )
             MSVS_PREFERENCE="$OPTARG"
