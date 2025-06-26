@@ -2,9 +2,16 @@
 
 The `bx32` ABI is the OCaml bytecode-only architecture with 32-bit OCaml types while the C architecture is 64-bit.
 
+It reports itself with `ocamlc -config` as:
+
+```text
+int_size: 31
+word_size: 64
+```
+
 ## Why choose this ABI modifier?
 
-1. It will always produce 32-bit bytecode compatible with the `dk` cross-compiler, `js_of_ocaml` (JS and WASM).
+1. It will always produce 32-bit bytecode compatible with the `dk` cross-compiler and `js_of_ocaml` (JS and WASM).
    In particular, `js_of_ocaml` and regular bytecode will fail with `input_value: integer too large` if the
    bytecode was compiled on a 64-bit machine and the bytecode uses 64-bit integers (ex. the constant
    `0x7fffffff00000000`):

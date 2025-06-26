@@ -253,3 +253,19 @@ index e817a6c..1ae5e3c 100644
  #define HALF_MASK (((uintnat)1 << HALF_SIZE) - 1)
  #define LOW_HALF(x) ((x) & HALF_MASK)
  #define HIGH_HALF(x) ((x) >> HALF_SIZE)
+diff --git a/runtime/sys.c b/runtime/sys.c
+index a77fd9d..20b48ab 100644
+--- a/runtime/sys.c
++++ b/runtime/sys.c
+@@ -633,7 +633,11 @@ CAMLprim value caml_sys_const_word_size(value unit)
+ /* returns a value that represents a number of bits */
+ CAMLprim value caml_sys_const_int_size(value unit)
+ {
++#if defined(TARGET_C_ARCH_SIXTYFOUR) && !defined(ARCH_SIXTYFOUR)
++  return Val_long(8 * 4 - 1) ;
++#else
+   return Val_long(8 * sizeof(value) - 1) ;
++#endif
+ }
+ 
+ /* returns a value that represents a number of words */
