@@ -126,6 +126,10 @@ that can take the "mlcross" Opam directory structure and add it to
 
 ## Options
 
+### ocaml-option-bytecode-only
+
+Builds the bytecode compiler and bytecode libraries.
+
 ### ocaml-option-address-sanitizer
 
 The clang/gcc Address Sanitizer.
