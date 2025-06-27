@@ -382,6 +382,8 @@ build_world() {
   fi
 
   # clean (otherwise you will 'make inconsistent assumptions' errors with a mix of host + target binaries)
+  #   note: If re-running after -R 500, we need access to delete files during clean. So chmod.
+  log_trace "$DKMLSYS_CHMOD" -R ug+w    stdlib/
   make clean
 
   # provide --host for use in `checking whether we are cross compiling` ./configure step
