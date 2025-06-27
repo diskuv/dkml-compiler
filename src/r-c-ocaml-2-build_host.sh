@@ -252,7 +252,7 @@ log_trace ocaml_configure "$OCAMLHOST_UNIX" "$DKMLHOSTABI" \
 
 # Extend m.h
 if [ "$BYTECODEONLY" = ON ] && [ "$BX32" = ON ]; then
-    print_m_h_extensions "$DKMLHOSTABI" __ex32 >> runtime/caml/m.h
+    print_m_h_extensions "$DKMLHOSTABI" __bx32 >> runtime/caml/m.h
 else
     print_m_h_extensions "$DKMLHOSTABI" "" >> runtime/caml/m.h
 fi

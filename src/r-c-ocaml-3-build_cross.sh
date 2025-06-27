@@ -404,7 +404,7 @@ build_world() {
 
   # Extend m.h
   if [ "$BYTECODEONLY" = ON ] && [ "$BX32" = ON ]; then
-    print_m_h_extensions "$build_world_TARGET_ABI" __ex32 >> runtime/caml/m.h
+    print_m_h_extensions "$build_world_TARGET_ABI" __bx32 >> runtime/caml/m.h
   else
     print_m_h_extensions "$build_world_TARGET_ABI" "" >> runtime/caml/m.h
   fi

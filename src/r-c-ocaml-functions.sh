@@ -583,8 +583,8 @@ print_m_h_extensions() {
       ;;
   esac
   case "$print_m_h_extensions_TARGETABIMOD" in
-    __ex32)
-      echo "/* Target ABI modifier: __ex32. Applies to OCaml architecture */"
+    __bx32)
+      echo "/* Target ABI: bx32. 32-bit OCaml architecture */"
       echo "#undef ARCH_SIXTYFOUR"
       ;;
   esac
