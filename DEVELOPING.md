@@ -163,6 +163,8 @@ case "$TARGETABI" in
     *) HOSTABI=linux_x86_64 ;;
 esac
 
+./dk dksdk.android.ndk.download NO_SYSTEM_PATH
+
 sh scripts/mk-ocamldir.sh
 sh scripts/mk-dkmldir.sh "" ""
 
@@ -174,5 +176,5 @@ src/r-c-ocaml-1-setup.sh \
     -a "$TARGETABI=vendor/dkml-compiler/env/android-ndk-env-to-ocaml-configure-env.sh" \
     -k vendor/dkml-compiler/env/standard-compiler-env-to-ocaml-configure-env.sh
 (cd "dist-$TARGETABI-on-$HOSTABI" && share/dkml/repro/100co/vendor/dkml-compiler/src/r-c-ocaml-2-build_host-noargs.sh)
-(cd "dist-$TARGETABI-on-$HOSTABI" && env DKML_BUILD_TRACE=ON share/dkml/repro/100co/vendor/dkml-compiler/src/r-c-ocaml-3-build_cross-noargs.sh)
+(export DKML_BUILD_TRACE=ON "ANDROID_NDK=$PWD/.ci/local/share/android-sdk/ndk/23.1.7779620" && cd "dist-$TARGETABI-on-$HOSTABI" && sh share/dkml/repro/100co/vendor/dkml-compiler/src/r-c-ocaml-3-build_cross-noargs.sh)
 ```

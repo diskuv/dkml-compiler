@@ -476,7 +476,11 @@ build_world() {
     log_trace make_host -compile-stdlib flexdll
   fi
   printf "+ INFO: Compiling host stdlib in pass 1\n" >&2
-  log_trace make_host -final  -C stdlib all allopt
+  log_trace make_host -final  -C stdlib all
+  if [ "$BYTECODEONLY" = OFF ]; then
+    printf "+ INFO: Compiling host optimized stdlib in pass 1\n" >&2
+    log_trace make_host -final  -C stdlib allopt
+  fi
   printf "+ INFO: Recompiling host ocamlc in pass 1\n" >&2
   log_trace make_host -final  ocamlc
   if [ "$BYTECODEONLY" = OFF ]; then
@@ -511,7 +515,11 @@ build_world() {
     log_trace make_target "$build_world_TARGET_ABI" "$build_world_BUILD_ROOT" flexdll
   fi
   printf "+ INFO: Compiling target stdlib in pass 1\n" >&2
-  log_trace make_target "$build_world_TARGET_ABI" "$build_world_BUILD_ROOT" -C stdlib all allopt
+  log_trace make_target "$build_world_TARGET_ABI" "$build_world_BUILD_ROOT" -C stdlib all
+  if [ "$BYTECODEONLY" = OFF ]; then
+    printf "+ INFO: Compiling target optimized stdlib in pass 1\n" >&2
+    log_trace make_target "$build_world_TARGET_ABI" "$build_world_BUILD_ROOT" -C stdlib allopt
+  fi
   printf "+ INFO: Recompiling target ocaml in pass 1\n" >&2
   log_trace make_target "$build_world_TARGET_ABI" "$build_world_BUILD_ROOT" ocaml
   printf "+ INFO: Recompiling target ocamlc in pass 1\n" >&2
