@@ -381,17 +381,23 @@ build_with_support_for_cross_compiling() {
     #   host wrapper.
     create_ocamlc_wrapper() {
         create_ocamlc_wrapper_PASS=$1 ; shift
-        # shellcheck disable=SC2086
-        log_trace genWrapper "$OCAMLSRC_MIXED/support/ocamlcHost$create_ocamlc_wrapper_PASS.wrapper"     "$OCAMLSRC_MIXED"/support/with-host-c-compiler.sh "$OCAMLSRC_MIXED"/support/with-linking-on-host.sh "$OCAMLSRC_MIXED/ocamlc.opt$HOST_EXE_EXT" "$@"
+        if [ "$BYTECODEONLY" = OFF ]; then
+            #   shellcheck disable=SC2086
+            log_trace genWrapper "$OCAMLSRC_MIXED/support/ocamlcHost$create_ocamlc_wrapper_PASS.wrapper" "$OCAMLSRC_MIXED"/support/with-host-c-compiler.sh "$OCAMLSRC_MIXED"/support/with-linking-on-host.sh "$OCAMLSRC_MIXED/ocamlc.opt$HOST_EXE_EXT" "$@"
+        else
+            # bytecode-only, so use ocamlc not ocamlc.opt
+            #   shellcheck disable=SC2086
+            log_trace genWrapper "$OCAMLSRC_MIXED/support/ocamlcHost$create_ocamlc_wrapper_PASS.wrapper" "$OCAMLSRC_MIXED"/support/with-host-c-compiler.sh "$OCAMLSRC_MIXED"/support/with-linking-on-host.sh "$OCAMLSRC_MIXED/ocamlc$HOST_EXE_EXT" "$@"
+        fi
     }
     create_ocamlopt_wrapper() {
         create_ocamlopt_wrapper_PASS=$1 ; shift
-        # shellcheck disable=SC2086
+        #   shellcheck disable=SC2086
         log_trace genWrapper "$OCAMLSRC_MIXED/support/ocamloptHost$create_ocamlopt_wrapper_PASS.wrapper" "$OCAMLSRC_MIXED"/support/with-host-c-compiler.sh "$OCAMLSRC_MIXED"/support/with-linking-on-host.sh "$OCAMLSRC_MIXED/ocamlopt.opt$HOST_EXE_EXT" "$@"
     }
     create_ocamlrun_ocamlopt_wrapper() {
         create_ocamlrun_ocamlopt_wrapper_PASS=$1 ; shift
-        # shellcheck disable=SC2086
+        #   shellcheck disable=SC2086
         log_trace genWrapper "$OCAMLSRC_MIXED/support/ocamloptHost$create_ocamlrun_ocamlopt_wrapper_PASS.wrapper" "$OCAMLSRC_MIXED"/support/with-host-c-compiler.sh "$OCAMLSRC_MIXED"/support/with-linking-on-host.sh "$OCAMLSRC_MIXED/runtime/ocamlrun$HOST_EXE_EXT" "$OCAMLSRC_MIXED/ocamlopt$HOST_EXE_EXT" "$@"
     }
     #   Since the Makefile is sensitive to timestamps, we must make sure the wrappers have timestamps

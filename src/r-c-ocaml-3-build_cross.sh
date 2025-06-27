@@ -364,11 +364,21 @@ build_world() {
   $DKMLSYS_INSTALL "$build_world_POSTTRANSFORM" "$build_world_PREFIX/share/dkml/detect/post-transform.sh"
 
   # Target wrappers
-  #   shellcheck disable=SC2086
-  log_trace genWrapper "$build_world_BUILD_ROOT/support/ocamlcTarget.wrapper" "$build_world_BUILD_ROOT"/support/with-target-c-compiler.sh "$OCAMLSRC_MIXED"/support/with-linking-on-host.sh "$build_world_BUILD_ROOT/ocamlc.opt$build_world_TARGET_EXE_EXT" -I "$build_world_BUILD_ROOT/stdlib" -I "$build_world_BUILD_ROOT/otherlibs/unix" -nostdlib
   if [ "$BYTECODEONLY" = OFF ]; then
     #   shellcheck disable=SC2086
+    log_trace genWrapper "$build_world_BUILD_ROOT/support/ocamlcTarget.wrapper" "$build_world_BUILD_ROOT"/support/with-target-c-compiler.sh "$OCAMLSRC_MIXED"/support/with-linking-on-host.sh "$build_world_BUILD_ROOT/ocamlc.opt$build_world_TARGET_EXE_EXT" -I "$build_world_BUILD_ROOT/stdlib" -I "$build_world_BUILD_ROOT/otherlibs/unix" -nostdlib
+    #   shellcheck disable=SC2086
     log_trace genWrapper "$build_world_BUILD_ROOT/support/ocamloptTarget.wrapper" "$build_world_BUILD_ROOT"/support/with-target-c-compiler.sh "$OCAMLSRC_MIXED"/support/with-linking-on-host.sh "$build_world_BUILD_ROOT/ocamlopt.opt$build_world_TARGET_EXE_EXT" -I "$build_world_BUILD_ROOT/stdlib" -I "$build_world_BUILD_ROOT/otherlibs/unix" -nostdlib
+  else
+    # bytecode-only, so use ocamlrun ocamlc not ocamlc.opt. we need ocamlrun from the host ABI so it can run
+    #   shellcheck disable=SC2086
+    log_trace genWrapper "$build_world_BUILD_ROOT/support/ocamlcTarget.wrapper" \
+      "$build_world_BUILD_ROOT"/support/with-target-c-compiler.sh \
+      "$OCAMLSRC_MIXED"/support/with-linking-on-host.sh \
+      "$OCAMLSRC_MIXED/runtime/ocamlrun$build_world_TARGET_EXE_EXT" \
+      "$build_world_BUILD_ROOT/ocamlc$build_world_TARGET_EXE_EXT" \
+      -I "$build_world_BUILD_ROOT/stdlib" -I "$build_world_BUILD_ROOT/otherlibs/unix" \
+      -nostdlib
   fi
 
   # clean (otherwise you will 'make inconsistent assumptions' errors with a mix of host + target binaries)

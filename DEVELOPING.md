@@ -171,8 +171,8 @@ src/r-c-ocaml-1-setup.sh \
     -t "dist-$TARGETABI-on-$HOSTABI" \
     -v "$OCAMLVER" \
     -e "$HOSTABI" \
-    -a "$TARGETABI=env/android-ndk-env-to-ocaml-configure-env.sh" \
-    -k env/standard-compiler-env-to-ocaml-configure-env.sh
+    -a "$TARGETABI=vendor/dkml-compiler/env/android-ndk-env-to-ocaml-configure-env.sh" \
+    -k vendor/dkml-compiler/env/standard-compiler-env-to-ocaml-configure-env.sh
 (cd "dist-$TARGETABI-on-$HOSTABI" && share/dkml/repro/100co/vendor/dkml-compiler/src/r-c-ocaml-2-build_host-noargs.sh)
 (cd "dist-$TARGETABI-on-$HOSTABI" && env DKML_BUILD_TRACE=ON share/dkml/repro/100co/vendor/dkml-compiler/src/r-c-ocaml-3-build_cross-noargs.sh)
 ```
