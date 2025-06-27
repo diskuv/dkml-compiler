@@ -84,6 +84,7 @@ The following projects are exceptions and have tiny patches:
 * A **page** is a 4096-byte (2^12) block of heap memory
 * The **page table** is a map whose keys are the addresses of *page* and whose values are 8-bit integers. The physical representation of a key is often a page index (the address divided by 4096-byte page size).
 * With `bx32` the OCaml memory page table is a sparse hash table just like `b64`.
+* There is a **heap** which is a linked list of **heap chunk**s. Each heap chunk is a pointer to an aligned, append-only, bounded-memory array of [header](#header) and [value](#values) pairs, with a **head chunk header** preceding the array of *header + value* pairs. Each heap chunk is malloc'd in `memory.c:caml_alloc_for_heap()`.
 
 ### Bytecode Interpreter
 
@@ -93,8 +94,7 @@ The following projects are exceptions and have tiny patches:
 
 * A **value** is the memory representation of an OCaml variable. It will be either an **integer value** or a **pointer value**. The bx32 OCaml `value` object is a 64-bit integer; that reflects the 64-bit C pointer size. Any tagged integers will occupy the lower 32-bits.
 * A **pointer value** is a pointer to the field words of the OCaml variable. For example, for an OCaml array the pointer value will be the pointer to the first element of the array, and for an OCaml string the pointer value will be the pointer to the first character of the string. Immediately preceding the field words is the 1-word header which contains, among other things, the number of field words for the OCaml variable in its `word_size` bits, and the runtime type of the OCaml variable in its 8 `tag` bits. The number of bits to encode the `word_size` is discussed in the [Header section](#header).
-* A **string value** is a pointer to a null-terminated string with trailing padding that encodes the string length modulus 4 or modulus 8 on `b32` or `b64`, respectively. Immediately preceding the string is the 1-word header that contains, among other things, the word size (the string length divided by 4 or 8 in `b32` or `b64`, respectively, plus the zero or one padding word). The encoding of padding words is complex and is not relevant to this document. The main takeaway is that the number of words in a `b32` string value, to maintain portability with C strings, is greater than or equal to the number of words in a `b64` string. This difference in size is the **32-bit string word overhead**, which is a nonnegative integer.
-* There is a **heap** which is a linked list of **heap chunk**s. Each heap chunk is a pointer to an aligned, append-only, bounded-memory array of *header* and *value* pairs, with a **head chunk header** preceding the array of *header + value* pairs. Each heap chunk is malloc'd in `memory.c:caml_alloc_for_heap()`.
+* A **string value** is a pointer to a null-terminated string with trailing padding that encodes the string length modulus 4 or modulus 8 on `b32` or `b64`, respectively. Immediately preceding the string is the 1-word header that contains, among other things, the word size (the string length divided by 4 or 8 in `b32` or `b64`, respectively, plus the zero or one padding word). The encoding of padding words is complex and is not relevant to this document. The main takeaway is that the number of words in a `b32` string value, to maintain portability with C strings, is greater than or equal to the number of words in a `b64` string. This difference in size is the **32-bit string word overhead**.
 
 ### Header
 
@@ -173,7 +173,7 @@ All values marshalled by an bx32 process should be readable in a bx32 process.
 
 ### Marshalling Goal - Equivalent word offsets
 
-The number of words written during marshalling by a `b32` bytecode process must be the same number of words occupied in memory by an bx32 process during unmarshalling. That simplifies the logic to adopt bx32.
+The number of words written during marshalling by a `b32` bytecode process must be the same number of words occupied in memory by an bx32 process during unmarshalling. That simplifies the logic to adopt bx32, especially to accurately size the [heap chunks](#pages).
 
 ### Strings
 
@@ -181,9 +181,21 @@ To maintain [Equivalent Word Offsets](#marshalling-goal---equivalent-word-offset
 the [32-bit string word overhead](#in-memory-representation) is padded with zero-length arrays which each occupy 1 header word and 0 field words. So:
 
 - 1 `string` value is unmarshalled which occupies the denser 64-bit word size.
-- N zero-length `string` values are unmarshalled to pad the N words of 32-bit string word overhead.
+- N zero-length `array` values are unmarshalled to pad the N words of 32-bit string word overhead.
 
 During the first major garbage collection cycle after unmarshalling, the zero-length arrays will be garbage collected since there will be no references to those strings.
+
+The patch has C comments with a proof that there is a non-negative overhead for strings in the bx32 ABI compared to the b64 ABI.
+So a procedure to fill the overhead with 1-word, zero-length `array` values is well-defined.
+
+### Custom Blocks
+
+There is a non-negative overhead for bx32 custom blocks that is similar to the [32-bit string word overhead](#in-memory-representation).
+
+The overhead, like for [strings](#strings), is filled with zero-length `array` values.
+
+The patch has C comments with a proof that there is a non-negative overhead for custom blocks in the bx32 ABI compared to the b64 ABI.
+So a procedure to fill the overhead with 1-word, zero-length `array` values just like was done for [strings](#strings) is well-defined.
 
 ### Floats
 
