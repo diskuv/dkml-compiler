@@ -76,6 +76,7 @@ The following projects are exceptions and have tiny patches:
 | Project | Patch                                                                                 |
 | ------- | ------------------------------------------------------------------------------------- |
 | `base`  | https://github.com/jonahbeckford/base/commit/8e18f0b749fd60bde8889824d1c38629265f8634 |
+| `checkseum` | https://github.com/jonahbeckford/checkseum/commit/8cdacc0d6b790fcb4094fa8fef8c47dbf5ca4c48 |
 
 ## In-Memory Representation
 
