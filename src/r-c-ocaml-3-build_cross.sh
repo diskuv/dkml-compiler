@@ -386,7 +386,7 @@ build_world() {
   esac
 
   # check if we'll build native toplevel
-  case "${BYTECODEONLY:-OFF},$DISABLE_EXTRAS,$_OCAMLVER" in
+  case "$BYTECODEONLY,$DISABLE_EXTRAS,$_OCAMLVER" in
     OFF,0,4.14.*|OFF,0,5.*)
         # Install native toplevel
         native_toplevel=full

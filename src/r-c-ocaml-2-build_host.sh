@@ -236,8 +236,8 @@ if [ "$RUNTIMEONLY" = ON ]; then
 elif [ "$BYTECODEONLY" = ON ]; then
     CONFIGUREARGS="$CONFIGUREARGS --disable-native-compiler --disable-ocamldoc"
 else
-    case "$DISABLE_EXTRAS,$_OCAMLVER" in
-        0,4.14.*|0,5.*)
+    case "$BYTECODEONLY,$DISABLE_EXTRAS,$_OCAMLVER" in
+        OFF,0,4.14.*|OFF,0,5.*)
             # Install native toplevel
             CONFIGUREARGS="$CONFIGUREARGS --enable-native-toplevel"
             ;;
