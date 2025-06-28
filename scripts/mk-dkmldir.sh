@@ -15,9 +15,9 @@ install -d dkmldir
 printf 'dkml_root_version=%s\n' "$SEMVER" | sed 's/[0-9.]*~v//; s/~/-/' > dkmldir/.dkmlroot
 
 #   <dkmldir>/vendor/drc/
-install -d dkmldir/vendor
 if [ -z "$DRC" ]; then
     # In development clone the dkml-runtime-common project
+    install -d dkmldir/vendor
     if [ -d dkmldir/vendor/drc ]; then
         git -C dkmldir/vendor/drc pull --ff-only
     else
@@ -26,6 +26,7 @@ if [ -z "$DRC" ]; then
 else
     # In opam copy the dkml-runtime-common dependency
     #     tar through pipe is essentially an rsync (without requiring rsync)
+    install -d dkmldir/vendor/drc
     tar cCf "$DRC/" - . | tar xCf dkmldir/vendor/drc/ -
 fi
 
