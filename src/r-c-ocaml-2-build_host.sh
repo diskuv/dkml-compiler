@@ -170,6 +170,9 @@ else
 fi
 export OCAMLSRC_MIXED
 
+# Until init_hostvars we can't use HOST_EXE_EXT
+if "${COMSPEC:-}"; then host_ext=.exe ; else host_ext=; fi
+
 # ------------------
 
 # Prereqs for r-c-ocaml-functions.sh
@@ -262,10 +265,7 @@ print_makefile_config_extensions "$SANITIZE_ADDRESS" "$SANITIZE_LEAK" >> Makefil
 
 # Skip bootstrapping if ocamlc.opt is present
 if [ -n "$OCAMLC_OPT_EXE" ]; then
-    case "$DKMLHOSTABI" in
-        windows_*) log_trace install "$OCAMLC_OPT_EXE" boot/ocamlc.opt.exe ;;
-        *)         log_trace install "$OCAMLC_OPT_EXE" boot/ocamlc.opt
-    esac
+    log_trace install "$OCAMLC_OPT_EXE" "boot/ocamlc.opt$host_ext"
 fi
 
 # Capture SAK_ variables for use in cross-compiler.
@@ -310,13 +310,16 @@ fi
 #        1 error generated.
 #
 # All of that is to say we need to check that the runtime/sak executable is runnable
+
+log_trace ocaml_make "$DKMLHOSTABI" -C runtime -f get_sak.make "sak$host_ext"
+#   Check runtime/sak is runnable
+runtime/sak encode-C-literal "runtime/sak was built correctly"
+#   Extract sak processed variables
 log_trace ocaml_make "$DKMLHOSTABI" -C runtime -f get_sak.make sak.source.sh 1=__1__ 2=__2__
 if [ "${DKML_BUILD_TRACE:-OFF}" = ON ] && [ "${DKML_BUILD_TRACE_LEVEL:-0}" -ge 2 ] ; then
     printf '@+ runtime/sak.source.sh\n' >&2
     cat runtime/sak.source.sh >&2
 fi
-#   Check runtime/sak is runnable
-runtime/sak encode-C-literal "runtime/sak was built correctly"
 
 # fix readonly perms we'll set later (if we've re-used the files because
 # of a cache)

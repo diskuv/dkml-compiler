@@ -45,25 +45,23 @@ If you have DkML installed, we recommend:
 with-dkml make local-install
 ```
 
-Otherwise, run the following inside a `with-dkml bash`, MSYS2 or Cygwin shell:
+Otherwise, run the following inside a `with-dkml bash`, Git Bash, MSYS2 or Cygwin shell:
 
 ```sh
 sh scripts/mk-ocamldir.sh
 sh scripts/mk-dkmldir.sh "" ""
 
 rm -rf _build/prefix
-env DKML_REPRODUCIBLE_SYSTEM_BREWFILE=./Brewfile \
-    src/r-c-ocaml-1-setup.sh \
+env DKML_SKIP_DKML_INSTALLTIME_VSDEV=1 sh src/r-c-ocaml-1-setup.sh \
     -d dkmldir \
     -t "$PWD/_build/prefix" \
     -f src-ocaml \
-    -g "$PWD/_build/prefix/share/mlcross" \
     -v dl/ocaml \
     -z \
     -ewindows_x86_64 \
     -k vendor/dkml-compiler/env/standard-compiler-env-to-ocaml-configure-env.sh
 
-(cd '_build/prefix' && share/dkml/repro/100co/vendor/dkml-compiler/src/r-c-ocaml-2-build_host-noargs.sh)
+(cd '_build/prefix' && env DKML_SKIP_DKML_INSTALLTIME_VSDEV=1 share/dkml/repro/100co/vendor/dkml-compiler/src/r-c-ocaml-2-build_host-noargs.sh)
 ```
 
 ### macOS
