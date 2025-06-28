@@ -271,11 +271,52 @@ fi
 # Capture SAK_ variables for use in cross-compiler.
 # We need $(1) and $(2) parameter placeholders to get passed as well, so
 # we encode them.
+#
+# However we need to be careful since this is the first call to the runtime/Makefile
+# and it doesn't handle errors from $(shell ...) below:
+#
+#    sak$(EXE): sak.$(O)
+#        $(call SAK_LINK,$@,$^)
+#
+#    sak.$(O): sak.c caml/misc.h caml/config.h
+#        $(SAK_CC) -c $(SAK_CFLAGS) $(OUTPUTOBJ)$@ $<
+#
+#    C_LITERAL = $(shell ./sak$(EXE) encode-C-literal '$(1)')
+#
+# For example, if we have darwin_x86_64 as the host ABI on an Apple Silicon
+# without the Rosetta emulation, we'll get a failure which is hard to understand
+# because stdout/stderr makes the messages out-of-order:
+#
+#    make: execvp: ./sak: Bad CPU type in executable
+#
+#    clang -arch x86_64 -mmacosx-version-min=10.16 -c -O2 -fno-strict-aliasing -fwrapv -pthread -Wall -Wdeclaration-after-statement -fno-common -g  -D_FILE_OFFSET_BITS=64 -DCAML_NAME_SPACE  -DCAMLDLLIMPORT=  -o sak.o sak.c
+#    clang -arch x86_64 -mmacosx-version-min=10.16 -O2 -fno-strict-aliasing -fwrapv -pthread -Wall -Wdeclaration-after-statement -fno-common -g    -o sak sak.o
+#    ...
+#    echo '/* This file is generated from ../Makefile.config */' > build_config.h
+#    echo '#define OCAML_STDLIB_DIR ' >> build_config.h
+#    echo '#define HOST "x86_64-apple-darwin24.5.0"' >> build_config.h
+#
+# But the build will continue on with an empty OCAML_STDLIB_DIR in build_config.h.
+# Eventually there will be a failure in _later_ steps:
+#
+#        [xxx] ocaml_make darwin_x86_64 coldstart
+#        [xxx] env
+#        startup_byt.c:382:49: error: too few arguments to function call, single argument 's' was not specified
+#        382 |          caml_stat_strdup_of_os(OCAML_STDLIB_DIR));
+#            |          ~~~~~~~~~~~~~~~~~~~~~~                 ^
+#        ./caml/memory.h:161:29: note: 'caml_stat_strdup' declared here
+#        161 | CAMLextern caml_stat_string caml_stat_strdup(const char *s);
+#            |                             ^                ~~~~~~~~~~~~~
+#        1 error generated.
+#
+# All of that is to say we need to check that the runtime/sak executable is runnable
 log_trace ocaml_make "$DKMLHOSTABI" -C runtime -f get_sak.make sak.source.sh 1=__1__ 2=__2__
 if [ "${DKML_BUILD_TRACE:-OFF}" = ON ] && [ "${DKML_BUILD_TRACE_LEVEL:-0}" -ge 2 ] ; then
     printf '@+ runtime/sak.source.sh\n' >&2
     cat runtime/sak.source.sh >&2
 fi
+#   Check runtime/sak is runnable
+runtime/sak encode-C-literal "runtime/sak was built correctly"
 
 # fix readonly perms we'll set later (if we've re-used the files because
 # of a cache)
