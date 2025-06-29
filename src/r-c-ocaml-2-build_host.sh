@@ -171,7 +171,7 @@ fi
 export OCAMLSRC_MIXED
 
 # Until init_hostvars we can't use HOST_EXE_EXT
-if "${COMSPEC:-}"; then host_ext=.exe ; else host_ext=; fi
+if [ -n "${COMSPEC:-}" ]; then host_ext=.exe ; else host_ext=; fi
 
 # ------------------
 
