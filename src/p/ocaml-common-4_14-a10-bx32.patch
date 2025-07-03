@@ -25,7 +25,7 @@ index 82e5cf7..6ad4003 100644
  /* 64 bits: Represent page table as a sparse hash table */
  int caml_page_table_lookup(void * addr);
 diff --git a/runtime/caml/misc.h b/runtime/caml/misc.h
-index 41c5e50..1c57d99 100644
+index 41c5e50..945512f 100644
 --- a/runtime/caml/misc.h
 +++ b/runtime/caml/misc.h
 @@ -72,6 +72,12 @@ typedef size_t asize_t;
@@ -41,6 +41,25 @@ index 41c5e50..1c57d99 100644
  #ifdef CAML_INTERNALS
  CAMLdeprecated_typedef(addr, char *);
  #endif /* CAML_INTERNALS */
+@@ -113,7 +119,8 @@ CAMLdeprecated_typedef(addr, char *);
+ /* Export control (to mark primitives and to handle Windows DLL) */
+ 
+ #ifndef CAMLDLLIMPORT
+-  #if defined(SUPPORT_DYNAMIC_LINKING) && defined(ARCH_SIXTYFOUR) \
++  #if defined(SUPPORT_DYNAMIC_LINKING) \
++      && (defined(ARCH_SIXTYFOUR) || defined(TARGET_C_ARCH_SIXTYFOUR)) \
+       && (defined(__CYGWIN__) || defined(__MINGW32__) || defined(_MSC_VER))
+     #define CAMLDLLIMPORT __declspec(dllimport)
+   #else
+@@ -439,7 +446,7 @@ extern uintnat caml_runtime_warnings;
+ int caml_runtime_warnings_active(void);
+ 
+ #ifdef DEBUG
+-#ifdef ARCH_SIXTYFOUR
++#if defined(ARCH_SIXTYFOUR) || defined(TARGET_C_ARCH_SIXTYFOUR)
+ #define Debug_tag(x) (INT64_LITERAL(0xD700D7D7D700D6D7u) \
+                       | ((uintnat) (x) << 16) \
+                       | ((uintnat) (x) << 48))
 diff --git a/runtime/caml/mlvalues.h b/runtime/caml/mlvalues.h
 index 878b756..afd6322 100644
 --- a/runtime/caml/mlvalues.h
