@@ -122,6 +122,7 @@ Your host machine will need Docker. Windows as a host is fine.
 FIRST, pick one of the following (for Windows prepend `dk Ml.Use --` to the `bash` line):
 
 1. Use the Dev Container inside Visual Studio Code.
+
 2. ```sh
    $ docker run --rm -it debian:stable-slim
    root@12b9f953b5fd:/# apt update
