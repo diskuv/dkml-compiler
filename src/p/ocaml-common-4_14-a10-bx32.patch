@@ -25,23 +25,25 @@ index 82e5cf7..6ad4003 100644
  /* 64 bits: Represent page table as a sparse hash table */
  int caml_page_table_lookup(void * addr);
 diff --git a/runtime/caml/misc.h b/runtime/caml/misc.h
-index 41c5e50..945512f 100644
+index 41c5e50..4ae2e16 100644
 --- a/runtime/caml/misc.h
 +++ b/runtime/caml/misc.h
-@@ -72,6 +72,12 @@ typedef size_t asize_t;
+@@ -72,6 +72,14 @@ typedef size_t asize_t;
  #define NULL 0
  #endif
  
 +#if defined(TARGET_C_ARCH_SIXTYFOUR) && !defined(ARCH_SIXTYFOUR)
 +#define SIZEOF_NATIVE_INT() 4
++#define UNSIGNED_NATIVE_INT_MASK() ((uintnat)0xFFFFFFFF)
 +#else
 +#define SIZEOF_NATIVE_INT() sizeof(intnat)
++#define UNSIGNED_NATIVE_INT_MASK() ((uintnat) -1)
 +#endif
 +
  #ifdef CAML_INTERNALS
  CAMLdeprecated_typedef(addr, char *);
  #endif /* CAML_INTERNALS */
-@@ -113,7 +119,8 @@ CAMLdeprecated_typedef(addr, char *);
+@@ -113,7 +121,8 @@ CAMLdeprecated_typedef(addr, char *);
  /* Export control (to mark primitives and to handle Windows DLL) */
  
  #ifndef CAMLDLLIMPORT
@@ -51,7 +53,7 @@ index 41c5e50..945512f 100644
        && (defined(__CYGWIN__) || defined(__MINGW32__) || defined(_MSC_VER))
      #define CAMLDLLIMPORT __declspec(dllimport)
    #else
-@@ -439,7 +446,7 @@ extern uintnat caml_runtime_warnings;
+@@ -439,7 +448,7 @@ extern uintnat caml_runtime_warnings;
  int caml_runtime_warnings_active(void);
  
  #ifdef DEBUG
@@ -259,9 +261,18 @@ index 9b18f3c..a96a83f 100644
  #endif
    initial_local_roots = Caml_state->local_roots;
 diff --git a/runtime/ints.c b/runtime/ints.c
-index c9584e4..928c5c8 100644
+index c9584e4..b01446c 100644
 --- a/runtime/ints.c
 +++ b/runtime/ints.c
+@@ -81,7 +81,7 @@ static intnat parse_intnat(value s, int nbits, const char *errmsg)
+   int sign, base, signedness, d;
+ 
+   p = parse_sign_and_base(String_val(s), &base, &signedness, &sign);
+-  threshold = ((uintnat) -1) / base;
++  threshold = UNSIGNED_NATIVE_INT_MASK() / base;
+   d = parse_digit(*p);
+   if (d < 0 || d >= base) caml_failwith(errmsg);
+   for (p++, res = d; /*nothing*/; p++) {
 @@ -108,7 +108,7 @@ static intnat parse_intnat(value s, int nbits, const char *errmsg)
    } else {
      /* Unsigned representation expected, allow 0 to 2^nbits - 1
