@@ -1,0 +1,353 @@
+diff --git a/otherlibs/systhreads/st_win32.h b/otherlibs/systhreads/st_win32.h
+index f53eca1..f943b1d 100644
+--- a/otherlibs/systhreads/st_win32.h
++++ b/otherlibs/systhreads/st_win32.h
+@@ -39,7 +39,7 @@ typedef DWORD st_retcode;
+ #define SIGPREEMPTION SIGTERM
+ 
+ /* Unique thread identifiers and atomic operations over them */
+-#ifdef ARCH_SIXTYFOUR
++#ifdef TARGET_C_ARCH_SIXTYFOUR
+ typedef LONG64 st_tid;
+ #define Tid_Atomic_Exchange InterlockedExchange64
+ #define Tid_Atomic_Compare_Exchange InterlockedCompareExchange64
+diff --git a/runtime/caml/address_class.h b/runtime/caml/address_class.h
+index 82e5cf7..6ad4003 100644
+--- a/runtime/caml/address_class.h
++++ b/runtime/caml/address_class.h
+@@ -96,7 +96,7 @@
+ #define In_young 2
+ #define In_static_data 4
+ 
+-#ifdef ARCH_SIXTYFOUR
++#ifdef TARGET_C_ARCH_SIXTYFOUR
+ 
+ /* 64 bits: Represent page table as a sparse hash table */
+ int caml_page_table_lookup(void * addr);
+diff --git a/runtime/caml/misc.h b/runtime/caml/misc.h
+index 41c5e50..4ae2e16 100644
+--- a/runtime/caml/misc.h
++++ b/runtime/caml/misc.h
+@@ -72,6 +72,14 @@ typedef size_t asize_t;
+ #define NULL 0
+ #endif
+ 
++#if defined(TARGET_C_ARCH_SIXTYFOUR) && !defined(ARCH_SIXTYFOUR)
++#define SIZEOF_NATIVE_INT() 4
++#define UNSIGNED_NATIVE_INT_MASK() ((uintnat)0xFFFFFFFF)
++#else
++#define SIZEOF_NATIVE_INT() sizeof(intnat)
++#define UNSIGNED_NATIVE_INT_MASK() ((uintnat) -1)
++#endif
++
+ #ifdef CAML_INTERNALS
+ CAMLdeprecated_typedef(addr, char *);
+ #endif /* CAML_INTERNALS */
+@@ -113,7 +121,8 @@ CAMLdeprecated_typedef(addr, char *);
+ /* Export control (to mark primitives and to handle Windows DLL) */
+ 
+ #ifndef CAMLDLLIMPORT
+-  #if defined(SUPPORT_DYNAMIC_LINKING) && defined(ARCH_SIXTYFOUR) \
++  #if defined(SUPPORT_DYNAMIC_LINKING) \
++      && (defined(ARCH_SIXTYFOUR) || defined(TARGET_C_ARCH_SIXTYFOUR)) \
+       && (defined(__CYGWIN__) || defined(__MINGW32__) || defined(_MSC_VER))
+     #define CAMLDLLIMPORT __declspec(dllimport)
+   #else
+@@ -439,7 +448,7 @@ extern uintnat caml_runtime_warnings;
+ int caml_runtime_warnings_active(void);
+ 
+ #ifdef DEBUG
+-#ifdef ARCH_SIXTYFOUR
++#if defined(ARCH_SIXTYFOUR) || defined(TARGET_C_ARCH_SIXTYFOUR)
+ #define Debug_tag(x) (INT64_LITERAL(0xD700D7D7D700D6D7u) \
+                       | ((uintnat) (x) << 16) \
+                       | ((uintnat) (x) << 48))
+diff --git a/runtime/caml/mlvalues.h b/runtime/caml/mlvalues.h
+index 878b756..afd6322 100644
+--- a/runtime/caml/mlvalues.h
++++ b/runtime/caml/mlvalues.h
+@@ -298,7 +298,15 @@ CAMLextern int caml_string_is_c_safe (value);
+ 
+ /* Floating-point numbers. */
+ #define Double_tag 253
++#if defined(TARGET_C_ARCH_SIXTYFOUR) && !defined(ARCH_SIXTYFOUR)
++/*  bx32: Two 32-bit words in 32-bit OCaml make a 64-bit double. Must keep
++    same number of words for demarshalling in intern.c:intern_rec:CODE_DOUBLE_*,
++    which unfortunately means a bx32 double occupies two 64-bit words rather
++    than just 1 in pure 64-bit OCaml. */
++#define Double_wosize 2
++#else
+ #define Double_wosize ((sizeof(double) / sizeof(value)))
++#endif
+ #ifndef ARCH_ALIGN_DOUBLE
+ #define Double_val(v) (* (double *)(v))
+ #define Store_double_val(v,d) (* (double *)(v) = (d))
+diff --git a/runtime/extern.c b/runtime/extern.c
+index b713c40..c74bf90 100644
+--- a/runtime/extern.c
++++ b/runtime/extern.c
+@@ -154,7 +154,7 @@ static struct extern_item * extern_resize_stack(struct extern_item * sp)
+ /* Multiplicative Fibonacci hashing
+    (Knuth, TAOCP vol 3, section 6.4, page 518).
+    HASH_FACTOR is (sqrt(5) - 1) / 2 * 2^wordsize. */
+-#ifdef ARCH_SIXTYFOUR
++#ifdef TARGET_C_ARCH_SIXTYFOUR
+ #define HASH_FACTOR 11400714819323198486UL
+ #else
+ #define HASH_FACTOR 2654435769UL
+diff --git a/runtime/fix_code.c b/runtime/fix_code.c
+index 1259f53..6f0c0ae 100644
+--- a/runtime/fix_code.c
++++ b/runtime/fix_code.c
+@@ -25,6 +25,10 @@
+ #include <io.h>
+ #endif
+ 
++#if defined(TARGET_C_ARCH_SIXTYFOUR) && !defined(ARCH_SIXTYFOUR)
++#include <stdint.h>
++#endif
++
+ #include "caml/codefrag.h"
+ #include "caml/debugger.h"
+ #include "caml/fix_code.h"
+@@ -128,6 +132,7 @@ int* caml_init_opcode_nargs(void)
+ void caml_thread_code (code_t code, asize_t len)
+ {
+   code_t p;
++  intptr_t idx;
+   int* l = caml_init_opcode_nargs();
+   len /= sizeof(opcode_t);
+   for (p = code; p < code + len; /*nothing*/) {
+@@ -139,7 +144,15 @@ void caml_thread_code (code_t code, asize_t len)
+       */
+       instr = STOP;
+     }
+-    *p++ = (opcode_t)(caml_instr_table[instr] - caml_instr_base);
++    idx = (intptr_t)(caml_instr_table[instr] - caml_instr_base);
++#if defined(TARGET_C_ARCH_SIXTYFOUR) && !defined(ARCH_SIXTYFOUR)
++    if(idx < INT32_MIN || idx > INT32_MAX) {
++      /* >= 2147483648 (2GiB). Casting to 'typedef int32_t opcode_t'
++         will overflow.  */
++      caml_fatal_error ("in fix_code: threaded instruction table more than int32_t wide");
++    }
++#endif
++    *p++ = (opcode_t)idx;
+     if (instr == SWITCH) {
+       uint32_t sizes = *p++;
+       uint32_t const_size = sizes & 0xFFFF;
+diff --git a/runtime/intern.c b/runtime/intern.c
+index 1bb66ad..8b30810 100644
+--- a/runtime/intern.c
++++ b/runtime/intern.c
+@@ -322,6 +322,9 @@ static void intern_rec(value *dest)
+   unsigned int code;
+   tag_t tag;
+   mlsize_t size, len, ofs_ind;
++#if defined(TARGET_C_ARCH_SIXTYFOUR) && !defined(ARCH_SIXTYFOUR)
++  mlsize_t size32;
++#endif
+   value v;
+   asize_t ofs;
+   header_t header;
+@@ -399,6 +402,10 @@ static void intern_rec(value *dest)
+       /* Small string */
+       len = (code & 0x1F);
+     read_string:
++#if defined(TARGET_C_ARCH_SIXTYFOUR) && !defined(ARCH_SIXTYFOUR)
++      /* bx32 size is 32-bit OCaml size */
++      size32 = (len + 4) / 4;
++#endif
+       size = (len + sizeof(value)) / sizeof(value);
+       v = Val_hp(intern_dest);
+       if (intern_obj_table != NULL) intern_obj_table[obj_counter++] = v;
+@@ -408,6 +415,22 @@ static void intern_rec(value *dest)
+       ofs_ind = Bsize_wsize(size) - 1;
+       Byte(v, ofs_ind) = ofs_ind - len;
+       readblock((char *)String_val(v), len);
++#if defined(TARGET_C_ARCH_SIXTYFOUR) && !defined(ARCH_SIXTYFOUR)
++      /* Maintain equivalent number of words by padding with
++         filler words: a zero-length array [||] which has a single
++         header word but no field words.
++         We can always _add_ zero or more filler words because
++         the following is always true:
++
++           (len + 8) / 8  <= (len + 4) / 4
++                  therefore
++            size          <= size32
++         */
++      for (ofs_ind = size; ofs_ind < size32; ++ofs_ind) {
++        *intern_dest = Make_header(0, 0 /*array tag*/ , intern_color);
++        ++intern_dest;
++      }
++#endif
+     } else {
+       switch(code) {
+       case CODE_INT8:
+@@ -568,6 +591,9 @@ static void intern_rec(value *dest)
+               "input_value: incorrect length of serialized custom block");
+           }
+         }
++#if defined(TARGET_C_ARCH_SIXTYFOUR) && !defined(ARCH_SIXTYFOUR)
++        size32 = 1 + (size + 4 - 1) / 4;
++#endif
+         size = 1 + (size + sizeof(value) - 1) / sizeof(value);
+         v = Val_hp(intern_dest);
+         if (intern_obj_table != NULL) intern_obj_table[obj_counter++] = v;
+@@ -581,6 +607,35 @@ static void intern_rec(value *dest)
+         }
+ 
+         intern_dest += 1 + size;
++#if defined(TARGET_C_ARCH_SIXTYFOUR) && !defined(ARCH_SIXTYFOUR)
++      /* Maintain equivalent number of words by padding with
++         filler words: a zero-length array [||] which has a single
++         header word but no field words.
++         We can always _add_ zero or more filler words because
++         the following is almost always true:
++
++           1 + (len + sizeof64(value) - 1) / sizeof64(value)  <= 1 + (len + sizeof32(value) - 1) / sizeof32(value)
++               (len + 8 - 1) / 8                              <=     (len + 4 - 1) / 4
++               (len + 7) / 8                                  <= (len + 3) / 4
++               (len + 7) / 8                                  <= (2*len + 6) / 8
++               (len + 7)                                      <= (2*len + 6)
++               len + 1                                        <= 2*len
++               1                                              <= len
++                  therefore when len >= 1
++            size                                              <= size32
++
++         The only edge case is when len=0 (this is an integer inequality so don't consider all numbers len < 1):
++
++          1 + (len + sizeof64(value) - 1) / sizeof64(value)  <= 1 + (len + sizeof32(value) - 1) / sizeof32(value)
++          (0 + 8 - 1) / 8                              <=     (0 + 4 - 1) / 4
++          7 / 8                                        <= 3 / 4   (remember these are integers not real numbers)
++          0                                            <= 0
++         */
++        for (ofs_ind = size; ofs_ind < size32; ++ofs_ind) {
++          *intern_dest = Make_header(0, 0 /*array tag*/ , intern_color);
++          ++intern_dest;
++        }
++#endif
+         break;
+       }
+       default:
+diff --git a/runtime/interp.c b/runtime/interp.c
+index 9b18f3c..a96a83f 100644
+--- a/runtime/interp.c
++++ b/runtime/interp.c
+@@ -49,7 +49,7 @@ sp is a local copy of the global variable Caml_state->extern_sp. */
+ 
+ #ifdef THREADED_CODE
+ #  define Instruct(name) lbl_##name
+-#  if defined(ARCH_SIXTYFOUR) && !defined(ARCH_CODE32)
++#  if defined(TARGET_C_ARCH_SIXTYFOUR) && !defined(ARCH_CODE32)
+ #    define Jumptbl_base &&lbl_ACC0
+ #  else
+ #    define Jumptbl_base 0
+@@ -222,7 +222,7 @@ value caml_interprete(code_t prog, asize_t prog_size)
+   register value * sp;
+   register value accu;
+ #endif
+-#if defined(THREADED_CODE) && defined(ARCH_SIXTYFOUR) && !defined(ARCH_CODE32)
++#if defined(THREADED_CODE) && defined(TARGET_C_ARCH_SIXTYFOUR) && !defined(ARCH_CODE32)
+ #ifdef JUMPTBL_BASE_REG
+   register char * jumptbl_base JUMPTBL_BASE_REG;
+ #else
+@@ -254,7 +254,7 @@ value caml_interprete(code_t prog, asize_t prog_size)
+     return Val_unit;
+   }
+ 
+-#if defined(THREADED_CODE) && defined(ARCH_SIXTYFOUR) && !defined(ARCH_CODE32)
++#if defined(THREADED_CODE) && defined(TARGET_C_ARCH_SIXTYFOUR) && !defined(ARCH_CODE32)
+   jumptbl_base = Jumptbl_base;
+ #endif
+   initial_local_roots = Caml_state->local_roots;
+diff --git a/runtime/ints.c b/runtime/ints.c
+index c9584e4..b01446c 100644
+--- a/runtime/ints.c
++++ b/runtime/ints.c
+@@ -81,7 +81,7 @@ static intnat parse_intnat(value s, int nbits, const char *errmsg)
+   int sign, base, signedness, d;
+ 
+   p = parse_sign_and_base(String_val(s), &base, &signedness, &sign);
+-  threshold = ((uintnat) -1) / base;
++  threshold = UNSIGNED_NATIVE_INT_MASK() / base;
+   d = parse_digit(*p);
+   if (d < 0 || d >= base) caml_failwith(errmsg);
+   for (p++, res = d; /*nothing*/; p++) {
+@@ -108,7 +108,7 @@ static intnat parse_intnat(value s, int nbits, const char *errmsg)
+   } else {
+     /* Unsigned representation expected, allow 0 to 2^nbits - 1
+        and tolerate -(2^nbits - 1) to 0 */
+-    if (nbits < sizeof(uintnat) * 8 && res >= (uintnat)1 << nbits)
++    if (nbits < SIZEOF_NATIVE_INT() * 8 && res >= (uintnat)1 << nbits)
+       caml_failwith(errmsg);
+   }
+   return sign < 0 ? -((intnat) res) : (intnat) res;
+@@ -706,7 +706,7 @@ static uintnat nativeint_deserialize(void * dst)
+   default:
+     caml_deserialize_error("input_value: ill-formed native integer");
+   }
+-  return sizeof(intnat);
++  return SIZEOF_NATIVE_INT();
+ }
+ 
+ static const struct custom_fixed_length nativeint_length = { 4, 8 };
+@@ -740,7 +740,7 @@ CAMLprim value caml_nativeint_sub(value v1, value v2)
+ CAMLprim value caml_nativeint_mul(value v1, value v2)
+ { return caml_copy_nativeint(Nativeint_val(v1) * Nativeint_val(v2)); }
+ 
+-#define Nativeint_min_int ((intnat) 1 << (sizeof(intnat) * 8 - 1))
++#define Nativeint_min_int ((intnat) 1 << (SIZEOF_NATIVE_INT() * 8 - 1))
+ 
+ CAMLprim value caml_nativeint_div(value v1, value v2)
+ {
+diff --git a/runtime/memory.c b/runtime/memory.c
+index 66d1c50..3a9e7bd 100644
+--- a/runtime/memory.c
++++ b/runtime/memory.c
+@@ -54,7 +54,7 @@ extern uintnat caml_percent_free;                   /* major_gc.c */
+ #define Page(p) ((uintnat) (p) >> Page_log)
+ #define Page_mask ((~(uintnat)0) << Page_log)
+ 
+-#ifdef ARCH_SIXTYFOUR
++#ifdef TARGET_C_ARCH_SIXTYFOUR
+ 
+ /* 64-bit implementation:
+    The page table is represented sparsely as a hash table
+@@ -80,7 +80,7 @@ static struct page_table caml_page_table;
+ /* Multiplicative Fibonacci hashing
+    (Knuth, TAOCP vol 3, section 6.4, page 518).
+    HASH_FACTOR is (sqrt(5) - 1) / 2 * 2^wordsize. */
+-#ifdef ARCH_SIXTYFOUR
++#ifdef TARGET_C_ARCH_SIXTYFOUR
+ #define HASH_FACTOR 11400714819323198486UL
+ #else
+ #define HASH_FACTOR 2654435769UL
+diff --git a/runtime/misc.c b/runtime/misc.c
+index e817a6c..1ae5e3c 100644
+--- a/runtime/misc.c
++++ b/runtime/misc.c
+@@ -147,7 +147,7 @@ void caml_ext_table_free(struct ext_table * tbl, int free_entries)
+ #if ! (__GNUC__ >= 5 || Caml_has_builtin(__builtin_mul_overflow))
+ CAMLexport int caml_umul_overflow(uintnat a, uintnat b, uintnat * res)
+ {
+-#define HALF_SIZE (sizeof(uintnat) * 4)
++#define HALF_SIZE (SIZEOF_NATIVE_INT() * 4)
+ #define HALF_MASK (((uintnat)1 << HALF_SIZE) - 1)
+ #define LOW_HALF(x) ((x) & HALF_MASK)
+ #define HIGH_HALF(x) ((x) >> HALF_SIZE)
+diff --git a/runtime/sys.c b/runtime/sys.c
+index a77fd9d..20b48ab 100644
+--- a/runtime/sys.c
++++ b/runtime/sys.c
+@@ -633,7 +633,11 @@ CAMLprim value caml_sys_const_word_size(value unit)
+ /* returns a value that represents a number of bits */
+ CAMLprim value caml_sys_const_int_size(value unit)
+ {
++#if defined(TARGET_C_ARCH_SIXTYFOUR) && !defined(ARCH_SIXTYFOUR)
++  return Val_long(8 * 4 - 1) ;
++#else
+   return Val_long(8 * sizeof(value) - 1) ;
++#endif
+ }
+ 
+ /* returns a value that represents a number of words */

@@ -32,27 +32,27 @@ install -v \
 
 install -d "$targetdir/src/p"
 install -v \
-    src/p/flexdll-cross-0_39-a01-arm64.patch \
-    src/p/flexdll-cross-0_42-a01-arm64.patch \
+    src/p/flexdll-cross-0_99-a01-arm64.patch \
     src/p/ocaml-common-4_12-a01-alignfiletime.patch \
-    src/p/ocaml-common-4_14_0-a01-fmatest.patch \
     src/p/ocaml-common-4_14-a01-alignfiletime.patch \
     src/p/ocaml-common-4_14-a02-nattop.patch \
     src/p/ocaml-common-4_14-a03-keepasm.patch \
     src/p/ocaml-common-4_14-a04-xdg.patch \
     src/p/ocaml-common-4_14-a05-msvccflags.patch \
+    src/p/ocaml-common-4_14-a06-linearclosures.patch \
+    src/p/ocaml-common-4_14_0-a01-fmatest.patch \
     src/p/ocaml-cross-4_12-a01.patch \
     src/p/ocaml-cross-4_12-a02-arm32.patch \
     src/p/ocaml-cross-4_12unused-zzz-win32arm.patch \
     src/p/ocaml-cross-4_13-a01.patch \
+    src/p/ocaml-cross-4_14-a01.patch \
     src/p/ocaml-cross-4_14_0-a02-arm32.patch \
     src/p/ocaml-cross-4_14_2-a02-arm32.patch \
-    src/p/ocaml-cross-4_14-a01.patch \
     src/p/ocaml-cross-5_00_a02-arm32.patch \
     "$targetdir/src/p"
 
 install -d "$targetdir/env"
 install -v \
-    env/github-actions-ci-to-ocaml-configure-env.sh \
+    env/android-ndk-env-to-ocaml-configure-env.sh \
     env/standard-compiler-env-to-ocaml-configure-env.sh \
     "$targetdir/env"

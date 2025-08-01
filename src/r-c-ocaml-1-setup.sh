@@ -83,6 +83,7 @@ OPT_MSVS_PREFERENCE='VS16.*;VS15.*;VS14.0' # KEEP IN SYNC with 2-build.sh
 HOST_SUBDIR=.
 HOSTSRC_SUBDIR=src/ocaml
 CROSS_SUBDIR=opt/mlcross
+PATCH_CATEGORIES=(ocaml)
 
 usage() {
     {
@@ -158,6 +159,8 @@ usage() {
         printf "%s\n" "      Defaults to '$OPT_MSVS_PREFERENCE' which, because it does not include '@',"
         printf "%s\n" "      will not choose a compiler based on environment variables that would disrupt reproducibility."
         printf "%s\n" "      Confer with https://github.com/metastack/msvs-tools#msvs-detect"
+        printf "%s\n" "   -B Build bytecode compiler and libraries."
+        printf "%s\n" "   -X Use bx32 ABI so OCaml (not C) is 32-bit. Effective only with -B, and works on 64-bit targets."
         printf "%s\n" "   -e DKMLHOSTABI: Optional. Use the DkML compiler detector find a host ABI compiler."
         printf "%s\n" "      Especially useful to find a 32-bit Windows host compiler that can use 64-bits of memory for the compiler."
         printf "%s\n" "      Values include: windows_x86, windows_x86_64, android_arm64v8a, darwin_x86_64, etc."
@@ -184,6 +187,10 @@ usage() {
         printf "%s\n" "   -w Disable non-essentials like the native toplevel and ocamldoc."
         printf "%s\n" "   -x Do not include temporary object files (only useful for debugging) in target directory"
         printf "%s\n" "   -z Do not include .git repositories in target directory"
+        printf "%s\n" "   -A Enable Address Sanitizer"
+        printf "%s\n" "   -L Enable Leak Sanitizer"
+        printf "%s\n" "   -P CATEGORY: Add the patch category, which is the prefix of patches in the src/p directory. Can be repeated."
+        printf "%s\n" "      Defaults to 'ocaml'. The dash (-) will be added to each patch category."
     } >&2
 }
 
@@ -191,6 +198,7 @@ SETUP_ARGS=()
 BUILD_HOST_ARGS=()
 BUILD_CROSS_ARGS=()
 TRIM_ARGS=()
+PATCH_CATEGORIES=(ocaml)
 
 # Make repeatable environment variable specs
 if [ -n "${DKML_HOST_OCAML_CONFIGURE:-}" ]; then
@@ -212,7 +220,7 @@ RUNTIMEONLY=OFF
 TEMPLATEDIR=
 HOSTABISCRIPT=
 OCAMLC_OPT_EXE=
-while getopts ":d:v:u:t:a:b:c:e:k:l:m:n:rf:p:g:o:wxzh" opt; do
+while getopts ":d:v:u:t:a:BXb:c:e:k:l:m:n:rf:p:g:o:wxzALP:h" opt; do
     case ${opt} in
         h )
             usage
@@ -251,6 +259,16 @@ while getopts ":d:v:u:t:a:b:c:e:k:l:m:n:rf:p:g:o:wxzh" opt; do
         a )
             TARGETABIS="$OPTARG"
         ;;
+        B )
+            SETUP_ARGS+=( -B )
+            BUILD_HOST_ARGS+=( -B )
+            BUILD_CROSS_ARGS+=( -B )
+        ;;
+        X )
+            SETUP_ARGS+=( -X )
+            BUILD_HOST_ARGS+=( -X )
+            BUILD_CROSS_ARGS+=( -X )
+        ;;
         b )
             MSVS_PREFERENCE="$OPTARG"
             SETUP_ARGS+=( -b "$OPTARG" )
@@ -263,6 +281,7 @@ while getopts ":d:v:u:t:a:b:c:e:k:l:m:n:rf:p:g:o:wxzh" opt; do
         p ) HOST_SUBDIR=$OPTARG ;;
         g ) CROSS_SUBDIR=$OPTARG ;;
         l )
+            SETUP_ARGS+=( -l "$OPTARG" )
             BUILD_HOST_ARGS+=( -l "$OPTARG" )
             BUILD_CROSS_ARGS+=( -l "$OPTARG" )
         ;;
@@ -296,6 +315,17 @@ while getopts ":d:v:u:t:a:b:c:e:k:l:m:n:rf:p:g:o:wxzh" opt; do
             SETUP_ARGS+=( -z )
             TRIM_ARGS+=( -z )
         ;;
+        A )
+            SETUP_ARGS+=( -A )
+            BUILD_HOST_ARGS+=( -A )
+            BUILD_CROSS_ARGS+=( -A )
+            ;;
+        L )
+            SETUP_ARGS+=( -L )
+            BUILD_HOST_ARGS+=( -L )
+            BUILD_CROSS_ARGS+=( -L )
+            ;;
+        P ) PATCH_CATEGORIES+=( "$OPTARG" ) ;;
         \? )
             printf "%s\n" "This is not an option: -$OPTARG" >&2
             usage
@@ -466,7 +496,7 @@ set_ocaml_version_stems() {
         4.*) VERSION_STEMS+=("4") ;;
         5.*) VERSION_STEMS+=("5") ;;
         *)
-            echo "FATAL: Unsupported stemming case 1 for version $set_version_stems_VER" >&2
+            echo "FATAL: Unsupported stemming case 1 for ocaml version $set_version_stems_VER" >&2
             exit 123
             ;;
     esac
@@ -480,7 +510,7 @@ set_ocaml_version_stems() {
         5.1.*) VERSION_STEMS+=("5_1") ;;
         5.2.*) VERSION_STEMS+=("5_2") ;;
         *)
-            echo "FATAL: Unsupported stemming case 2 for version $set_version_stems_VER" >&2
+            echo "FATAL: Unsupported stemming case 2 for ocaml version $set_version_stems_VER" >&2
             exit 123
             ;;
     esac
@@ -488,8 +518,9 @@ set_ocaml_version_stems() {
         4.14.0) VERSION_STEMS+=("4_14_0") ;;
         4.14.1) VERSION_STEMS+=("4_14_1") ;;
         4.14.2) VERSION_STEMS+=("4_14_2") ;;
+        4.14.3) VERSION_STEMS+=("4_14_3") ;;
         *)
-            echo "FATAL: Unsupported stemming case 3 for version $set_version_stems_VER" >&2
+            echo "FATAL: Unsupported stemming case 3 for ocaml version $set_version_stems_VER" >&2
             exit 123
             ;;
     esac
@@ -500,12 +531,20 @@ set_flexdll_version_stems() {
     VERSION_STEMS=()
     case "$set_version_stems_VER" in
         0.*) VERSION_STEMS+=("0") ;;
+        *)
+            echo "FATAL: Unsupported stemming case 1 for flexdll version $set_version_stems_VER" >&2
+            exit 123
+            ;;
     esac
     case "$set_version_stems_VER" in
         0.39) VERSION_STEMS+=("0_39") ;;
-    esac
-    case "$set_version_stems_VER" in
         0.42) VERSION_STEMS+=("0_42") ;;
+        0.43) VERSION_STEMS+=("0_43") ;;
+        0.44) VERSION_STEMS+=("0_44") ;;
+        *)
+            echo "FATAL: Unsupported stemming case 2 for flexdll version $set_version_stems_VER" >&2
+            exit 123
+            ;;
     esac
 }
 # Sets the array PATCHES and accumulates dkmldir/ relative paths, including
@@ -523,7 +562,7 @@ set_patches() {
     case "$set_patches_CATEGORY" in
         ocaml)   set_ocaml_version_stems "$set_patches_VER";;
         flexdll) set_flexdll_version_stems "$set_patches_VER";;
-        *) printf "FATAL: No category %s\n" "$set_patches_CATEGORY" >&2; exit 107
+        *)       set_ocaml_version_stems "$set_patches_VER";;
     esac
 
     PATCHES=()
@@ -687,7 +726,8 @@ get_ocaml_source() {
             log_trace rm -rf "$get_ocaml_source_SRCUNIX" # clean any partial downloads
             log_trace cp -rp "$get_ocaml_source_COMMIT_TAG_OR_DIR" "$get_ocaml_source_SRCUNIX"
             #   we do not want complicated submodules for a local directory copy
-            log_trace rm -f "$get_ocaml_source_SRCUNIX/.gitmodules" "$get_ocaml_source_SRCUNIX/flexdll/.git"
+            log_trace rm -f "$get_ocaml_source_SRCUNIX/.gitmodules"
+            log_trace rm -rf "$get_ocaml_source_SRCUNIX/flexdll/.git"
         fi
 
         # Ensure git patchable
@@ -799,9 +839,11 @@ BUILD_HOST_ARGS+=( -s "$_OCAMLVER" )
 BUILD_CROSS_ARGS+=( -s "$_OCAMLVER" )
 
 # Find and apply patches to the host ABI
-apply_patches "$OCAMLSRC_UNIX"          ocaml    "$_OCAMLVER"    host
+for cat in "${PATCH_CATEGORIES[@]}"; do
+    apply_patches "$OCAMLSRC_UNIX"  "$cat"   "$_OCAMLVER"    host
+done
 if [ -e "$OCAMLSRC_UNIX"/flexdll/Makefile ] && is_unixy_windows_build_machine; then
-    apply_patches "$OCAMLSRC_UNIX/flexdll"  flexdll  "$_FLEXDLLVER"  host
+    apply_patches "$OCAMLSRC_UNIX"  flexdll  "$_FLEXDLLVER"  host
 fi
 
 if [ -z "$TARGETABIS" ]; then
@@ -824,7 +866,9 @@ else
             _srcabidir_unix="$TARGETDIR_UNIX/$CROSS_SUBDIR/$_targetabi/$HOSTSRC_SUBDIR"
             get_ocaml_source "$GIT_COMMITID_TAG_OR_DIR" "$_srcabidir_unix" "$TARGETDIR_MIXED/$CROSS_SUBDIR/$_targetabi/$HOSTSRC_SUBDIR" "$_targetabi"
             # Find and apply patches to the target ABI
-            apply_patches "$_srcabidir_unix"            ocaml    "$_OCAMLVER"    cross
+            for cat in "${PATCH_CATEGORIES[@]}"; do
+                apply_patches "$_srcabidir_unix"            "$cat"   "$_OCAMLVER"    cross
+            done            
             if [ -e "$_srcabidir_unix"/flexdll/Makefile ] && is_unixy_windows_build_machine; then
                 apply_patches "$_srcabidir_unix/flexdll"    flexdll  "$_FLEXDLLVER"  cross
             fi

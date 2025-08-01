@@ -12,18 +12,31 @@ synopsis: "OCaml cross-compiler and libraries from the DkML distribution"
 description:
   """The DkML distribution of the OCaml bytecode and native compiler, Stdlib and the other OCaml libraries (str, unix, bigarray, etc.).
 
-A cross-compiler for macOS x86_64 to macOS arm64 is included; for build consistency the regular OCaml compiler will be for
-x86_64 regardless of whether the build machine is Apple Silicon.
+The following cross-compilers have been included:
+- from macOS x86_64 and macOS arm64, and vice versa
+- from Linux x86 to the android armeabi-v7a ABI
+- from Linux x86_64 to either the android arm64-v8a or x86_64 ABI
 
 To support cross-compilation, environment variables for compilers like CC and LDFLAGS have no effect on the 'host' ABI.
 The compiler for the 'host' ABI will be detected from conventional locations on the system and (for Visual Studio)
 from configuration stored in the DkML home directory.
 
+If you use cross-compilation, you should also install the conf-dkml-cross-toolchain package
+so that your findlib installation recognizes the cross-compilers.
+
+For Android compilation, the following opam global or switch variables are needed:
+- (required) ANDROID_NDK. This is the directory containing the Android NDK installation.
+  Examples: /opt/downloaded/ndk-23.1.7779620
+- (optional) ANDROID_PLATFORM. The minimum API level for the Android app or library. The default varies based on the version
+  of dkml-base-compiler, so it is best to set this. This version the default is 23.
+  Confer: https://developer.android.com/ndk/guides/cmake#android_platform.
+  Examples: android-23, 23, android-N, android-O_MR1
+
 Advanced: Set environment variables like DKML_TARGET_ABI and DKML_COMPILE_* to do cross-compilation from the 'host' ABI
 to a 'target' ABI. Those variables are documented in dkml-runtime-common's crossplatform-functions.sh script.
-Search for: autodetect_compiler() {
+Search for: autodetect_compiler()
 
-Install with something like:
+You can install dkml-base-compiler with something like:
   opam switch create dkml-4.14.2 '--formula="dkml-base-compiler" {>= "4.14.2~" & < "4.15.0~"}'"""
 maintainer: ["opensource+dkml@support.diskuv.com"]
 authors: ["Diskuv, Inc. <opensource+dkml@support.diskuv.com>"]
@@ -50,8 +63,12 @@ depends: [
 ]
 depopts: [
   "ocaml-option-32bit"
+  "ocaml-option-bytecode-only"
+  "ocaml-option-address-sanitizer"
+  "ocaml-option-leak-sanitizer"
   "dkml-option-debuginfo"
   "dkml-option-minsize"
+  "dkml-option-bx32"
   "dkml-target-abi-android_arm64v8a"
   "dkml-target-abi-android_arm32v7a"
   "dkml-target-abi-android_x86_64"
@@ -69,16 +86,39 @@ flags: [ compiler avoid-version ]
 available: [
   opam-version >= "2.1.0"
 ]
+build-env: [
+  # Used by android-ndk-env-to-ocaml-configure-env.sh
+  [ANDROID_PLATFORM = "%{ANDROID_PLATFORM}%"]
+  [ANDROID_NDK = "%{ANDROID_NDK}%"]
+  # When building the OCaml compiler, which has known memory leaks, don't fail.
+  # And any sanitizer error ... just ignore it by using exit code 0.
+  [LSAN_OPTIONS = "detect_leaks=0,exitcode=0"]
+  [ASAN_OPTIONS = "detect_leaks=0,exitcode=0"]
+]
 build: [
+  # Fail-fast if ANDROID_NDK is not present but needs to be.
+  # It will also get checked much later in r-c-ocaml-3-build_cross.sh
+  # when android-ndk-env-to-ocaml-configure-env.sh is evaluated.
+  ["sh" "-c" """
+    echo 'FATAL: Installing an Android cross-compiler requires the ANDROID_NDK opam global or switch variable.';
+    echo 'It is recommended that you set ANDROID_PLATFORM (the minimum API level) as well.';
+    echo 'Try something like:';
+    echo '  OPAMCLI=2.0 opam config set-global ANDROID_NDK "/usr/local/lib/android/sdk/ndk/27.1.12297006"';
+    echo '  OPAMCLI=2.0 opam config set-global ANDROID_PLATFORM android-23';
+    exit 108"""]
+  { 
+    (!?ANDROID_NDK | ANDROID_NDK = "") &
+    (dkml-target-abi-android_arm32v7a:installed |
+     dkml-target-abi-android_arm64v8a:installed |
+     dkml-target-abi-android_x86_64:installed) }
+
   # Dump Homebrew, which is needed for reproducible build auditing in drc's crossplatform-functions.sh.
   # TODO: Move the brewbundle.sh to drc, or in drc skip reproducible build auditing if bundle tap is not installable
   # WAS: ["sh" "scripts/macos-bundle-dump.sh"] {os = "macos"}
   ["touch" "Brewfile"] {os = "macos"}
 
   # OCaml source code
-  ["install" "-d" "dl/ocaml/flexdll"]
-  ["tar" "xCfz" "dl/ocaml"          "dl/ocaml.tar.gz"   "--strip-components=1"]
-  ["tar" "xCfz" "dl/ocaml/flexdll"  "dl/flexdll.tar.gz" "--strip-components=1"]
+  ["sh" "scripts/mk-ocamldir.sh"]
 
   # Debugging for 4.14.2 `Env.Error(_)` and `Persistent_env.Error(_)`
   # Example:
@@ -99,25 +139,9 @@ build: [
   ["install" "debug/env.ml" "debug/persistent_env.ml" "dl/ocaml/typing/"] {dkml-debug-env-failures & version > "4.14.2~v1.2.1~" & version <= "4.14.2"}
 
   # Create a DKMLDIR. Its structure mimics a git submodule setup.
-  #   <dkmldir>/.dkmlroot
-  ["install" "-d" "dkmldir"]
-  #     4.14.0~v0.4.1          --dkml-semver--> 0.4.1
-  #     4.14.0~v0.4.1~prerel69 --dkml-semver--> 0.4.1-prerel69
-  ["sh" "-eufc" "printf 'dkml_root_version=%s\\n' '%{version}%' | sed 's/[0-9.]*~v//; s/~/-/' > dkmldir/.dkmlroot"]
+  ["sh" "scripts/mk-dkmldir.sh" "%{version}%" "%{dkml-runtime-common:lib}%"]
 
-  #   <dkmldir>/vendor/drc/
-  ["install" "-d" "dkmldir/vendor/drc"]
-  #     tar through pipe is essentially an rsync (without requiring rsync)
-  ["sh" "-eufc" "tar cCf '%{dkml-runtime-common:lib}%/' - . | tar xCf dkmldir/vendor/drc/ -"]
-
-  #   <dkmldir>/vendor/dkml-compiler/
-  ["install" "-d" "dkmldir/vendor/dkml-compiler/src" "dkmldir/vendor/dkml-compiler/env"]
-  #     only the standard compiler environment is needed for the base compiler. However options play a part.
-  ["install"
-    # default (unpatched) options
-    "env/standard-compiler-env-to-ocaml-configure-env.sh"
-    "dkmldir/vendor/dkml-compiler/env/"
-  ]
+  #     -------------- BEGIN compile flags: mutually exclusive set 1 --------------------
   ["sh" "-eufc"
     # https://learn.microsoft.com/en-us/cpp/build/reference/z7-zi-zi-debug-information-format?view=msvc-170
     # https://learn.microsoft.com/en-us/cpp/assembler/masm/ml-and-ml64-command-line-reference?view=msvc-170
@@ -142,8 +166,9 @@ build: [
     """
   ] {dkml-option-debuginfo:installed & dkml-host-abi-windows_arm64:installed}
   ["sh" "-eufc"
+    # /usr/bin/as -O0 is not supported in `GNU assembler (GNU Binutils for Ubuntu) 2.30` (ex. conanio/gcc8:*)
     """
-    sed 's/^INJECT_CFLAGS=$/INJECT_CFLAGS="-g -O0"/; s/^INJECT_ASFLAGS=$/INJECT_ASFLAGS="-g -O0"/' \
+    sed 's/^INJECT_CFLAGS=$/INJECT_CFLAGS="-g -O0"/; s/^INJECT_ASFLAGS=$/INJECT_ASFLAGS="-g"/' \
       env/standard-compiler-env-to-ocaml-configure-env.sh > \
       dkmldir/vendor/dkml-compiler/env/standard-compiler-env-to-ocaml-configure-env.sh
     """
@@ -154,8 +179,7 @@ build: [
       env/standard-compiler-env-to-ocaml-configure-env.sh > \
       dkmldir/vendor/dkml-compiler/env/standard-compiler-env-to-ocaml-configure-env.sh"
   ] {dkml-option-minsize:installed & os = "linux"}
-  #     tar through pipe is essentially an rsync (without requiring rsync)
-  ["sh" "-eufc" "tar cCf src/ - . | tar xCf dkmldir/vendor/dkml-compiler/src/ -"]
+  #     -------------- END compile flags --------------------
 
   #   <dkmldir>/vendor/dkml-compiler/bin/bootstrap-ocamlc.opt.exe
   #   to speed up compile
@@ -183,6 +207,18 @@ install: [
       #   the option will be dropped by r-c-ocaml-1-setup.sh. Just an optimization!
       "-c" "vendor/dkml-compiler/bin/bootstrap-ocamlc.opt.exe"
       "-z"
+      #   32-bit bytecode only compiler? It works even on 64-bit machines that
+      #   don't have 32-bit capable CPUs like Apple Silicon. It avoids:
+      #     'input_value: integer too large'
+      #   when bytecode is generated on a 64-bit machine and then transferred to
+      #   a 32-bit machine (ex. dk cross-compilation, js_of_ocaml
+      #   and wasm_of_ocaml;
+      #   https://github.com/ocsigen/js_of_ocaml/blob/e6c8a9adf7a3cb5a3bbee21b753b6dab0a7c1c36/runtime/js/marshal.js#L360-L362)
+      "-B" { ocaml-option-bytecode-only:installed }
+      "-X" { dkml-option-bx32:installed }
+      #   Sanitizers
+      "-A" {ocaml-option-address-sanitizer:installed & os != "win32"}
+      "-L" {ocaml-option-leak-sanitizer:installed & os != "win32"}
       #   Windows flexlink flags that affect the built ocaml.exe, ocamlc.opt.exe, etc.
       #   It is nice with the toplevel ocaml.exe to be able to debug it when the toplevel
       #   loads in other (stublib) DLLs, for example.
@@ -195,15 +231,12 @@ install: [
       "--disable-debug-runtime --disable-instrumented-runtime"  { !dkml-option-debuginfo:installed }
       #   Host architectures
       "-e%{dkml-host-abi:abi}%"
-      #   Target architectures (if cross-compiling; similar to dkml-component-staging-ocamlrun.opam)
-      "-adarwin_x86_64=vendor/dkml-compiler/env/standard-compiler-env-to-ocaml-configure-env.sh" { dkml-host-abi:abi != "darwin_x86_64" & dkml-target-abi-darwin_x86_64:installed }
-      "-adarwin_arm64=vendor/dkml-compiler/env/standard-compiler-env-to-ocaml-configure-env.sh"  { dkml-host-abi:abi != "darwin_arm64" & dkml-target-abi-darwin_arm64:installed }
-      #     TODO: Would be nice to bundle the 3 Android cross-compilers here since they are already supported
-      #     by DkML, but I (jonahbeckford@) doubt there is an Android NDK available on the Opam hosts.
-      #     Confer: https://github.com/diskuv/diskuv-ocaml-ghmirror/runs/4831077050
-      #     Perhaps the Android NDK should just be downloaded via an 'android-option-ndk23' package? That would give control of the NDK version.
-      # "-aandroid_arm64v8a=vendor/dkml-compiler/env/github-actions-ci-to-ocaml-configure-env.sh;android_arm64v8a=vendor/dkml-compiler/env/github-actions-ci-to-ocaml-configure-env.sh"] { dkml-target-abi-android_arm64v8a:installed }
-      # "-aandroid_arm32v7a=vendor/dkml-compiler/env/github-actions-ci-to-ocaml-configure-env.sh" { dkml-target-abi-android_arm32v7a:installed }
+      #   Target architectures
+      "-adarwin_x86_64=vendor/dkml-compiler/env/standard-compiler-env-to-ocaml-configure-env.sh"  { dkml-host-abi:abi != "darwin_x86_64" & dkml-target-abi-darwin_x86_64:installed }
+      "-adarwin_arm64=vendor/dkml-compiler/env/standard-compiler-env-to-ocaml-configure-env.sh"   { dkml-host-abi:abi != "darwin_arm64" & dkml-target-abi-darwin_arm64:installed }
+      "-aandroid_arm32v7a=vendor/dkml-compiler/env/android-ndk-env-to-ocaml-configure-env.sh"     { dkml-target-abi-android_arm32v7a:installed }
+      "-aandroid_arm64v8a=vendor/dkml-compiler/env/android-ndk-env-to-ocaml-configure-env.sh"     { dkml-target-abi-android_arm64v8a:installed }
+      "-aandroid_x86_64=vendor/dkml-compiler/env/android-ndk-env-to-ocaml-configure-env.sh"       { dkml-target-abi-android_x86_64:installed }
       "-k" "vendor/dkml-compiler/env/standard-compiler-env-to-ocaml-configure-env.sh"
   ]
 

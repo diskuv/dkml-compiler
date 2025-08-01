@@ -39,7 +39,40 @@
 #    See https://github.com/anmonteiro/nix-overlays/blob/79d36ea351edbaf6ee146d9bf46b09ee24ed6ece/cross/ocaml.nix for
 #    reference material and an alternate way of doing it on nix.
 #
-# -------------------------------------------------------
+######################################
+#
+# The generated findlib configuration file will be
+# <PREFIX_DIR>/lib/findlib.conf.d/<toolchain>.conf for compatibility
+# with Dune's `dune -x` option. The generation is mostly idempotent
+# since, if the file already exsts, entries are only added to FINDLIB_CONF.
+#
+# MLCROSS_DIR is the base directory for zero or more target DKML ABIs (ex.
+# android_arm32v7a) that contains bin/ and lib/ subfolders (ex.
+# android_arm32v7a/bin). It can be an environment variable, but a default value
+# must still be specified on the command line.
+#
+# findlib.conf on output
+# ----------------------
+#
+# path(<dkmlabi>) = "<MLCROSS_DIR>/<dkmlabi>/lib:<PREFIX_DIR>/<dkmlabi>-sysroot/lib"
+#   The META/package search path will start in the cross-compiled lib folder.
+#   There are no META packages in the cross-compiled folder today, but that may change.
+#   Opam installs packages into <PREFIX_DIR>/<dkmlabi>-sysroot/; precisely `dune -x`
+#   creates a <package>.install file containing that path, and the Opam install step
+#   runs those instructions.
+#   Finally, there are base packages like `threads/META` that come from ocamlfind's
+#   `make install-meta`. Use an Opam module like
+#   https://github.com/ocaml/opam-repository/blob/master/packages/ocamlfind-secondary/ocamlfind-secondary.1.9.1/opam
+#   to install those into <PREFIX_DIR>/<dkmlabi>-sysroot/lib.
+# stdlib(<dkmlabi>) = "<MLCROSS_DIR>/<dkmlabi>/lib"
+#   Built-in package libraries like `threads.cmxa` can be located
+#   in `<MLCROSS_DIR>/<dkmlabi>/lib/``.
+# destdir(<dkmlabi>) = "<MLCROSS_DIR>/<dkmlabi>/lib"
+#   Newly cross-compiled packages will be added to this `destdir`
+# ocamlc(<dkmlabi>) = "<MLCROSS_DIR>/<dkmlabi>/bin/ocamlc.opt"
+#   The cross-compiler ocamlc. Other binaries (ex. ocamlopt) are added as well.
+#   Some binaries may be bytecode executables while some may be native
+#   executables.
 set -euf
 
 # ------------------
@@ -61,6 +94,8 @@ usage() {
     printf "%s\n" "   -d DIR: DKML directory containing a .dkmlroot file"
     printf "%s\n" "   -t DIR: Target directory for the reproducible directory tree"
     printf "%s\n" "   -a TARGETABIS: Optional. See r-c-ocaml-1-setup.sh"
+    printf "%s\n" "   -B Build bytecode compiler and libraries."
+    printf "%s\n" "   -X Use bx32 ABI so OCaml (not C) is 32-bit. Effective only with -B, and works on 64-bit targets."
     printf "%s\n" "   -e DKMLHOSTABI: Uses the DkML compiler detector find a host ABI compiler"
     printf "%s\n" "   -f HOSTSRC_SUBDIR: Use HOSTSRC_SUBDIR subdirectory of -t DIR to place the source code of the host ABI"
     printf "%s\n" "   -g CROSS_SUBDIR: Use CROSS_SUBDIR subdirectory of -t DIR to place target ABIs"
@@ -69,6 +104,8 @@ usage() {
     printf "%s\n" "      and --host will have already been set appropriately, but you can override the --host heuristic by adding it"
     printf "%s\n" "      to -n CONFIGUREARGS. Can be repeated."
     printf "%s\n" "   -w Disable non-essentials like the native toplevel and ocamldoc."
+    printf "%s\n" "   -A Enable Address Sanitizer"
+    printf "%s\n" "   -L Enable Leak Sanitizer"
   } >&2
 }
 
@@ -82,7 +119,11 @@ HOSTSRC_SUBDIR=
 CROSS_SUBDIR=
 FLEXLINKFLAGS=
 DISABLE_EXTRAS=0
-while getopts ":s:d:t:a:n:e:f:g:l:wh" opt; do
+BYTECODEONLY=OFF
+BX32=OFF
+SANITIZE_ADDRESS=OFF
+SANITIZE_LEAK=OFF
+while getopts ":s:d:t:a:BXn:e:f:g:l:wALh" opt; do
   case ${opt} in
   h)
     usage
@@ -107,6 +148,8 @@ while getopts ":s:d:t:a:n:e:f:g:l:wh" opt; do
   a)
     TARGETABIS="$OPTARG"
     ;;
+  B ) BYTECODEONLY=ON ;;
+  X ) BX32=ON ;;
   n)
     CONFIGUREARGS="$CONFIGUREARGS $OPTARG"
     ;;
@@ -116,6 +159,8 @@ while getopts ":s:d:t:a:n:e:f:g:l:wh" opt; do
   f ) HOSTSRC_SUBDIR=$OPTARG ;;
   g ) CROSS_SUBDIR=$OPTARG ;;
   l ) FLEXLINKFLAGS="$OPTARG" ;;
+  A ) SANITIZE_ADDRESS=ON ;;
+  L ) SANITIZE_LEAK=ON ;;
   \?)
     printf "%s\n" "This is not an option: -$OPTARG" >&2
     usage
@@ -197,8 +242,12 @@ init_hostvars
 # when trying to compile the target cross-compiler with the host compiler.
 HOST_FUNCTION_SECTIONS=$("$OCAMLSRC_MIXED/ocamlc$HOST_EXE_EXT" -config-var function_sections)
 case $HOST_FUNCTION_SECTIONS in
-false) CONFIGUREARGS="--disable-function-sections${CONFIGUREARGS:+ $CONFIGUREARGS}" ;;
+    false) CONFIGUREARGS="--disable-function-sections${CONFIGUREARGS:+ $CONFIGUREARGS}" ;;
 esac
+
+if [ "$BYTECODEONLY" = ON ]; then
+    CONFIGUREARGS="$CONFIGUREARGS --disable-native-compiler"
+fi
 
 # Get the variables for runtime/sak
 #       shellcheck disable=SC1091
@@ -306,7 +355,7 @@ build_world() {
   # applied.
   install -d "$build_world_BUILD_ROOT"/support
   #   Exports OCAML_HOST_TRIPLET and DKML_TARGET_SYSROOT
-  DKML_TARGET_ABI="$build_world_TARGET_ABI" \
+  DKML_HOST_ABI="$DKMLHOSTABI" DKML_TARGET_ABI="$build_world_TARGET_ABI" \
     autodetect_compiler \
     --post-transform "$build_world_POSTTRANSFORM" \
     "$build_world_BUILD_ROOT"/support/with-target-c-compiler.sh
@@ -315,16 +364,26 @@ build_world() {
   $DKMLSYS_INSTALL "$build_world_POSTTRANSFORM" "$build_world_PREFIX/share/dkml/detect/post-transform.sh"
 
   # Target wrappers
-  # shellcheck disable=SC2086
-  log_trace genWrapper "$build_world_BUILD_ROOT/support/ocamlcTarget.wrapper" "$build_world_BUILD_ROOT"/support/with-target-c-compiler.sh "$OCAMLSRC_MIXED"/support/with-linking-on-host.sh "$build_world_BUILD_ROOT/ocamlc.opt$build_world_TARGET_EXE_EXT" -I "$build_world_BUILD_ROOT/stdlib" -I "$build_world_BUILD_ROOT/otherlibs/unix" -nostdlib
-  # shellcheck disable=SC2086
-  log_trace genWrapper "$build_world_BUILD_ROOT/support/ocamloptTarget.wrapper" "$build_world_BUILD_ROOT"/support/with-target-c-compiler.sh "$OCAMLSRC_MIXED"/support/with-linking-on-host.sh "$build_world_BUILD_ROOT/ocamlopt.opt$build_world_TARGET_EXE_EXT" -I "$build_world_BUILD_ROOT/stdlib" -I "$build_world_BUILD_ROOT/otherlibs/unix" -nostdlib
-
-  # macOS, and probably Windows, don't like the way the next `make clean` removes read-only files.
-  # would get ... rm: Debug/dksdk/ocaml/opt/mlcross/darwin_x86_64: Permission denied
-  log_trace "$DKMLSYS_CHMOD" -R u+w .
+  if [ "$BYTECODEONLY" = OFF ]; then
+    #   shellcheck disable=SC2086
+    log_trace genWrapper "$build_world_BUILD_ROOT/support/ocamlcTarget.wrapper" "$build_world_BUILD_ROOT"/support/with-target-c-compiler.sh "$OCAMLSRC_MIXED"/support/with-linking-on-host.sh "$build_world_BUILD_ROOT/ocamlc.opt$build_world_TARGET_EXE_EXT" -I "$build_world_BUILD_ROOT/stdlib" -I "$build_world_BUILD_ROOT/otherlibs/unix" -nostdlib
+    #   shellcheck disable=SC2086
+    log_trace genWrapper "$build_world_BUILD_ROOT/support/ocamloptTarget.wrapper" "$build_world_BUILD_ROOT"/support/with-target-c-compiler.sh "$OCAMLSRC_MIXED"/support/with-linking-on-host.sh "$build_world_BUILD_ROOT/ocamlopt.opt$build_world_TARGET_EXE_EXT" -I "$build_world_BUILD_ROOT/stdlib" -I "$build_world_BUILD_ROOT/otherlibs/unix" -nostdlib
+  else
+    # bytecode-only, so use ocamlrun ocamlc not ocamlc.opt. we need ocamlrun from the host ABI so it can run
+    #   shellcheck disable=SC2086
+    log_trace genWrapper "$build_world_BUILD_ROOT/support/ocamlcTarget.wrapper" \
+      "$build_world_BUILD_ROOT"/support/with-target-c-compiler.sh \
+      "$OCAMLSRC_MIXED"/support/with-linking-on-host.sh \
+      "$OCAMLSRC_MIXED/runtime/ocamlrun$build_world_TARGET_EXE_EXT" \
+      "$build_world_BUILD_ROOT/ocamlc$build_world_TARGET_EXE_EXT" \
+      -I "$build_world_BUILD_ROOT/stdlib" -I "$build_world_BUILD_ROOT/otherlibs/unix" \
+      -nostdlib
+  fi
 
   # clean (otherwise you will 'make inconsistent assumptions' errors with a mix of host + target binaries)
+  #   note: If re-running after -R 500, we need access to delete files during clean. So chmod.
+  log_trace "$DKMLSYS_CHMOD" -R ug+w    stdlib/
   make clean
 
   # provide --host for use in `checking whether we are cross compiling` ./configure step
@@ -339,8 +398,8 @@ build_world() {
   esac
 
   # check if we'll build native toplevel
-  case "$DISABLE_EXTRAS,$_OCAMLVER" in
-    0,4.14.*|0,5.*)
+  case "$BYTECODEONLY,$DISABLE_EXTRAS,$_OCAMLVER" in
+    OFF,0,4.14.*|OFF,0,5.*)
         # Install native toplevel
         native_toplevel=full
         CONFIGUREARGS="--enable-native-toplevel${CONFIGUREARGS:+ $CONFIGUREARGS}"
@@ -354,6 +413,16 @@ build_world() {
   log_trace ocaml_configure "$build_world_PREFIX" "$build_world_TARGET_ABI" \
     "$build_world_BUILD_ROOT"/support/with-target-c-compiler.sh "$OCAML_HOST_TRIPLET" "$DKML_TARGET_SYSROOT" \
     "--host=$build_world_HOST_TRIPLET $CONFIGUREARGS --disable-ocamldoc"
+
+  # Extend m.h
+  if [ "$BYTECODEONLY" = ON ] && [ "$BX32" = ON ]; then
+    print_m_h_extensions "$build_world_TARGET_ABI" __bx32 >> runtime/caml/m.h
+  else
+    print_m_h_extensions "$build_world_TARGET_ABI" "" >> runtime/caml/m.h
+  fi
+
+  # Extend Makefile.config
+  print_makefile_config_extensions "$SANITIZE_ADDRESS" "$SANITIZE_LEAK" >> Makefile.config
 
   # Build
   # -----
@@ -371,20 +440,29 @@ build_world() {
     log_trace make_host -final flexdll
   fi
   log_trace make_host -final runtime coreall
-  log_trace make_host -final opt-core
-  log_trace make_host -final ocamlc.opt NATIVECCLIBS= BYTECCLIBS= # host and target C libraries don't mix
-  #   Troubleshooting
-  {
-    printf "+ '%s/ocamlc.opt' -config\n" "$build_world_BUILD_ROOT" >&2
-    "$build_world_BUILD_ROOT"/ocamlc.opt -config >&2
-  }
-  log_trace make_host -final ocamlopt.opt
+  if [ "$BYTECODEONLY" = OFF ]; then
+    #   Build ocamlc.opt which needs opt-core
+    log_trace make_host -final opt-core
+    log_trace make_host -final ocamlc.opt NATIVECCLIBS= BYTECCLIBS= # host and target C libraries don't mix
+    #   Troubleshooting
+    {
+      printf "+ '%s/ocamlc.opt' -config\n" "$build_world_BUILD_ROOT" >&2
+      "$build_world_BUILD_ROOT"/ocamlc.opt -config >&2
+    }
+    log_trace make_host -final ocamlopt.opt
+  else
+    log_trace make_host -final ocamlc
+  fi
 
   # Tools we want that we can compile using the OCaml compiler to run on the host.
   # Separate ocaml from the others to avoid race condition `Could not finding .cmi file
   # for interface .../genprintval.mli` (Apple M1 -> android_arm64v8a; 4.14.0)
   log_trace make_host -final ocaml
-  log_trace make_host -final ocamldebugger ocamllex.opt ocamltoolsopt
+  if [ "$BYTECODEONLY" = OFF ]; then
+    log_trace make_host -final ocamldebugger ocamllex.opt ocamltoolsopt
+  else
+    log_trace make_host -final ocamldebugger ocamllex ocamltools
+  fi
 
   # Tools we don't need but are needed by `install` target
   log_trace make_host -final expunge
@@ -395,19 +473,33 @@ build_world() {
   # Recompile stdlib (and flexdll if enabled)
   #   See notes in 2-build_host.sh for why we compile twice.
   #   (We have to serialize the make_ commands because OCaml Makefile do not usually build multiple targets in parallel)
-  if [ "$OCAML_CONFIGURE_NEEDS_MAKE_FLEXDLL" = ON ]; then
+  if [ "$BYTECODEONLY" = OFF ] && [ "$OCAML_CONFIGURE_NEEDS_MAKE_FLEXDLL" = ON ]; then
+    printf "+ INFO: Compiling host flexdll in pass 1\n" >&2
     log_trace make_host -compile-stdlib flexdll
   fi
   printf "+ INFO: Compiling host stdlib in pass 1\n" >&2
-  log_trace make_host -final  -C stdlib all allopt
+  log_trace make_host -final  -C stdlib all
+  if [ "$BYTECODEONLY" = OFF ]; then
+    printf "+ INFO: Compiling host optimized stdlib in pass 1\n" >&2
+    log_trace make_host -final  -C stdlib allopt
+  fi
   printf "+ INFO: Recompiling host ocamlc in pass 1\n" >&2
   log_trace make_host -final  ocamlc
-  printf "+ INFO: Recompiling host ocamlopt in pass 1\n" >&2
-  log_trace make_host -final  ocamlopt
-  printf "+ INFO: Recompiling host ocamlc.opt/ocamlopt.opt in pass 1\n" >&2
-  log_trace make_host -final  ocamlc.opt ocamlopt.opt
+  if [ "$BYTECODEONLY" = OFF ]; then
+    #   ocamlopt needed to build ocamlc.opt
+    printf "+ INFO: Recompiling host ocamlopt in pass 1\n" >&2
+    log_trace make_host -final  ocamlopt
+    printf "+ INFO: Recompiling host ocamlc.opt in pass 1\n" >&2
+    log_trace make_host -final  ocamlc.opt
+    printf "+ INFO: Recompiling host ocamlopt.opt in pass 1\n" >&2
+    log_trace make_host -final  ocamlopt.opt
+  fi
   printf "+ INFO: Recompiling host stdlib in pass 2\n" >&2
-  log_trace make_host -final  -C stdlib all allopt
+  log_trace make_host -final  -C stdlib all
+  if [ "$BYTECODEONLY" = OFF ]; then
+    printf "+ INFO: Recompiling host optimized stdlib in pass 2\n" >&2
+    log_trace make_host -final  -C stdlib allopt
+  fi
 
   # Remove all OCaml compiled modules since they were compiled for the host ABI
   remove_compiled_objects_from_curdir
@@ -421,24 +513,38 @@ build_world() {
   # Recompile stdlib (and flexdll if enabled)
   #   See notes in 2-build_host.sh for why we compile twice
   #   (We have to serialize the make_ commands because OCaml Makefile do not usually build multiple targets in parallel)
-  if [ "$OCAML_CONFIGURE_NEEDS_MAKE_FLEXDLL" = ON ]; then
+  if [ "$BYTECODEONLY" = OFF ] && [ "$OCAML_CONFIGURE_NEEDS_MAKE_FLEXDLL" = ON ]; then
     log_trace make_target "$build_world_TARGET_ABI" "$build_world_BUILD_ROOT" flexdll
   fi
   printf "+ INFO: Compiling target stdlib in pass 1\n" >&2
-  log_trace make_target "$build_world_TARGET_ABI" "$build_world_BUILD_ROOT" -C stdlib all allopt
+  log_trace make_target "$build_world_TARGET_ABI" "$build_world_BUILD_ROOT" -C stdlib all
+  if [ "$BYTECODEONLY" = OFF ]; then
+    printf "+ INFO: Compiling target optimized stdlib in pass 1\n" >&2
+    log_trace make_target "$build_world_TARGET_ABI" "$build_world_BUILD_ROOT" -C stdlib allopt
+  fi
   printf "+ INFO: Recompiling target ocaml in pass 1\n" >&2
   log_trace make_target "$build_world_TARGET_ABI" "$build_world_BUILD_ROOT" ocaml
   printf "+ INFO: Recompiling target ocamlc in pass 1\n" >&2
   log_trace make_target "$build_world_TARGET_ABI" "$build_world_BUILD_ROOT" ocamlc
-  printf "+ INFO: Recompiling target ocamlopt in pass 1\n" >&2
-  log_trace make_target "$build_world_TARGET_ABI" "$build_world_BUILD_ROOT" ocamlopt
-  printf "+ INFO: Recompiling target stdlib in pass 2\n" >&2
-  log_trace make_target "$build_world_TARGET_ABI" "$build_world_BUILD_ROOT" -C stdlib all allopt
+  if [ "$BYTECODEONLY" = OFF ]; then
+    #   ocamlopt needed to build ocamlc.opt
+    printf "+ INFO: Recompiling target ocamlopt in pass 1\n" >&2
+    log_trace make_target "$build_world_TARGET_ABI" "$build_world_BUILD_ROOT" ocamlopt
+    printf "+ INFO: Recompiling target optimized stdlib in pass 2\n" >&2
+    log_trace make_target "$build_world_TARGET_ABI" "$build_world_BUILD_ROOT" -C stdlib all allopt
+  else
+    printf "+ INFO: Recompiling target stdlib in pass 2\n" >&2
+    log_trace make_target "$build_world_TARGET_ABI" "$build_world_BUILD_ROOT" -C stdlib all
+  fi
   log_trace "$DKMLSYS_CHMOD" -R 500 stdlib/
 
+  printf "+ INFO: Compiling target libraries in pass 2\n" >&2
   log_trace make_target "$build_world_TARGET_ABI" "$build_world_BUILD_ROOT" otherlibraries
-  log_trace make_target "$build_world_TARGET_ABI" "$build_world_BUILD_ROOT" otherlibrariesopt
-  log_trace make_target "$build_world_TARGET_ABI" "$build_world_BUILD_ROOT" ocamltoolsopt
+  if [ "$BYTECODEONLY" = OFF ]; then
+    printf "+ INFO: Compiling target optimized libraries and tools in pass 2\n" >&2
+    log_trace make_target "$build_world_TARGET_ABI" "$build_world_BUILD_ROOT" otherlibrariesopt
+    log_trace make_target "$build_world_TARGET_ABI" "$build_world_BUILD_ROOT" ocamltoolsopt
+  fi
   case "$native_toplevel" in
     compile)
         # Install compiled objects needed for [installoptopt] target
@@ -452,13 +558,22 @@ build_world() {
           "ocamlnat$build_world_TARGET_EXE_EXT" \
           toplevel/toploop.cmx
         ;;
+    off) ;; # to document that 'off' is a valid enumeration value
   esac
-  #   stop warning about native binary older than bytecode binary
-  log_trace touch "lex/ocamllex.opt${build_world_TARGET_EXE_EXT}"
-  log_trace make_target "$build_world_TARGET_ABI" "$build_world_BUILD_ROOT" driver/main.cmx driver/optmain.cmx \
-    compilerlibs/ocamlcommon.cmxa \
-    compilerlibs/ocamlbytecomp.cmxa \
-    compilerlibs/ocamloptcomp.cmxa
+  if [ "$BYTECODEONLY" = OFF ]; then
+    #   stop warning about native binary older than bytecode binary
+    log_trace touch "lex/ocamllex.opt${build_world_TARGET_EXE_EXT}"
+    log_trace make_target "$build_world_TARGET_ABI" "$build_world_BUILD_ROOT" driver/main.cmx driver/optmain.cmx \
+      compilerlibs/ocamlcommon.cmxa \
+      compilerlibs/ocamlbytecomp.cmxa \
+      compilerlibs/ocamloptcomp.cmxa
+  else
+    #   stop warning about native binary older than bytecode binary
+    log_trace touch "lex/ocamllex${build_world_TARGET_EXE_EXT}"
+    log_trace make_target "$build_world_TARGET_ABI" "$build_world_BUILD_ROOT" driver/main.cmo \
+      compilerlibs/ocamlcommon.cma \
+      compilerlibs/ocamlbytecomp.cma
+  fi
 
   ## Install
   log_trace "$DKMLSYS_CHMOD" -R ug+w    stdlib/ # Restore file permissions
@@ -499,6 +614,82 @@ build_world() {
   "$DKMLSYS_INSTALL" -v "$OCAMLSRC_MIXED/ocaml$build_world_TARGET_EXE_EXT" "$build_world_PREFIX/bin/"
 }
 
+add_text() {
+  add_text_FILE=$1
+  shift
+  #   shellcheck disable=SC2034
+  add_text_SEARCH=$1 # ignored this version
+  shift
+  add_text_TEXT_IF_MISSING=$1
+  shift
+  # if grep -q "$add_text_SEARCH" "$add_text_FILE"; then
+  #   return 0
+  # fi
+  printf "%s\n" "$add_text_TEXT_IF_MISSING" >> "$add_text_FILE"
+}
+
+add_findlib_conf() {
+    # ex. android_arm32v7a
+    add_findlib_conf_ABI=$1; shift
+    # ex. <switch>/share/dkml-base-compiler/mlcross/android_arm64v8a
+    add_findlib_conf_CROSSTARGET=$1; shift
+
+    install -d "$TARGETDIR_UNIX/lib/findlib.conf.d"
+    add_findlib_conf_CONF="$TARGETDIR_UNIX/lib/findlib.conf.d/$add_findlib_conf_ABI.conf"
+
+    # Ex. path(android_arm32v7a)="C:\\source\\windows_x86_64\\lib"
+    # Any backslashes need to be escaped since it is an OCaml string
+    bin_buildhost="$add_findlib_conf_CROSSTARGET/bin"
+    lib_buildhost="$add_findlib_conf_CROSSTARGET/lib"
+    sysroot_lib_buildhost="$TARGETDIR_UNIX/$add_findlib_conf_ABI-sysroot/lib"
+    install -d "$sysroot_lib_buildhost" # needed for realpath to work, even if won't be populated until conf-dkml-cross-toolchain
+    _dirsep="/"
+    _findsep=":"
+    _exe=""
+    if [ -x /usr/bin/cygpath ]; then
+        bin_buildhost=$(/usr/bin/cygpath -aw "$bin_buildhost")
+        lib_buildhost=$(/usr/bin/cygpath -aw "$lib_buildhost")
+        sysroot_lib_buildhost=$(/usr/bin/cygpath -aw "$sysroot_lib_buildhost")
+        _dirsep="\\\\"
+        _exe=".exe"
+        _findsep=";"
+    elif [ -x /usr/bin/realpath ]; then
+        bin_buildhost=$(/usr/bin/realpath "$bin_buildhost")
+        lib_buildhost=$(/usr/bin/realpath "$lib_buildhost")
+        sysroot_lib_buildhost=$(/usr/bin/realpath "$sysroot_lib_buildhost")
+    fi
+    bin_buildhost=$(escape_arg_as_ocaml_string "$bin_buildhost")
+    lib_buildhost=$(escape_arg_as_ocaml_string "$lib_buildhost")
+
+    {
+      printf "%s\n"     "path($add_findlib_conf_ABI) = \"$lib_buildhost${_findsep}$sysroot_lib_buildhost\""
+      printf "%s\n"     "destdir($add_findlib_conf_ABI) = \"$sysroot_lib_buildhost\""
+      printf "%s\n"     "stdlib($add_findlib_conf_ABI) = \"$lib_buildhost${_dirsep}ocaml\""
+      if [ "$BYTECODEONLY" = OFF ] && [ -e "$add_findlib_conf_CROSSTARGET/bin/flexlink.exe" ]; then
+          printf "%s\n" "flexlink($add_findlib_conf_ABI) = \"$bin_buildhost${_dirsep}flexlink.exe\""
+      fi
+      printf "%s\n"     "ocaml($add_findlib_conf_ABI) = \"$bin_buildhost${_dirsep}ocaml${_exe}\""
+      printf "%s\n"     "ocamlc($add_findlib_conf_ABI) = \"$bin_buildhost${_dirsep}ocamlc.opt${_exe}\""
+      printf "%s\n"     "ocamlcmt($add_findlib_conf_ABI) = \"$bin_buildhost${_dirsep}ocamlcmt${_exe}\""
+      printf "%s\n"     "ocamlcp($add_findlib_conf_ABI) = \"$bin_buildhost${_dirsep}ocamlcp.byte${_exe}\""
+      printf "%s\n"     "ocamldebug($add_findlib_conf_ABI) = \"$bin_buildhost${_dirsep}ocamldebug${_exe}\""
+      printf "%s\n"     "ocamldep($add_findlib_conf_ABI) = \"$bin_buildhost${_dirsep}ocamldep.byte${_exe}\""
+      printf "%s\n"     "ocamllex($add_findlib_conf_ABI) = \"$bin_buildhost${_dirsep}ocamllex.opt${_exe}\""
+      printf "%s\n"     "ocamlmklib($add_findlib_conf_ABI) = \"$bin_buildhost${_dirsep}ocamlmklib.byte${_exe}\""
+      printf "%s\n"     "ocamlmktop($add_findlib_conf_ABI) = \"$bin_buildhost${_dirsep}ocamlmktop.byte${_exe}\""
+      printf "%s\n"     "ocamlobjinfo($add_findlib_conf_ABI) = \"$bin_buildhost${_dirsep}ocamlobjinfo.byte${_exe}\""
+      if [ "$BYTECODEONLY" = OFF ]; then
+        printf "%s\n"     "ocamlopt($add_findlib_conf_ABI) = \"$bin_buildhost${_dirsep}ocamlopt.opt${_exe}\""
+        printf "%s\n"     "ocamloptp($add_findlib_conf_ABI) = \"$bin_buildhost${_dirsep}ocamloptp.byte${_exe}\""
+      fi
+      printf "%s\n"     "ocamlprof($add_findlib_conf_ABI) = \"$bin_buildhost${_dirsep}ocamlprof.byte${_exe}\""
+      printf "%s\n"     "ocamlrun($add_findlib_conf_ABI) = \"$bin_buildhost${_dirsep}ocamlrun${_exe}\""
+      printf "%s\n"     "ocamlrund($add_findlib_conf_ABI) = \"$bin_buildhost${_dirsep}ocamlrund${_exe}\""
+      printf "%s\n"     "ocamlruni($add_findlib_conf_ABI) = \"$bin_buildhost${_dirsep}ocamlruni${_exe}\""
+      printf "%s\n"     "ocamlyacc($add_findlib_conf_ABI) = \"$bin_buildhost${_dirsep}ocamlyacc${_exe}\""
+    } > "$add_findlib_conf_CONF"
+}
+
 # Loop over each target abi script file; each file separated by semicolons, and each term with an equals
 printf "%s\n" "$TARGETABIS" | sed 's/;/\n/g' | sed 's/^\s*//; s/\s*$//' > "$WORK"/target-abis
 log_script "$WORK"/target-abis
@@ -514,8 +705,14 @@ while IFS= read -r _abientry; do
     ;;
   esac
 
+  # Compile the cross-compiler
   _CROSS_TARGETDIR=$TARGETDIR_UNIX/$CROSS_SUBDIR/$_targetabi
   _CROSS_SRCDIR=$_CROSS_TARGETDIR/$HOSTSRC_SUBDIR
   cd "$_CROSS_SRCDIR"
   build_world "$_CROSS_SRCDIR" "$_CROSS_TARGETDIR" "$_targetabi" "$_abiscript"
+
+  # Create lib/findlib.conf.d/android_arm64.conf (etc.)
+  cd "$TARGETDIR_UNIX"
+  add_findlib_conf "$_targetabi" "$_CROSS_TARGETDIR"
+
 done <"$WORK"/target-abis

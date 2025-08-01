@@ -24,6 +24,7 @@
 # On entry autodetect_compiler() will have populated some or all of the
 # following non-export variables:
 #
+# * DKML_HOST_ABI. Always available
 # * DKML_TARGET_ABI. Always available
 # * autodetect_compiler_CC
 # * autodetect_compiler_CFLAGS
@@ -197,11 +198,11 @@ if [ -n "${autodetect_compiler_CC:-}" ]; then
       autodetect_compiler_CFLAGS=$(printf "%s" " $autodetect_compiler_CFLAGS " | PATH=/usr/bin:/bin sed 's/ -Os / /g')
   fi
 
-  # -Z7 is an option that should be in CC for OCaml
+  # /Z7 or normalized -Z7 is an option that should be in CC for OCaml
   # Confer: https://learn.microsoft.com/en-us/cpp/build/reference/z7-zi-zi-debug-information-format?view=msvc-170
-  if printf "%s" " ${autodetect_compiler_CFLAGS:-} " | PATH=/usr/bin:/bin grep -q ' -Z7 '; then
+  if printf "%s" " ${autodetect_compiler_CFLAGS:-} " | PATH=/usr/bin:/bin grep -q ' [/-]Z7 '; then
       autodetect_compiler_CC="$autodetect_compiler_CC -Z7"
-      autodetect_compiler_CFLAGS=$(printf "%s" " $autodetect_compiler_CFLAGS " | PATH=/usr/bin:/bin sed 's/ -Z7 / /g')
+      autodetect_compiler_CFLAGS=$(printf "%s" " $autodetect_compiler_CFLAGS " | PATH=/usr/bin:/bin sed 's/ [/-]Z7 / /g')
   fi
 
   # -mmacosx-version-min=MM.NN needs to be in CC for OCaml
@@ -305,7 +306,7 @@ elif [ -n "${autodetect_compiler_AS:-}" ]; then
       # The GNU AS assembler (https://sourceware.org/binutils/docs/as/index.html) does not support preprocessing
       # so it cannot be used as the `ASPP` ./configure variable.
       #
-      # TODO: If no -as GNU assembler see "NDK 24+" comments in github-actions-ci-to-ocaml-configure-env.sh
+      # TODO: If no -as GNU assembler see "NDK 24+" comments in android-ndk-env-to-ocaml-configure-env.sh
 
       # XCode (macOS/iOS)
       # -----------------

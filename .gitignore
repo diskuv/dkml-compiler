@@ -35,3 +35,17 @@ stage/
 
 # ci: cross-unix.yml
 /vendor/drc/
+/vendor/dkml-compiler/
+/.dkmlroot
+/dist-*-on-*/
+
+# dockcross
+#   docker run --rm dockcross/manylinux2014-x86  > ./dockcross-manylinux2014-x86
+#   dk Ml.Use -- bash dockcross-manylinux2014-x86 --args "--platform linux/386 -it" bash
+/dockcross-manylinux2014-x86
+#   docker run --rm dockcross/manylinux2014-x64  > ./dockcross-manylinux2014-x64
+#   dk Ml.Use -- bash dockcross-manylinux2014-x64 --args "--platform linux/amd64 -it" bash
+/dockcross-manylinux2014-x64
+#   docker run --rm dockcross/manylinux_2_28-x64  > ./dockcross-manylinux_2_28-x64
+#   dk Ml.Use -- bash dockcross-manylinux_2_28-x64 --args "--platform linux/amd64 -it" bash
+/dockcross-manylinux_2_28-x64

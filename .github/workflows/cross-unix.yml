@@ -7,7 +7,7 @@ on:
       - 'next'
 
 jobs:
-  build:
+  build:    
     strategy:
       fail-fast: false
       matrix:
@@ -25,23 +25,32 @@ jobs:
             os: ubuntu-latest
             targetabi: android_arm64v8a
             targetbits: 64
-            ocamlconfigure: env/github-actions-ci-to-ocaml-configure-env.sh
+            ocamlconfigure: env/android-ndk-env-to-ocaml-configure-env.sh
             expectfile: ELF 64-bit LSB pie executable, ARM aarch64, version 1 (SYSV), dynamically linked, interpreter /system/bin/linker64, with debug_info, not stripped
 
-          - name: "[android] armv7a on [linux] x86"
+          - name: "[android] armv7a on [linux] x86. default minimum API level"
             hostabi: linux_x86
             os: ubuntu-latest
             targetabi: android_arm32v7a
             targetbits: 32
-            ocamlconfigure: env/github-actions-ci-to-ocaml-configure-env.sh
-            expectfile: ELF 32-bit LSB shared object, ARM, EABI5 version 1 (SYSV), dynamically linked, interpreter /system/bin/linker, with debug_info, not stripped
+            ocamlconfigure: env/android-ndk-env-to-ocaml-configure-env.sh
+            expectfile: ELF 32-bit LSB pie executable, ARM, EABI5 version 1 (SYSV), dynamically linked, interpreter /system/bin/linker, with debug_info, not stripped
+
+          - name: "[android] armv7a on [linux] x86. minimum API level 26"
+            hostabi: linux_x86
+            os: ubuntu-latest
+            targetabi: android_arm32v7a
+            targetbits: 32
+            ocamlconfigure: env/android-ndk-env-to-ocaml-configure-env.sh
+            expectfile: ELF 32-bit LSB pie executable, ARM, EABI5 version 1 (SYSV), dynamically linked, interpreter /system/bin/linker, with debug_info, not stripped
+            ANDROID_PLATFORM: android-26
 
           - name: "[android] x86_64 on [linux] x86_64"
             hostabi: linux_x86_64
             os: ubuntu-latest
             targetabi: android_x86_64
             targetbits: 64
-            ocamlconfigure: env/github-actions-ci-to-ocaml-configure-env.sh
+            ocamlconfigure: env/android-ndk-env-to-ocaml-configure-env.sh
             expectfile: ELF 64-bit LSB pie executable, x86-64, version 1 (SYSV), dynamically linked, interpreter /system/bin/linker64, with debug_info, not stripped
 
     name: ${{ matrix.name }}
@@ -69,12 +78,16 @@ jobs:
           ${{ runner.os }}-dist-${{ env.cache-name }}-
 
     # ================ Diagnostics ==========
-    - name: Android diagnostics
+    - name: Set ANDROID_NDK and ANDROID_PLATFORM
+      env:
+        ANDROID_PLATFORM: '${{ matrix.ANDROID_PLATFORM }}'
       run: |
         set -x
         if [ -d "$ANDROID_NDK_LATEST_HOME" ]; then ls "$ANDROID_NDK_LATEST_HOME"; fi
         if [ -d "$ANDROID_NDK_LATEST_HOME/toolchains/llvm/prebuilt/" ]; then ls "$ANDROID_NDK_LATEST_HOME/toolchains/llvm/prebuilt/"; fi
         if [ -d "$ANDROID_NDK_LATEST_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/" ]; then ls "$ANDROID_NDK_LATEST_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin/"; fi
+        echo "ANDROID_NDK=$ANDROID_NDK_LATEST_HOME" >> "$GITHUB_ENV"
+        echo "ANDROID_PLATFORM=${ANDROID_PLATFORM:-}" >> "$GITHUB_ENV"
 
     # ================ Setup ================
     - name: Install compiler on Debian/Ubuntu
