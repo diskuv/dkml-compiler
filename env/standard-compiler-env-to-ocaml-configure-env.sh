@@ -17,7 +17,7 @@
 #
 # This is a --post-transform script used by DkML's autodetect_compiler()
 # function to customize compiler variables before the variables are written
-# to a launcher script.
+# to a launcher script. See below for how to debug it.
 #
 # Anything printed on stdout is ignored as of DkML 2.1.4.
 #
@@ -58,6 +58,12 @@
 # a) Changing autodetect_compiler_CFLAGS (etc.). Those values will be named as
 #    CFLAGS (etc.) in the launcher script
 # b) Explicitly adding names and values with `export_binding`
+
+# Debugging
+# ---------
+#
+# eval $(awk '{print "export", $0}' share/dkml/detect/compile-vars.txt)
+# DKML_BUILD_TRACE=ON DKML_BUILD_TRACE_LEVEL=2 share/dkml/repro/100co/vendor/dkml-compiler/src/r-c-ocaml-2-build_host-noargs.sh
 
 set -euf
 
