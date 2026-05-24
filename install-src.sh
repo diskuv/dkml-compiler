@@ -40,7 +40,12 @@ install -v \
     src/p/ocaml-common-4_14-a04-xdg.patch \
     src/p/ocaml-common-4_14-a05-msvccflags.patch \
     src/p/ocaml-common-4_14-a06-linearclosures.patch \
+    src/p/ocaml-common-4_14-a07-arm32dedup.patch \
+    src/p/ocaml-common-4_14-a08-declspecdllimport.patch \
+    src/p/ocaml-common-4_14-a09-debuggasx86.patch \
+    src/p/ocaml-common-4_14-a10-bx32.patch \
     src/p/ocaml-common-4_14_0-a01-fmatest.patch \
+    src/p/ocamldebug_gcc_clang-common-4_14-a01-compileflags.patch \
     src/p/ocaml-cross-4_12-a01.patch \
     src/p/ocaml-cross-4_12-a02-arm32.patch \
     src/p/ocaml-cross-4_12unused-zzz-win32arm.patch \

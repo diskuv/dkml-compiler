@@ -1,5 +1,5 @@
 opam-version: "2.0"
-version: "4.14.2"
+version: "4.14.3"
 license: "LGPL-2.1-or-later WITH OCaml-LGPL-linking-exception"
 synopsis: "The OCaml compiler (virtual package)"
 description: """
@@ -8,10 +8,10 @@ and polls it to initialise specific variables like `ocaml:native-dynlink`"""
 maintainer: "platform@lists.ocaml.org"
 depends: [
   "ocaml-config" {>= "2"}
-  "ocaml-base-compiler" {>= "4.14.2~" & < "4.14.3~"} |
-  "ocaml-variants" {>= "4.14.2~" & < "4.14.3~"} |
-  "ocaml-system" {>= "4.14.2" & < "4.14.3~"} |
-  "dkml-base-compiler" {>= "4.14.2~" & < "4.14.3~"}
+  "ocaml-base-compiler" {>= "4.14.3~" & < "4.14.4~"} |
+  "ocaml-variants" {>= "4.14.3~" & < "4.14.4~"} |
+  "ocaml-system" {>= "4.14.3" & < "4.14.4~"} |
+  "dkml-base-compiler" {>= "4.14.3~" & < "4.14.4~"}
 ]
 setenv: [
   [CAML_LD_LIBRARY_PATH = "%{_:stubsdir}%"]

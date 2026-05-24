@@ -25,7 +25,7 @@ opam exec -- dune build '@gen-dkml' --auto-promote
 
 ## Upgrading binary assets
 
-1. Make a `-prep` tag, and then wait for the CI to complete successfully
+1. Make a prerelease tag like `2.4.2-1`, and then wait for the CI to complete successfully
 2. Update `src/version.semver.txt`
 3. Run: `dune build '@gen-opam' --auto-promote`
 

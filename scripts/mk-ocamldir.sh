@@ -4,7 +4,7 @@ set -euf
 # Files already present in .opam extra-source
 if [ ! -e dl/ocaml.tar.gz ]; then
     install -d dl
-    curl -Lo dl/ocaml.tar.gz https://github.com/ocaml/ocaml/archive/4.14.2.tar.gz
+    curl -Lo dl/ocaml.tar.gz https://github.com/ocaml/ocaml/archive/4.14.3.tar.gz
 fi
 if [ ! -e dl/flexdll.tar.gz ]; then
     install -d dl

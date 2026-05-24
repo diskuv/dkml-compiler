@@ -58,7 +58,17 @@ COPY /Y /B src\p\ocaml-common-4_14-a05-msvccflags.patch %TARGETDIR%\src\p
 IF %ERRORLEVEL% NEQ 0 (ECHO Error during COPY &EXIT /B 1)
 COPY /Y /B src\p\ocaml-common-4_14-a06-linearclosures.patch %TARGETDIR%\src\p
 IF %ERRORLEVEL% NEQ 0 (ECHO Error during COPY &EXIT /B 1)
+COPY /Y /B src\p\ocaml-common-4_14-a07-arm32dedup.patch %TARGETDIR%\src\p
+IF %ERRORLEVEL% NEQ 0 (ECHO Error during COPY &EXIT /B 1)
+COPY /Y /B src\p\ocaml-common-4_14-a08-declspecdllimport.patch %TARGETDIR%\src\p
+IF %ERRORLEVEL% NEQ 0 (ECHO Error during COPY &EXIT /B 1)
+COPY /Y /B src\p\ocaml-common-4_14-a09-debuggasx86.patch %TARGETDIR%\src\p
+IF %ERRORLEVEL% NEQ 0 (ECHO Error during COPY &EXIT /B 1)
+COPY /Y /B src\p\ocaml-common-4_14-a10-bx32.patch %TARGETDIR%\src\p
+IF %ERRORLEVEL% NEQ 0 (ECHO Error during COPY &EXIT /B 1)
 COPY /Y /B src\p\ocaml-common-4_14_0-a01-fmatest.patch %TARGETDIR%\src\p
+IF %ERRORLEVEL% NEQ 0 (ECHO Error during COPY &EXIT /B 1)
+COPY /Y /B src\p\ocamldebug_gcc_clang-common-4_14-a01-compileflags.patch %TARGETDIR%\src\p
 IF %ERRORLEVEL% NEQ 0 (ECHO Error during COPY &EXIT /B 1)
 COPY /Y /B src\p\ocaml-cross-4_12-a01.patch %TARGETDIR%\src\p
 IF %ERRORLEVEL% NEQ 0 (ECHO Error during COPY &EXIT /B 1)
@@ -83,4 +93,3 @@ COPY /Y /B env\android-ndk-env-to-ocaml-configure-env.sh %TARGETDIR%\env
 IF %ERRORLEVEL% NEQ 0 (ECHO Error during COPY &EXIT /B 1)
 COPY /Y /B env\standard-compiler-env-to-ocaml-configure-env.sh %TARGETDIR%\env
 IF %ERRORLEVEL% NEQ 0 (ECHO Error during COPY &EXIT /B 1)
-

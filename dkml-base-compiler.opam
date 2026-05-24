@@ -7,7 +7,7 @@ opam-version: "2.0"
 # Examples:
 # - 4.14.0~prerel69 (legacy format) < 4.14.0~v0.4.0 < 4.14.0~v0.4.1~prerel69 < 4.14.0~v0.4.1
 # Confer: Version Ordering in https://opam.ocaml.org/doc/Manual.html#Package-Formulas
-version: "4.14.2~v2.1.6"
+version: "4.14.3~v2.1.6"
 synopsis: "OCaml cross-compiler and libraries from the DkML distribution"
 description:
   """The DkML distribution of the OCaml bytecode and native compiler, Stdlib and the other OCaml libraries (str, unix, bigarray, etc.).
@@ -37,14 +37,14 @@ to a 'target' ABI. Those variables are documented in dkml-runtime-common's cross
 Search for: autodetect_compiler()
 
 You can install dkml-base-compiler with something like:
-  opam switch create dkml-4.14.2 '--formula="dkml-base-compiler" {>= "4.14.2~" & < "4.15.0~"}'"""
+  opam switch create dkml-4.14.3 '--formula="dkml-base-compiler" {>= "4.14.3~" & < "4.15.0~"}'"""
 maintainer: ["opensource+dkml@support.diskuv.com"]
 authors: ["Diskuv, Inc. <opensource+dkml@support.diskuv.com>"]
 license: "Apache-2.0"
 homepage: "https://github.com/diskuv/dkml-compiler"
 bug-reports: "https://github.com/diskuv/dkml-compiler/issues"
 depends: [
-  "ocaml" {= "4.14.2" & post}
+  "ocaml" {= "4.14.3" & post}
 
   "base-unix" {post}
   "base-bigarray" {post}
@@ -120,7 +120,7 @@ build: [
   # OCaml source code
   ["sh" "scripts/mk-ocamldir.sh"]
 
-  # Debugging for 4.14.2 `Env.Error(_)` and `Persistent_env.Error(_)`
+  # Debugging for 4.14.3 `Env.Error(_)` and `Persistent_env.Error(_)`
   # Example:
   #   Fatal error: exception Persistent_env.Error(_)
   #   Raised at Persistent_env.error in file "typing/persistent_env.ml", line 33, characters 16-33
@@ -136,7 +136,7 @@ build: [
   #   Called from UTop_main.common_init in file "src/lib/uTop_main.ml", line 1384, characters 2-1921
   #   Called from UTop_main.main_aux in file "src/lib/uTop_main.ml", line 1476, characters 6-30
   #   Called from UTop_main.main_internal in file "src/lib/uTop_main.ml", line 1497, characters 4-25  
-  ["install" "debug/env.ml" "debug/persistent_env.ml" "dl/ocaml/typing/"] {dkml-debug-env-failures & version > "4.14.2~v1.2.1~" & version <= "4.14.2"}
+  ["install" "debug/env.ml" "debug/persistent_env.ml" "dl/ocaml/typing/"] {dkml-debug-env-failures & version > "4.14.2~v1.2.1~" & version <= "4.14.3"}
 
   # Create a DKMLDIR. Its structure mimics a git submodule setup.
   ["sh" "scripts/mk-dkmldir.sh" "%{version}%" "%{dkml-runtime-common:lib}%"]
@@ -256,8 +256,8 @@ install: [
 ]
 dev-repo: "git+https://github.com/diskuv/dkml-compiler.git"
 extra-source "dl/ocaml.tar.gz" {
-  src: "https://github.com/ocaml/ocaml/archive/4.14.2.tar.gz"
-  checksum: "sha256=c2d706432f93ba85bd3383fa451d74543c32a4e84a1afaf3e8ace18f7f097b43"
+  src: "https://github.com/ocaml/ocaml/archive/4.14.3.tar.gz"
+  checksum: "sha256=e510689183b2d62b0a7513ea7e47be80ddb9173377a2df436dbc1ca927a64689"
 }
 extra-source "dl/flexdll.tar.gz" {
   src: "https://github.com/ocaml/flexdll/archive/0.43.tar.gz"
@@ -271,27 +271,27 @@ extra-source "dl/homebrew-bundle.tar.gz" {
 }
 # BEGIN: Managed by `dune build '@gen-opam' --auto-promote`
 extra-source "dl/windows_x86-ocamlc.opt.exe" {
-  src: "https://github.com/diskuv/dkml-compiler/releases/download/2.1.0-1/windows_x86-ocamlc.opt.exe"
+  src: "https://github.com/diskuv/dkml-compiler/releases/download/2.4.2-1/windows_x86-ocamlc.opt.exe"
   checksum: "sha256=ff7c95619120f265c9e2b0d73677fd5411b9b6c05655063caf7d65b33b23f3c7"
 }
 extra-source "dl/windows_x86_64-ocamlc.opt.exe" {
-  src: "https://github.com/diskuv/dkml-compiler/releases/download/2.1.0-1/windows_x86_64-ocamlc.opt.exe"
+  src: "https://github.com/diskuv/dkml-compiler/releases/download/2.4.2-1/windows_x86_64-ocamlc.opt.exe"
   checksum: "sha256=98e1a3df7f9e59cfdbe53c259cb0284b24f393fbc89777ef029d12e33ba417e6"
 }
 extra-source "dl/linux_x86-ocamlc.opt" {
-  src: "https://github.com/diskuv/dkml-compiler/releases/download/2.1.0-1/linux_x86-ocamlc.opt"
+  src: "https://github.com/diskuv/dkml-compiler/releases/download/2.4.2-1/linux_x86-ocamlc.opt"
   checksum: "sha256=3ae5b3fcf1b6f75104adac0365b1d600113bead38ea93e1a673861d48d275dea"
 }
 extra-source "dl/linux_x86_64-ocamlc.opt" {
-  src: "https://github.com/diskuv/dkml-compiler/releases/download/2.1.0-1/linux_x86_64-ocamlc.opt"
+  src: "https://github.com/diskuv/dkml-compiler/releases/download/2.4.2-1/linux_x86_64-ocamlc.opt"
   checksum: "sha256=beb3a45c8bb3899c6d51195db929176481640a33c1ed3f3816fcce657d9690dd"
 }
 extra-source "dl/darwin_x86_64-ocamlc.opt" {
-  src: "https://github.com/diskuv/dkml-compiler/releases/download/2.1.0-1/darwin_x86_64-ocamlc.opt"
+  src: "https://github.com/diskuv/dkml-compiler/releases/download/2.4.2-1/darwin_x86_64-ocamlc.opt"
   checksum: "sha256=89971a82713071d8afa3b7570ca62f98ce95ab641d0af3f891554fa4e262b737"
 }
 extra-source "dl/darwin_arm64-ocamlc.opt" {
-  src: "https://github.com/diskuv/dkml-compiler/releases/download/2.1.0-1/darwin_arm64-ocamlc.opt"
+  src: "https://github.com/diskuv/dkml-compiler/releases/download/2.4.2-1/darwin_arm64-ocamlc.opt"
   checksum: "sha256=8cc9568301770454e5f8f81a4279baa48e786e24867cc4aa94c88653f3f93aae"
 }
 # END: Managed by `dune build '@gen-opam' --auto-promote`
