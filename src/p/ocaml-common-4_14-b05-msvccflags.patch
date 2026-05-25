@@ -1,0 +1,21 @@
+From 6eb8df0ea28b2ba7d9f9ddbd91acc8065cd9b831 Mon Sep 17 00:00:00 2001
+From: Jonah Beckford <9566106-jonahbeckford@users.noreply.gitlab.com>
+Date: Mon, 25 May 2026 11:37:01 -0700
+Subject: [PATCH] b05
+
+
+diff --git a/configure b/configure
+index 6bc05fcea5cd81e039a98a5b87f29a291fc2b0aa..ae354f8ae8fa321b38a466363bc9f3882bcf5bb5 100755
+GIT binary patch
+delta 138
+zcmcb5L*?{Mm4+6^7N!>F7M3lnFRm$MrYS@#=;kRXsZ=|=`8c`<$NL6{IoB#F#9Awq
+zWTfUzufM`7ZkU&!lb@cipzB_#tAMIdK_xjkzC5ugFEcN_Scyvk2vT#3Q^DG%|G37g
+X#*~)XE_t05h}nRceY@m!4x3N_7(6fM
+
+delta 52
+zcmX?oQ|0Onm4+6^7N!>F7M3lnFRo2LbDLFQy8Lxkj_LW=S>@WNTxSJhHXvr-KIJ-x
+Gc_;vI=@&Kt
+
+-- 
+2.53.0.windows.2
+

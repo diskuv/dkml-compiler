@@ -1,0 +1,196 @@
+From 22d105eb3e14554480676dd97c5d2faf05e587f7 Mon Sep 17 00:00:00 2001
+From: David Allsopp <david.allsopp@metastack.com>
+Date: Fri, 5 Sep 2025 21:50:45 +0100
+Subject: [PATCH] Eliminate local if blocks in install
+
+(cherry picked from commit 96906a36c47204bed0f3e575cc6e13e3447f5751)
+
+diff --git a/Makefile b/Makefile
+index b0dc66ee27d2d8147c872f8dae835051b20d5f5c..4a6702e32967b7b5fbd850ba6c4c27d3eea797ab 100644
+--- a/Makefile
++++ b/Makefile
+@@ -452,9 +452,9 @@ endif
+ ifeq "$(WITH_OCAMLDOC)-$(STDLIB_MANPAGES)" "ocamldoc-true"
+ 	$(MAKE) -C api_docgen install
+ endif
+-	if test -n "$(WITH_DEBUGGER)"; then \
+-	  $(MAKE) -C debugger install; \
+-	fi
++ifneq "$(WITH_DEBUGGER)" ""
++	$(MAKE) -C debugger install
++endif
+ ifeq "$(BOOTSTRAPPING_FLEXDLL)" "true"
+ ifeq "$(TOOLCHAIN)" "msvc"
+ 	$(INSTALL_DATA) $(FLEXDLL_SOURCES)/$(FLEXDLL_MANIFEST) \
+@@ -470,16 +470,18 @@ endif # ifeq "$(INSTALL_BYTECODE_PROGRAMS)" "true"
+ endif # ifeq "$(BOOTSTRAPPING_FLEXDLL)" "true"
+ 	$(INSTALL_DATA) Makefile.config "$(INSTALL_LIBDIR)"
+ 	$(INSTALL_DATA) $(DOC_FILES) "$(INSTALL_DOCDIR)"
++	$(MAKE) install$(if $(wildcard ocamlopt$(EXE)),opt,-mklinks)
++
++# Ensure the symlinks are created if the user configures for the native
++# compiler but then doesn't build opt (legacy installation only)
++.PHONY: install-mklinks
++install-mklinks:
+ ifeq "$(INSTALL_BYTECODE_PROGRAMS)" "true"
+-	if test -f ocamlopt$(EXE); then $(MAKE) installopt; else \
+-	   cd "$(INSTALL_BINDIR)"; \
+-	   $(LN) ocamlc.byte$(EXE) ocamlc$(EXE); \
+-	   $(LN) ocamllex.byte$(EXE) ocamllex$(EXE); \
+-	   (test -f flexlink.byte$(EXE) && \
+-	      $(LN) flexlink.byte$(EXE) flexlink$(EXE)) || true; \
+-	fi
+-else
+-	if test -f ocamlopt$(EXE); then $(MAKE) installopt; fi
++	cd "$(INSTALL_BINDIR)"; \
++	$(LN) ocamlc.byte$(EXE) ocamlc$(EXE); \
++	$(LN) ocamllex.byte$(EXE) ocamllex$(EXE); \
++	(test -f flexlink.byte$(EXE) && \
++	  $(LN) flexlink.byte$(EXE) flexlink$(EXE)) || true
+ endif
+ 
+ # Installation of the native-code compiler
+@@ -537,19 +539,21 @@ endif
+ 	for i in $(OTHERLIBRARIES); do \
+ 	  $(MAKE) -C otherlibs/$$i installopt || exit $$?; \
+ 	done
++	$(MAKE) -C tools installopt
++	$(MAKE) installopt$(if $(wildcard ocamlopt.opt$(EXE)),opt,-mklinks)
++
++# Ensure the symlinks are created if the user configures for the native
++# compiler but then doesn't build opt.opt (legacy installation only)
++.PHONY: install-mklinks
++installopt-mklinks:
+ ifeq "$(INSTALL_BYTECODE_PROGRAMS)" "true"
+-	if test -f ocamlopt.opt$(EXE); then $(MAKE) installoptopt; else \
+-	   cd "$(INSTALL_BINDIR)"; \
+-	   $(LN) ocamlc.byte$(EXE) ocamlc$(EXE); \
+-	   $(LN) ocamlopt.byte$(EXE) ocamlopt$(EXE); \
+-	   $(LN) ocamllex.byte$(EXE) ocamllex$(EXE); \
+-	   (test -f flexlink.byte$(EXE) && \
+-	     $(LN) flexlink.byte$(EXE) flexlink$(EXE)) || true; \
+-	fi
+-else
+-	if test -f ocamlopt.opt$(EXE); then $(MAKE) installoptopt; fi
++	cd "$(INSTALL_BINDIR)"; \
++	$(LN) ocamlc.byte$(EXE) ocamlc$(EXE); \
++	$(LN) ocamlopt.byte$(EXE) ocamlopt$(EXE); \
++	$(LN) ocamllex.byte$(EXE) ocamllex$(EXE); \
++	(test -f flexlink.byte$(EXE) && \
++	  $(LN) flexlink.byte$(EXE) flexlink$(EXE)) || true
+ endif
+-	$(MAKE) -C tools installopt
+ 
+ .PHONY: installoptopt
+ installoptopt:
+diff --git a/api_docgen/ocamldoc/Makefile b/api_docgen/ocamldoc/Makefile
+index 6af89ab49e2c9ae0e07eb6346eec29a55b6b2f90..b6dbbf9da9a937339dcfc9a42fceb2611bc84b84 100644
+--- a/api_docgen/ocamldoc/Makefile
++++ b/api_docgen/ocamldoc/Makefile
+@@ -122,6 +122,5 @@ build/latex/compilerlibs_input.tex: | build/latex
+ .PHONY: install
+ install:
+ 	$(MKDIR) "$(INSTALL_LIBRARIES_MAN_DIR)"
+-	if test -d build/man; then \
+-	  $(INSTALL_DATA) build/man/*.3o "$(INSTALL_LIBRARIES_MAN_DIR)"; \
+-	fi
++	$(if $(wildcard build/man), \
++	  $(INSTALL_DATA) build/man/*.3o "$(INSTALL_LIBRARIES_MAN_DIR)")
+diff --git a/api_docgen/odoc/Makefile b/api_docgen/odoc/Makefile
+index 5fc75b5cf18548565747b60ecc077413d610faa4..e8e189f37f8f6f25d7b82518cca82196767f117c 100644
+--- a/api_docgen/odoc/Makefile
++++ b/api_docgen/odoc/Makefile
+@@ -192,12 +192,10 @@ $(ALL_PAGED_DOC:%=build/%.3o.stamp):build/%.3o.stamp:build/%.odocl | build/
+ .PHONY: install
+ install:
+ 	$(MKDIR) "$(INSTALL_LIBRARIES_MAN_DIR)"
+-	if test -d build/man/libref ; then \
+-	  $(INSTALL_DATA) build/man/libref/* "$(INSTALL_LIBRARIES_MAN_DIR)"; \
+-	fi
+-	if test -d build/man/compilerlibref ; then \
+-	  $(INSTALL_DATA) build/man/libref/* "$(INSTALL_LIBRARIES_MAN_DIR)"; \
+-	fi
++	$(if $(wildcard build/man/libref), \
++	  $(INSTALL_DATA) build/man/libref/* "$(INSTALL_LIBRARIES_MAN_DIR)")
++	$(if $(wildcard build/man/compilerlibref), \
++	  $(INSTALL_DATA) build/man/libref/* "$(INSTALL_LIBRARIES_MAN_DIR)")
+ 
+ # Dependencies for stdlib modules.
+ # Use the same dependencies used for compiling .cmx files.
+diff --git a/otherlibs/Makefile.otherlibs.common b/otherlibs/Makefile.otherlibs.common
+index e730336a4235c2a018569ffd9a01befaed1e2b67..81ea589abd31dd31331ac71adf6e29fb7dcf4738 100644
+--- a/otherlibs/Makefile.otherlibs.common
++++ b/otherlibs/Makefile.otherlibs.common
+@@ -118,17 +118,17 @@ ifeq "$(INSTALL_SOURCE_ARTIFACTS)" "true"
+           $(CMIFILES:.cmi=.cmti) \
+ 	  "$(INSTALL_LIBDIR)/"
+ endif
+-	if test -n "$(HEADERS)"; then \
+-	  $(INSTALL_DATA) $(HEADERS) "$(INSTALL_LIBDIR)/caml/"; \
+-	fi
++ifneq "$(HEADERS)" ""
++	$(INSTALL_DATA) $(HEADERS) "$(INSTALL_LIBDIR)/caml/"
++endif
+ 
+ installopt:
+ 	$(INSTALL_DATA) \
+ 	   $(CAMLOBJS_NAT) $(LIBNAME).cmxa $(LIBNAME).$(A) \
+ 	   "$(INSTALL_LIBDIR)/"
+-	if test -f $(LIBNAME).cmxs; then \
+-	  $(INSTALL_PROG) $(LIBNAME).cmxs "$(INSTALL_LIBDIR)"; \
+-	fi
++ifeq "$(SUPPORTS_SHARED_LIBRARIES)" "true"
++	  $(INSTALL_PROG) $(LIBNAME).cmxs "$(INSTALL_LIBDIR)"
++endif
+ 
+ partialclean:
+ 	rm -f *.cm*
+diff --git a/tools/Makefile b/tools/Makefile
+index 644536ea08b81e74407742f5f09051ac4d17d637..961b8050a5fb00ac59ac8cddc4f6796ef4f61a97 100644
+--- a/tools/Makefile
++++ b/tools/Makefile
+@@ -146,19 +146,13 @@ LIBRARY3=config.cmo build_path_prefix_map.cmo misc.cmo warnings.cmo location.cmo
+ define INSTALL_ONE_TOOL
+ install::
+ ifeq "$(INSTALL_BYTECODE_PROGRAMS)" "true"
+-	$(INSTALL_PROG) "$(1)$(EXE)" "$(INSTALL_BINDIR)/$(1).byte$(EXE)"; \
+-	if test -f "$(1)".opt$(EXE); then \
+-	  $(INSTALL_PROG) "$(1).opt$(EXE)" "$(INSTALL_BINDIR)" && \
+-	  (cd "$(INSTALL_BINDIR)" && $(LN) "$(1).opt$(EXE)" "$(1)$(EXE)"); \
+-	else \
+-	  (cd "$(INSTALL_BINDIR)" && $(LN) "$(1).byte$(EXE)" "$(1)$(EXE)"); \
+-	fi
+-else
+-	if test -f "$(1)".opt$(EXE); then \
+-	  $(INSTALL_PROG) "$(1).opt$(EXE)" "$(INSTALL_BINDIR)"; \
+-	  (cd "$(INSTALL_BINDIR)" && $(LN) "$(1).opt$(EXE)" "$(1)$(EXE)"); \
+-	fi
++	$(INSTALL_PROG) "$(1)$(EXE)" "$(INSTALL_BINDIR)/$(1).byte$(EXE)"
+ endif
++	$(if $(wildcard $(1).opt$(EXE)), \
++	  $(INSTALL_PROG) "$(1).opt$(EXE)" "$(INSTALL_BINDIR)")
++	(cd "$(INSTALL_BINDIR)" && \
++	  $(LN) "$(1).$(if $(wildcard $(1).opt$(EXE)),opt,byte)$(EXE)" \
++	        "$(1)$(EXE)")
+ endef
+ 
+ $(foreach tool, $(install_files), \
+@@ -189,12 +183,9 @@ ocamlcmt$(EXE): $(OCAMLCMT)
+ ocamlcmt.opt$(EXE): $(call byte2native, $(OCAMLCMT))
+ 
+ install::
+-	if test -f ocamlcmt.opt$(EXE); then \
+-	  $(INSTALL_PROG)\
+-	    ocamlcmt.opt$(EXE) "$(INSTALL_BINDIR)/ocamlcmt$(EXE)"; \
+-	else \
+-	  $(INSTALL_PROG) ocamlcmt$(EXE) "$(INSTALL_BINDIR)"; \
+-	fi
++	$(INSTALL_PROG) \
++	  ocamlcmt$(if $(wildcard ocamlcmt.opt$(EXE)),.opt)$(EXE) \
++	  "$(INSTALL_BINDIR)/ocamlcmt$(EXE)"
+ 
+ # The bytecode disassembler
+ 
+-- 
+2.53.0.windows.2
+

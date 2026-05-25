@@ -1,0 +1,33 @@
+From 17cb4e2ceca9325fd3744988f80956867c51c0df Mon Sep 17 00:00:00 2001
+From: David Allsopp <david.allsopp@metastack.com>
+Date: Sat, 1 Mar 2025 16:24:05 +0000
+Subject: [PATCH] Use as directly on Cygwin, as on Linux
+
+(cherry picked from commit 3b3084f631c75fd8631c24f97af22c4158f9fe60)
+
+diff --git a/configure b/configure
+index 7b3d1b2de1b5dfe371deb3474b7a619b228ec9fc..c6a3a52900ac829e3d9840b3958cd00d9b434916 100755
+GIT binary patch
+delta 60
+zcmeyhOl9kGm4+6^7N!>F7M2#)Eo={F@M-C4=_XgEmuKebq$ej&KRA<3eENnNY+~&X
+QX0QP<`}PMjIA&D=0MAAkp8x;=
+
+delta 35
+qcmdnGT;<m?m4+6^7N!>F7M2#)Eo={Fv`f!q17h~=(la?`RRI72Obw&}
+
+diff --git a/configure.ac b/configure.ac
+index 63d421fa18ae4db6f60d0fab3821e6d55d435191..36109defa854918f90a349944984309d55d65d3b 100644
+--- a/configure.ac
++++ b/configure.ac
+@@ -1376,6 +1376,8 @@ AS_CASE([$as_target,$ocaml_cv_cc_vendor],
+     [AS_CASE([$as_cpu],
+       [x86_64|arm*|aarch64*|i[[3-6]]86|riscv*],
+         [default_as="${toolpref}as"])],
++  [*-*-cygwin,gcc-*],
++    [default_as="${toolpref}as"],
+   [i686-pc-windows,*],
+     [default_as="ml -nologo -coff -Cp -c -Fo"
+     default_aspp="$default_as"],
+-- 
+2.53.0.windows.2
+

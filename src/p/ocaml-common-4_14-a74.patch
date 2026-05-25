@@ -1,0 +1,24 @@
+From ec68106f0fa1feb73a4526e3e1832dabeabdf515 Mon Sep 17 00:00:00 2001
+From: David Allsopp <david.allsopp@metastack.com>
+Date: Thu, 17 Jul 2025 11:17:04 +0100
+Subject: [PATCH] Don't install ocamldoc's .cmi files twice
+
+(cherry picked from commit 087de67665c00604156a9283a009ea1b1bc22fc3)
+
+diff --git a/ocamldoc/Makefile b/ocamldoc/Makefile
+index 0a536545818e17f523a4c631f20079e8ea6e6e7b..30498e7c962f42e4351cfa54d793c57a0dc6fb3a 100644
+--- a/ocamldoc/Makefile
++++ b/ocamldoc/Makefile
+@@ -245,9 +245,6 @@ install:
+ 	$(INSTALL_DATA) \
+ 	  ocamldoc.hva *.cmi $(OCAMLDOC_LIBCMA) \
+ 	  "$(INSTALL_LIBDIR)/ocamldoc"
+-	$(INSTALL_DATA) \
+-	  $(OCAMLDOC_LIBCMIS) \
+-	  "$(INSTALL_LIBDIR)/ocamldoc"
+ ifeq "$(INSTALL_SOURCE_ARTIFACTS)" "true"
+ 	$(INSTALL_DATA) \
+ 	  $(OCAMLDOC_LIBMLIS) $(OCAMLDOC_LIBCMTS) \
+-- 
+2.53.0.windows.2
+

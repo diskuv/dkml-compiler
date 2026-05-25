@@ -1,0 +1,44 @@
+From e62ec93cc72255566139eba28abd7b6a4abcfa08 Mon Sep 17 00:00:00 2001
+From: Jonah Beckford <9566106-jonahbeckford@users.noreply.gitlab.com>
+Date: Mon, 25 May 2026 09:02:04 -0700
+Subject: [PATCH] b01
+
+
+diff --git a/otherlibs/win32unix/gettimeofday.c b/otherlibs/win32unix/gettimeofday.c
+index 6e2b56e8c2ab8990bf72733da2b2eb22de7e403f..d4fe0f68f49f2f1f299872057b839f7833c9a174 100644
+--- a/otherlibs/win32unix/gettimeofday.c
++++ b/otherlibs/win32unix/gettimeofday.c
+@@ -19,23 +19,17 @@
+ 
+ #include "unixsupport.h"
+ 
+-/* Unix epoch as a Windows timestamp in hundreds of ns */
+-#define epoch_ft 116444736000000000.0;
++/* There are 11644473600 seconds between 1 January 1601 (the NT Epoch) and 1
++ * January 1970 (the Unix Epoch). FILETIME is measured in 100ns ticks.
++ */
++#define CAML_NT_EPOCH_100ns_TICKS 116444736000000000ULL
+ 
+ double unix_gettimeofday_unboxed(value unit)
+ {
+-  FILETIME ft;
++  ULONGLONG utime;
+   double tm;
+-  GetSystemTimeAsFileTime(&ft);
+-#if defined(_MSC_VER) && _MSC_VER < 1300
+-  /* This compiler can't cast uint64_t to double! Fortunately, this doesn't
+-     matter since SYSTEMTIME is only ever 63-bit (maximum value 31-Dec-30827
+-     23:59:59.999, and it requires some skill to set the clock past 2099!)
+-   */
+-  tm = *(int64_t *)&ft - epoch_ft; /* shift to Epoch-relative time */
+-#else
+-  tm = *(uint64_t *)&ft - epoch_ft; /* shift to Epoch-relative time */
+-#endif
++  GetSystemTimeAsFileTime((LPFILETIME)&utime);
++  tm = utime - CAML_NT_EPOCH_100ns_TICKS;
+   return (tm * 1e-7);  /* tm is in 100ns */
+ }
+ 
+-- 
+2.53.0.windows.2
+

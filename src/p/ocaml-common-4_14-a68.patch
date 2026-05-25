@@ -1,0 +1,223 @@
+From 8c8845ad2dbee043f91b1188b0dd7fd1515eeb96 Mon Sep 17 00:00:00 2001
+From: David Allsopp <david.allsopp@metastack.com>
+Date: Wed, 17 Aug 2022 11:10:30 +0100
+Subject: [PATCH] Add --enable-runtime-search[-target] options
+
+--enable-runtime-search controls the -runtime-search setting used to
+build the compiler's own bytecode executables;
+--enable-runtime-search-target controls the default value of
+-runtime-search that ocamlc itself uses.
+
+(cherry picked from commit e7930ee8efb2bb5604bce3b4aa0e13ea45703939)
+
+diff --git a/Changes b/Changes
+index 8274d92bbaa4852af66a6d850859bb9f441df47d..0d878eea465789751025725edfd86e75dc435c52 100644
+--- a/Changes
++++ b/Changes
+@@ -115,6 +115,12 @@ OCaml 4.14 maintenance version
+   previously.
+   (David Allsopp, review by ???)
+ 
++- #14???: New --enable-runtime-search configure option controls the
++  -runtime-search option used to build the bytecode binaries in the compiler
++  distribution. --enable-runtime-search-target controls the default value of
++  -runtime-search used for bytecode executables produced by the compiler.
++  (David Allsopp, review by ???)
++
+ ### Bug fixes:
+ 
+ - #12070, #12075, #13209: auto-detect whether `ar` support @FILE arguments at
+diff --git a/Makefile.build_config.in b/Makefile.build_config.in
+index c18cb03bb6869492ccb31d964773caa137263581..37d5c4b86112664678a232698b100a914eedf46d 100644
+--- a/Makefile.build_config.in
++++ b/Makefile.build_config.in
+@@ -38,6 +38,7 @@ OCAML_CC_VENDOR = @ocaml_cc_vendor@
+ 
+ LAUNCH_METHOD = @launch_method@
+ TARGET_LAUNCH_METHOD = @target_launch_method@
++TARGET_SEARCH_METHOD = @runtime_search_target@
+ SUFFIXING = @suffixing@
+ 
+ BUILD_PATH_LOGICAL = @srcdir_abs@
+@@ -80,3 +81,5 @@ ZINC_RUNTIME_ID = @zinc_runtime_id_lo@$(ZINC_RUNTIME_ID_HI)
+ 
+ # Platform-dependent command to create symbolic links
+ LN = @ln@
++
++RUNTIME_SEARCH = @runtime_search@
+diff --git a/Makefile.common b/Makefile.common
+index e0887539703a544a19efa53dd031885ea9bf0b34..efc27c7d132ab54446ec5e9237c96ab3821e7d4e 100644
+--- a/Makefile.common
++++ b/Makefile.common
+@@ -204,7 +204,8 @@ SAK = $(ROOTDIR)/runtime/sak$(EXE)
+ # $(ROOTDIR)/ocamlc needs -launch-method to be given explicitly as its default
+ # values are those for the target (cf. --with-target-sh and TARGET_BINDIR).
+ BYTECODE_LAUNCHER_FLAGS = \
+-  -launch-method $(call QUOTE_SINGLE,$(LAUNCH_METHOD) $(BINDIR))
++  -launch-method $(call QUOTE_SINGLE,$(LAUNCH_METHOD) $(BINDIR)) \
++  -runtime-search $(if $(RUNTIME_SEARCH),$(RUNTIME_SEARCH),disable)
+ 
+ MAYBE_ADD_BYTECODE_LAUNCHER_FLAGS = \
+   $(if $(filter -custom, $(1)),,\
+diff --git a/configure b/configure
+index bd896ed17d74e32770f4667ffc1604821bcd9edf..003bfdba002eab6b68af5386209254133291eed2 100755
+GIT binary patch
+delta 1418
+zcmb_c&ubG=5N4~J>XsBWM2p%oCV{nKS4C7xL-gdKBDJ9xQ6ao+UYdo?ZnOK=G+-&7
+zdMHSt=mRf$_fp6qDuO?cf)q~?#cTfqFCKiGx4Y?vL=jz>4LfgUzL{^nycZuc@4jTV
+zCl@ldYZASNiw;J%RxJ`_FJU4@y{(fAGh^qmiAn}8MvtU{UcXFh@piI!#ZOQ<0wBY%
+z8bGQT%DO{rz2p+zGGzx!O@cM6i~+A;%_Sa~1H{@YJU?;9&#hQCSQ@GstfmB@svKR7
+zLa190UY#1}I6+am`Akg483xbS{KAO=g<E%C<~Gkp$IQ!eA1D5Z-hq^cISL<yWPAIX
+z(22Fz3&Q1Dx?B^|<I%=w-4>?ek;-&uRhXdXY~jdS#9z&Uh8zqTKH*(tfNnziG@IJA
+zreT)-vL~10t|oQ@U$jbI=J|3Mii`$o4vHRQ>(9&lnAYEm3Hs^V=%Gc1te1hkUA7Hm
+zV_;Yc>jBs*crbWd8M2BLq%zm%=C97*NWn$cgM=NV(YH58lJs>)j2-lb$f}J?7wFSB
+z;?&Xp=J#~-$cV-1kNd*$q#xw#N#%;|QX3pa#Y}gWh3P(a{q6l9l0zx{o@<Cs7iR4l
+zvP=1`f1}(d<nNfD{Bv*K0@frhO2@5K^cCG)Qu^+X{%?QCP`ku-v65A?_bSM6u%ZO2
+z?a9+6R?i*c<h$`O69^u8VXRJ&-wX5*!fG6a#nJB_aiXZI?8@=(6_v;1GW(O6rbVEH
+z!FAYYLnqZ?TJ{t_MCP1xdibk&?BUN?f_|<G3HoGJ5Z8A%1ZE@5_A%Sf%=5*Vjkb3;
+I4ip~$0?{7rNB{r;
+
+delta 81
+zcmX?fOJ(O7l?}21o1Fs8xi_zg7Kz_{dAI(A?YcgUpV+o51~b}Nv8E;F6sJyaC}osu
+d|2T;eh?#(x8Hibcm=%cGfS7&z$4MN4vjC=+Bv1eV
+
+diff --git a/configure.ac b/configure.ac
+index b18bcb72a0a8786f9936e3420c301b53749196c5..ce300d820a934553e0616c6b005f402607ea9949 100644
+--- a/configure.ac
++++ b/configure.ac
+@@ -62,6 +62,8 @@ target_libdir_is_relative=false
+ srcdir_abs=''
+ srcdir_abs_real=''
+ build_map_flags=''
++runtime_search=''
++runtime_search_target=''
+ 
+ # Information about the package
+ 
+@@ -194,6 +196,8 @@ AC_SUBST([zinc_runtime_id_hi])
+ AC_SUBST([bytecode_runtime_id])
+ AC_SUBST([native_runtime_id])
+ AC_SUBST([suffixing])
++AC_SUBST([runtime_search])
++AC_SUBST([runtime_search_target])
+ 
+ ## Generated files
+ 
+@@ -509,7 +513,42 @@ AC_ARG_ENABLE([suffixing],
+   [AS_HELP_STRING([--enable-suffixing],
+     [enable suffixing of runtime executables and shared libraries])],
+   [AS_IF([test "x$enableval" = 'xno'], [suffixing=false], [suffixing=true])],
+-  [suffixing=false])
++  [suffixing=auto])
++
++AC_ARG_ENABLE([runtime-search],
++  [AS_HELP_STRING([--enable-runtime-search],
++    [allow the distribution's bytecode executables to search for ocamlrun])],
++  [AS_CASE([$enableval],
++    [no],[],
++    [yes],[runtime_search='enable'],
++    [always],[runtime_search='always'],
++    [AC_MSG_ERROR(m4_normalize([valid values are yes, no or always for
++       --enable-runtime-search]))])],
++  [AS_CASE([$host],
++dnl Historically, the native Windows ports are assumed to be finding ocamlrun
++dnl using a PATH search. *)
++    [*-w64-mingw32*|*-pc-windows],[runtime_search='always'])])
++
++AC_ARG_ENABLE([runtime-search-target],
++  [AS_HELP_STRING([--enable-runtime-search-target],
++    [allow bytecode executables produced by ocamlc to search for ocamlrun])],
++  [AS_CASE([$enableval],
++    [no],[],
++    [yes],[runtime_search_target='enable'],
++    [always],[runtime_search_target='always'],
++    [AC_MSG_ERROR(m4_normalize([valid values are yes, no or always for
++       --enable-runtime-search-target]))])],
++  [AS_CASE([$host],
++dnl Historically, the native Windows ports are assumed to be finding ocamlrun
++dnl using a PATH search. *)
++    [*-w64-mingw32*|*-pc-windows],[runtime_search_target='always'])])
++
++AS_CASE([$suffixing,$runtime_search,$runtime_search_target],
++  [true,*,*|false,,],[],
++  [auto,,],[suffixing=false],
++  [auto,*,*],[suffixing=true],
++  [false,*,*],[AC_MSG_ERROR(m4_normalize([--disable-suffixed cannot be used with
++       --enable-runtime-search or --enable-runtime-search-target]))])
+ 
+ AC_ARG_WITH([afl],
+   [AS_HELP_STRING([--with-afl],
+diff --git a/utils/Makefile b/utils/Makefile
+index ce13b8f41c7d8891531d4f5097fe327f7e217c8d..e1df17f180a63be83f298930a1baabe0b9e059d5 100644
+--- a/utils/Makefile
++++ b/utils/Makefile
+@@ -94,6 +94,7 @@ config.ml: config.mlp $(ROOTDIR)/Makefile.config Makefile
+ 	    $(call SUBST,AR_SUPPORTS_RESPONSE_FILES) \
+ 	    $(call SUBST,SUFFIXING) \
+ 	    $(call SUBST_STRING,TARGET_LAUNCH_METHOD) \
++	    $(call SUBST_STRING,TARGET_SEARCH_METHOD) \
+ 	    $(call SUBST_STRING,BYTECODE_RUNTIME_ID) \
+ 	    $(call SUBST_STRING,NATIVE_RUNTIME_ID) \
+ 	    $< > $@
+diff --git a/utils/clflags.ml b/utils/clflags.ml
+index a8b2c5913bdf4cba854c62d800e61a299520ac42..e333896448d3fc824bca0fbca4295031629aa623 100644
+--- a/utils/clflags.ml
++++ b/utils/clflags.ml
+@@ -84,12 +84,7 @@ and use_runtime = ref ""                (* -use-runtime ... *)
+ and launch_method =                     (* -launch-method ... *)
+   ref (Config.launch_method, Config.target_bindir)
+ and search_method =                     (* -search-method ... *)
+-  if Config.target_win32 then
+-    (* Historically, the native Windows ports are assumed to be finding ocamlrun
+-       using a PATH search. *)
+-    ref Config.Search
+-  else
+-    ref Config.Absolute
++  ref Config.search_method
+ and plugin = ref false                  (* -plugin ... *)
+ and principal = ref false               (* -principal *)
+ and real_paths = ref true               (* -short-paths *)
+diff --git a/utils/config.mli b/utils/config.mli
+index 1b9a7c434d96329f311f47a2caa1a7b04cac9302..eab2d382863d46390726fcd63f7ff0d04a3fabcf 100644
+--- a/utils/config.mli
++++ b/utils/config.mli
+@@ -329,6 +329,11 @@ type search_method =
+                            if that fails *)
+ | Search               (** Always search for the interpreter *)
+ 
++val search_method : search_method
++(** Default search mechanism for bytecode executables
++
++    @since 5.5 *)
++
+ val suffixing : bool
+ (** Whether the runtime executable and shared library filenames and C stub
+     library filenames are being mangled with Runtime IDs and the {!target}.
+diff --git a/utils/config.mlp b/utils/config.mlp
+index cadd9060a8f29aac70a6715d7de1e400d7b0d269..96d33fc132e85b009e7e7fc4672faff6dc842175 100644
+--- a/utils/config.mlp
++++ b/utils/config.mlp
+@@ -186,6 +186,7 @@ let flexdll_dirs = [%%FLEXDLL_DIR%%];;
+ 
+ let suffixing = %%SUFFIXING%%
+ let launch_method = "%%TARGET_LAUNCH_METHOD%%"
++let search_method = "%%TARGET_SEARCH_METHOD%%"
+ 
+ let launch_method =
+   match launch_method with
+@@ -193,6 +194,12 @@ let launch_method =
+   | "sh" -> Shebang None
+   | _ -> Shebang (Some launch_method)
+ 
++let search_method =
++  match search_method with
++  | "always" -> Search
++  | "enable" -> Absolute_then_search
++  | _ -> Absolute
++
+ let ar_supports_response_files = %%AR_SUPPORTS_RESPONSE_FILES%%;;
+ 
+ type configuration_value =
+-- 
+2.53.0.windows.2
+

@@ -1,0 +1,62 @@
+From b9641bfcc9bfd5a1e30c34b2b426397a6ab68451 Mon Sep 17 00:00:00 2001
+From: David Allsopp <david.allsopp@metastack.com>
+Date: Sat, 25 Jan 2025 21:22:36 +0000
+Subject: [PATCH] Don't add a double-separator when locating ld.conf
+
+When calculating the full path for ld.conf, the runtime unconditionally
+concatenated "/ld.conf". This is harmless when the separators appear in
+the middle of a path ("/usr/local/lib/ocaml//ld.conf" is equivalent to
+the version with only single slashes), but it is technically incorrect
+for two corners cases with OCAMLLIB and CAMLLIB:
+
+- if either is explicitly set to "/" then "//ld.conf" is _not_ the same
+  file as "/ld.conf". This is mildly relevant on Windows and Cygwin
+  where the two initial slashes (including as "\/" for native Windows)
+  will be interpreted as a UNC path
+- if either is explicitly blank, then "ld.conf" (i.e. ld.conf in the
+  current directory) is a less illogical file to open than "/ld.conf"
+
+(cherry picked from commit c7fde9c19b5f9752ba8b6bc53e8dd0de064cd724)
+
+diff --git a/runtime/caml/osdeps.h b/runtime/caml/osdeps.h
+index f43bf6f73dc3fb5ac694e17776c5ded6f0bd629a..fea24c15cc3620af9290efe044c9b7d2514d6a55 100644
+--- a/runtime/caml/osdeps.h
++++ b/runtime/caml/osdeps.h
+@@ -136,6 +136,14 @@ CAMLextern void caml_expand_command_line (int *, wchar_t ***);
+ 
+ CAMLextern clock_t caml_win32_clock(void);
+ 
++#define CAML_DIR_SEP T("\\")
++#define Is_dir_separator(c) (c == '\\' || c == '/')
++
++#else
++
++#define CAML_DIR_SEP "/"
++#define Is_dir_separator(c) (c == '/')
++
+ #endif /* _WIN32 */
+ 
+ #endif /* CAML_INTERNALS */
+diff --git a/runtime/dynlink.c b/runtime/dynlink.c
+index b92d5e36ebe1a5848cd225b8727cadc83efdf2cf..5fa609b7ddfe05d951ecf7149f2a16d937d4741e 100644
+--- a/runtime/dynlink.c
++++ b/runtime/dynlink.c
+@@ -96,9 +96,14 @@ CAMLexport char_os * caml_parse_ld_conf(void)
+   struct stat st;
+ #endif
+   int ldconf, nread;
++  size_t length;
+ 
+   stdlib = caml_get_stdlib_location();
+-  ldconfname = caml_stat_strconcat_os(3, stdlib, T("/"), LD_CONF_NAME);
++  length = strlen_os(stdlib);
++  if (length == 0 || !Is_dir_separator(stdlib[length - 1]))
++    ldconfname = caml_stat_strconcat_os(3, stdlib, CAML_DIR_SEP, LD_CONF_NAME);
++  else
++    ldconfname = caml_stat_strconcat_os(2, stdlib, LD_CONF_NAME);
+   if (stat_os(ldconfname, &st) == -1) {
+     caml_stat_free(ldconfname);
+     return NULL;
+-- 
+2.53.0.windows.2
+

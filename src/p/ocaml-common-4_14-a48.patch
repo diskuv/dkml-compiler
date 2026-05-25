@@ -1,0 +1,115 @@
+From 38daa7ffaaeff68af7090af33c948400a9e2ed74 Mon Sep 17 00:00:00 2001
+From: David Allsopp <david.allsopp@metastack.com>
+Date: Wed, 26 Feb 2025 22:53:42 +0000
+Subject: [PATCH] Use %standard_library_default in Config
+
+Config.standard_library_default is now implemented using the
+%standard_library_default primitive. This allows a convenient test which
+can be added for `-set-runtime-default`.
+
+The change also makes the host-like nature of of
+Config.standard_library_default clearer, as the build of the
+cross-compiler must now (correctly) specify the location of its (target)
+Standard Library.
+
+(cherry picked from commit 9cbf2174ef542fb4ea89589a97949b8a9a2ef016)
+
+diff --git a/Makefile.common b/Makefile.common
+index 9075828019cf3b211bc5a203b4f3f60fbd7c1955..1f9a8454dfb471275a40e01c32bf78b0256daed6 100644
+--- a/Makefile.common
++++ b/Makefile.common
+@@ -110,6 +110,10 @@ SUBST=-e 's!%%$1%%!$(call SED_ESCAPE,$($1))!'
+ # in config.mlp.  Thus, backslashes and double quotes must be escaped.
+ SUBST_STRING=-e 's!%%$1%%!$(call SED_ESCAPE,$(call OCAML_ESCAPE,$($1)))!'
+ 
++# Allow Makefile.cross to add flags to OC_COMMON_LINKFLAGS
++OC_CROSS_LINKFLAGS ?=
++OC_COMMON_LINKFLAGS += $(OC_CROSS_LINKFLAGS)
++
+ # The rule to compile C files
+ 
+ # This rule is similar to GNU make's implicit rule, except that it is more
+diff --git a/otherlibs/dynlink/Makefile b/otherlibs/dynlink/Makefile
+index c21bf573dad4a7281a1aa28c61684ed88b513da3..6526e8bf3980b29a2648260fc4d812bea0dadc89 100644
+--- a/otherlibs/dynlink/Makefile
++++ b/otherlibs/dynlink/Makefile
+@@ -140,6 +140,9 @@ $(LOCAL_SRC)/Makefile: $(LOCAL_SRC)/Makefile.copy-sources Makefile
+             >> $@; \
+         done
+ 
++$(LOCAL_SRC)/dll.ml:
++	sed -e '/caml_dynlink_parse/s/_parse_/_parse_runtime_/' $< > $@
++
+ # Rules to automatically generate dependencies for the local copy of the
+ # compilerlibs sources.
+ 
+diff --git a/runtime/dynlink.c b/runtime/dynlink.c
+index fcdbaebe00cecfba6c3bca8ffaa0d715b042f8b0..fd1a56312157a54a8c360a49ebe740c865c886f0 100644
+--- a/runtime/dynlink.c
++++ b/runtime/dynlink.c
+@@ -203,18 +203,16 @@ CAMLexport char_os * caml_parse_ld_conf(const char_os * stdlib,
+ 
+ /* Exposes caml_parse_ld_conf as a primitive for the bytecode compiler, saving
+    the duplication of the logic with the bytecode compiler. */
+-CAMLprim value caml_dynlink_parse_ld_conf(value vstdlib)
++static value parse_ld_conf(const char_os *stdlib)
+ {
+-  CAMLparam1(vstdlib);
++  CAMLparam0();
+   CAMLlocal3(list, str, cell);
+ 
+-  char_os *stdlib = caml_stat_strdup_to_os(String_val(vstdlib));
+   struct ext_table table;
+   char_os *tofree;
+   int i;
+   caml_ext_table_init(&table, 8);
+   tofree = caml_parse_ld_conf(stdlib, &table);
+-  caml_stat_free(stdlib);
+ 
+   list = Val_emptylist;
+   for (i = table.size - 1; i >= 0; i--) {
+@@ -231,6 +229,26 @@ CAMLprim value caml_dynlink_parse_ld_conf(value vstdlib)
+   CAMLreturn(list);
+ }
+ 
++CAMLprim value caml_dynlink_parse_ld_conf(value vstdlib)
++{
++  char_os *stdlib = caml_stat_strdup_to_os(String_val(vstdlib));
++  value res = parse_ld_conf(stdlib);
++  caml_stat_free(stdlib);
++
++  return res;
++}
++
++CAMLprim value caml_dynlink_parse_runtime_ld_conf(value ignored)
++{
++#ifdef NATIVE_CODE
++  /* This primitive is needed in native code because of how dynlink_compilerlibs
++     is built, but this primitive is never actually called. */
++  return parse_ld_conf(T(""));
++#else
++  return parse_ld_conf(caml_runtime_standard_library_default);
++#endif
++}
++
+ #ifndef NATIVE_CODE
+ 
+ /* Open the given shared library and add it to shared_libs.
+diff --git a/utils/config.mlp b/utils/config.mlp
+index 1f0291b5be3551fa026c0ba4e04a41f007c05bbe..a93a04f48abaed73cfbb2822e500967b126ce191 100644
+--- a/utils/config.mlp
++++ b/utils/config.mlp
+@@ -19,7 +19,9 @@ let version = Sys.ocaml_version
+ 
+ let bindir = "%%OCAML_BINDIR%%"
+ 
+-let standard_library_default = "%%LIBDIR%%"
++external standard_library_default : unit -> string = "%standard_library_default"
++
++let standard_library_default = standard_library_default ()
+ 
+ let standard_library =
+   try
+-- 
+2.53.0.windows.2
+

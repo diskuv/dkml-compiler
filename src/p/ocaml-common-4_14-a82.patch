@@ -1,0 +1,196 @@
+From 664e05cf265f505436539cf88a49c862327c0f28 Mon Sep 17 00:00:00 2001
+From: David Allsopp <david.allsopp@metastack.com>
+Date: Sat, 19 Jul 2025 14:16:31 +0100
+Subject: [PATCH] Add SUBDIR_NAME to principal Makefiles
+
+SUBDIR_NAME goes along with ROOTDIR - where ROOTDIR is the relative path
+from Makefile back to the root directory, SUBDIR_NAME is the implicit
+path from the root directory to Makefile.
+
+(cherry picked from commit 588ec7560f6e709a1aa3f00c6dec1f6b6f7ba5be)
+
+diff --git a/Makefile b/Makefile
+index a29cbdd70d4d7ec4abd5ed2c8e844c4bccffa654..b03e1a8fbeed65bbd816d7e4efbd21013dc57e0c 100644
+--- a/Makefile
++++ b/Makefile
+@@ -16,6 +16,8 @@
+ # The main Makefile
+ 
+ ROOTDIR = .
++SUBDIR_NAME =
++
+ # NOTE: it is important that OCAMLLEX is defined *before* Makefile.common
+ # gets included, so that its definition here takes precedence
+ # over the one there.
+diff --git a/api_docgen/Makefile b/api_docgen/Makefile
+index 07254645812ae43d8e1578e280debbd67e23c043..4ad898ea6bfd6802a4f83888ecdbfe0c983c429d 100644
+--- a/api_docgen/Makefile
++++ b/api_docgen/Makefile
+@@ -14,6 +14,7 @@
+ #**************************************************************************
+ # Used by included Makefiles
+ ROOTDIR = ..
++SUBDIR_NAME = api_docgen
+ -include ../Makefile.build_config
+ 
+ odoc-%:
+diff --git a/api_docgen/ocamldoc/Makefile b/api_docgen/ocamldoc/Makefile
+index 239d938271e42f7a53fb12b363c4007fefd4e4b8..d3ec00a81cbb053adffc845d5540b8b9fd980f28 100644
+--- a/api_docgen/ocamldoc/Makefile
++++ b/api_docgen/ocamldoc/Makefile
+@@ -14,6 +14,7 @@
+ #**************************************************************************
+ # Used by included Makefiles
+ ROOTDIR = ../..
++SUBDIR_NAME = api_docgen/ocamldoc
+ include ../Makefile.common
+ include ../../ocamldoc/Makefile.best_ocamldoc
+ vpath %.mli ../../stdlib $(DOC_COMPILERLIBS_DIRS)  $(DOC_STDLIB_DIRS)
+diff --git a/api_docgen/odoc/Makefile b/api_docgen/odoc/Makefile
+index 0ee95951543eb00f6797088d7cad6cc21d6f5553..b0f1e8a8c80294a4d59431749d5f6801eb2731cd 100644
+--- a/api_docgen/odoc/Makefile
++++ b/api_docgen/odoc/Makefile
+@@ -15,6 +15,7 @@
+ 
+ # Used by included Makefiles
+ ROOTDIR = ../..
++SUBDIR_NAME = api_docgen/odoc
+ 
+ include ../Makefile.common
+ 
+diff --git a/debugger/Makefile b/debugger/Makefile
+index 7e1ff1a74af7cdf14b51cc3214d82b6c0fe63951..14c3e951040456ac3141a5cf02aebd7dddaf1c1d 100644
+--- a/debugger/Makefile
++++ b/debugger/Makefile
+@@ -14,6 +14,7 @@
+ #**************************************************************************
+ 
+ ROOTDIR = ..
++SUBDIR_NAME = debugger
+ 
+ include $(ROOTDIR)/Makefile.common
+ include $(ROOTDIR)/Makefile.best_binaries
+diff --git a/man/Makefile b/man/Makefile
+index 75e93ad88b6c189cddb8d75f8a6d1b0424fb8bbf..49963ff07de83ec0a42836ee238d7199b149b3f7 100644
+--- a/man/Makefile
++++ b/man/Makefile
+@@ -14,6 +14,7 @@
+ #**************************************************************************
+ 
+ ROOTDIR = ..
++SUBDIR_NAME = man
+ include $(ROOTDIR)/Makefile.common
+ 
+ MANPAGES = $(addsuffix .1,\
+diff --git a/ocamldoc/Makefile b/ocamldoc/Makefile
+index 1aa0910bc347de255feb3f670ac6d10728ee52b6..67743b3afef38e4074042e2bb63de79037d9783c 100644
+--- a/ocamldoc/Makefile
++++ b/ocamldoc/Makefile
+@@ -14,6 +14,7 @@
+ #**************************************************************************
+ 
+ ROOTDIR = ..
++SUBDIR_NAME = ocamldoc
+ 
+ include $(ROOTDIR)/Makefile.common
+ include $(ROOTDIR)/Makefile.best_binaries
+diff --git a/otherlibs/Makefile b/otherlibs/Makefile
+index 0da6669b731f3bb7c329a3b84a30bba59409c5d4..dbe9c62a0916fa39f8062648bf4265e0b975a0ec 100644
+--- a/otherlibs/Makefile
++++ b/otherlibs/Makefile
+@@ -14,6 +14,7 @@
+ #**************************************************************************
+ 
+ ROOTDIR=..
++SUBDIR_NAME=otherlibs
+ include $(ROOTDIR)/Makefile.common
+ 
+ OTHERLIBRARIES ?= bigarray dynlink str systhreads \
+diff --git a/otherlibs/Makefile.otherlibs.common b/otherlibs/Makefile.otherlibs.common
+index dca77225b43c848d81ff8882a65db5a88066e225..e309b7bd0f2811545f712e8686feb8fd6dc2d6c6 100644
+--- a/otherlibs/Makefile.otherlibs.common
++++ b/otherlibs/Makefile.otherlibs.common
+@@ -16,6 +16,7 @@
+ # Common Makefile for otherlibs
+ 
+ ROOTDIR=../..
++SUBDIR_NAME?=otherlibs/$(LIBNAME)
+ include $(ROOTDIR)/Makefile.common
+ include $(ROOTDIR)/Makefile.best_binaries
+ 
+diff --git a/otherlibs/dynlink/Makefile b/otherlibs/dynlink/Makefile
+index 6526e8bf3980b29a2648260fc4d812bea0dadc89..74a568bb7db5e53cfd2cc4c3232f61adabd94f58 100644
+--- a/otherlibs/dynlink/Makefile
++++ b/otherlibs/dynlink/Makefile
+@@ -20,6 +20,7 @@
+ # FIXME reduce redundancy by including ../Makefile
+ 
+ ROOTDIR = ../..
++SUBDIR_NAME = otherlibs/dynlink
+ 
+ include $(ROOTDIR)/Makefile.common
+ include $(ROOTDIR)/Makefile.best_binaries
+diff --git a/otherlibs/systhreads/Makefile b/otherlibs/systhreads/Makefile
+index 343e685ae39eb8d3243a9612feeedae6303e49f2..03838d4d86b17949bc49b87290dbf91f85ca34f0 100644
+--- a/otherlibs/systhreads/Makefile
++++ b/otherlibs/systhreads/Makefile
+@@ -14,6 +14,7 @@
+ #**************************************************************************
+ 
+ ROOTDIR=../..
++SUBDIR_NAME=otherlibs/systhreads
+ 
+ include $(ROOTDIR)/Makefile.common
+ include $(ROOTDIR)/Makefile.best_binaries
+diff --git a/otherlibs/win32unix/Makefile b/otherlibs/win32unix/Makefile
+index 35371fe7d0bcf2b8efed8d974287dd9e15ed43ae..be9df075a233f74b14d7fdecdcfca0818f458c52 100644
+--- a/otherlibs/win32unix/Makefile
++++ b/otherlibs/win32unix/Makefile
+@@ -13,6 +13,8 @@
+ #*                                                                        *
+ #**************************************************************************
+ 
++SUBDIR_NAME = otherlibs/win32unix
++
+ # Note: since this directory is Windows-specific, it may be good to make sure
+ # its content can not be compiled under Unix.
+ # This directory could even become a subdirectory of the unix directory.
+diff --git a/runtime/Makefile b/runtime/Makefile
+index 150336cbe31101ba96c274db459f98a0d3e052c4..07d27d3d8ee74b5a14c5e4b8603aa16990e82086 100644
+--- a/runtime/Makefile
++++ b/runtime/Makefile
+@@ -14,6 +14,7 @@
+ #**************************************************************************
+ 
+ ROOTDIR = ..
++SUBDIR_NAME = runtime
+ 
+ include $(ROOTDIR)/Makefile.common
+ 
+diff --git a/stdlib/Makefile b/stdlib/Makefile
+index 99c3b5a0eae94356f86bcd6ac8c409923ce1869f..42ca2d61cae3eb33f4bc751f0722cfa804875cb7 100644
+--- a/stdlib/Makefile
++++ b/stdlib/Makefile
+@@ -14,6 +14,7 @@
+ #**************************************************************************
+ 
+ ROOTDIR = ..
++SUBDIR_NAME = stdlib
+ 
+ include $(ROOTDIR)/Makefile.common
+ 
+diff --git a/tools/Makefile b/tools/Makefile
+index 961b8050a5fb00ac59ac8cddc4f6796ef4f61a97..4fbd6e43ca19fd373c907fde058e12268be108e7 100644
+--- a/tools/Makefile
++++ b/tools/Makefile
+@@ -14,6 +14,7 @@
+ #**************************************************************************
+ 
+ ROOTDIR = ..
++SUBDIR_NAME = tools
+ # NOTE: it is important that OCAMLLEX is defined *before* Makefile.common
+ # gets included, so that its definition here takes precedence
+ # over the one there.
+-- 
+2.53.0.windows.2
+

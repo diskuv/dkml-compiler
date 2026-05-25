@@ -1,0 +1,49 @@
+From 7d069a7c3557978186cb0dea3ddabde11ebebdea Mon Sep 17 00:00:00 2001
+From: David Allsopp <david.allsopp@metastack.com>
+Date: Thu, 4 Apr 2024 17:46:20 +0100
+Subject: [PATCH] Don't include the flexdll directory with -nostdlib
+
+When FlexDLL is bootstrapped, -I +flexdll is effectively added with the
+Standard Library directory. This shouldn't be done when -nostdlib is in
+effect. In practice, this should only affect the build system, which is
+erroneously including the _installed_ +flexdll directory when partially
+linking.
+
+(cherry picked from commit 5d0236524c240d5877b528eb9ec4468b0c1a09f9)
+(cherry picked from commit ecc8900ba820a5f1582034e6da8d5b632ef3c5f4)
+
+diff --git a/Changes b/Changes
+index 3a004ee045a706dbae5154134908188d605d87ee..fb2404703a9c7b602041a1bb5e6a81b9af1bb6ee 100644
+--- a/Changes
++++ b/Changes
+@@ -52,6 +52,11 @@ OCaml 4.14.3 (17 February 2026)
+   extends this to the bytecode executables emitted by that compiler.
+   (David Allsopp, review by Damien Doligez, Xavier Leroy and Olivier Nicole)
+ 
++* #13070: On Windows, when configured with bootstrapped flexdll, don't add
++  +flexdll to the search path when -nostdlib is specified (which then means
++  -L <path-to-flexdll> no longer gets passed to the system linker).
++  (David Allsopp, review by Florian Angeletti)
++
+ - #13430, #13434: protect memory-safety on Lazy.force races
+   (Gabriel Scherer and Vincent Laviron, report by Edwin Török,
+    review by Vincent Laviron)
+diff --git a/driver/compmisc.ml b/driver/compmisc.ml
+index bc2d151b126a770f5ca11354e0e951004c30030d..f135b046e17e9f9fcf2b51e17498326096ff39ff 100644
+--- a/driver/compmisc.ml
++++ b/driver/compmisc.ml
+@@ -26,7 +26,10 @@ let init_path ?(dir="") () =
+       !Clflags.include_dirs
+   in
+   let dirs =
+-    !Compenv.last_include_dirs @ dirs @ Config.flexdll_dirs @
++    !Compenv.last_include_dirs @ dirs @
++    (* Config.flexdll_dirs is either [] or ["+flexdll"]: don't include a
++       reference to the Standard Library when -nostdlib was specified. *)
++    (if !Clflags.no_std_include then [] else Config.flexdll_dirs) @
+     !Compenv.first_include_dirs
+   in
+   let exp_dirs =
+-- 
+2.53.0.windows.2
+

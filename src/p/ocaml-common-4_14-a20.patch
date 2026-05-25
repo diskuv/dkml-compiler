@@ -1,0 +1,66 @@
+From 4de441d96176998b71ab807fe536558e295fd6df Mon Sep 17 00:00:00 2001
+From: Samuel Hym <samuel@tarides.com>
+Date: Mon, 9 Dec 2024 19:23:40 +0100
+Subject: [PATCH] Rename target_bindir to TARGET_BINDIR in configure
+
+(cherry picked from commit 54ca811639689aa21ce9d4c2bd7d16de331029fe)
+(cherry picked from commit 93101845dbc2c44630dbc42c6dc89fbf127f8263)
+
+diff --git a/configure b/configure
+index 3fbd83579e31392d88d3c72d4095a561f1223534..be7e5b070aa0a6279e4d96f3019196776f9b036d 100755
+GIT binary patch
+delta 208
+zcmZ4XOnKQe<%TVc3dMRMjzR9OA@NS0elDItwkqYBB^hOjIb5kZ#i?8h3aGN`>eDx5
+zGRn2*6f*)b6A&{4F$)m00x{e6oMQGn?K&uWloV_g)GO4j6-qKv^AxPmjoe=HoBevR
+jDvB0cbrp@&<cxd;B^4C$?FIQ9JaxRNVx4a}=CT3+05?N3
+
+delta 206
+zcmZ4XOnKQe<%TVc3dMRQiACwDCGkm_c`2DiwkqYBB^hOjIb5kZ#i?8h3aGN`>eDx5
+zGRn2*6f*)b6A&{4F$)m00x{e6oMQGn?bG!(v9hZ|%u`aZRZy=`w^k_0NX=8QLN{=G
+m$#3@S#j0qQsA!}nXXGm=si25&FUaTMspCZz>wL>GmlXin;Y>*Y
+
+diff --git a/configure.ac b/configure.ac
+index 15350bbb61f0176bf4a63ceef7a84cdcef29d2e1..eed08686df11b5185a0ce4f1c414ca0e12fa2a91 100644
+--- a/configure.ac
++++ b/configure.ac
+@@ -353,8 +353,8 @@ AC_ARG_ENABLE([cmm-invariants],
+ AC_ARG_WITH([target-bindir],
+   [AS_HELP_STRING([--with-target-bindir],
+     [location of the runtime binaries on the target system])],
+-  [target_bindir=$withval],
+-  [target_bindir=''])
++  [TARGET_BINDIR=$withval],
++  [TARGET_BINDIR=''])
+ 
+ AC_ARG_WITH([target-sh],
+   [AS_HELP_STRING([--with-target-sh],
+@@ -615,7 +615,7 @@ AS_IF([test "x$interpval" = "xyes"],
+ AC_CONFIG_COMMANDS([shebang],
+   [printf '%s\n%s\000\n' "$launch_method" "$ocaml_bindir" \
+     > stdlib/runtime.info
+-  printf '%s\n%s\000\n' "$target_launch_method" "$target_bindir" \
++  printf '%s\n%s\000\n' "$target_launch_method" "$TARGET_BINDIR" \
+     > stdlib/target_runtime.info],
+ dnl These declarations are put in a here-document in configure, so the command
+ dnl in '$(...)' _is_ evaluated as the content is written to config.status (by
+@@ -625,7 +625,7 @@ dnl nefarious single quotes which may appear in any of the strings.
+   target_launch_method=\
+ '$(echo "$target_launch_method" | sed -e "s/'/'\"'\"'/g")'
+   ocaml_bindir='$(echo "$ocaml_bindir" | sed -e "s/'/'\"'\"'/g")'
+-  target_bindir='$(echo "$target_bindir" | sed -e "s/'/'\"'\"'/g")'])
++  TARGET_BINDIR='$(echo "$TARGET_BINDIR" | sed -e "s/'/'\"'\"'/g")'])
+ 
+ # Are we building a cross-compiler
+ 
+@@ -2126,7 +2126,7 @@ AC_CONFIG_COMMANDS_PRE([
+   eval "exec_prefix=\"$exec_prefix\""
+   eval "ocaml_bindir=\"$bindir\""
+   eval "ocaml_libdir=\"$libdir\""
+-  AS_IF([test x"$target_bindir" = 'x'],[target_bindir="$ocaml_bindir"])
++  AS_IF([test x"$TARGET_BINDIR" = 'x'],[TARGET_BINDIR="$ocaml_bindir"])
+   AS_IF([test x"$target_launch_method" = 'x'],
+     [target_launch_method="$launch_method"])
+   prefix="$saved_prefix"
+-- 
+2.53.0.windows.2
+

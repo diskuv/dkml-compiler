@@ -1,0 +1,63 @@
+From 75e3c0604ca45bc12ff6c804d7729f6cc0f7b664 Mon Sep 17 00:00:00 2001
+From: David Allsopp <david.allsopp@metastack.com>
+Date: Fri, 5 Jul 2024 09:26:24 +0100
+Subject: [PATCH] Add Compmisc.reinit_path
+
+Compmisc.init_path initialises the load path using
+Config.standard_library. Compmisc.reinit_path generalises this, allowing
+an alternate value for the standard library location to be used. This is
+used internally when testing compiler installations in order to allow
+Ccomp.call_linker to be used.
+
+Deviations from original:
+  - Paranoid implementation using Compmisc.reinit_path used instead of
+    the change to Compmisc.init_path merged in OCaml 5.5
+
+(cherry picked from commit 6b82c95cf44071e86c3cbba2757520d0c227f339)
+(cherry picked from commit 5f6b3010176f2844402d824962de1b3d587b57ca)
+
+diff --git a/driver/compmisc.ml b/driver/compmisc.ml
+index f135b046e17e9f9fcf2b51e17498326096ff39ff..42479045bfab2b89c93385e9fb34da9bf666b1a6 100644
+--- a/driver/compmisc.ml
++++ b/driver/compmisc.ml
+@@ -19,7 +19,7 @@
+    then the standard library directory (unless the -nostdlib option is given).
+  *)
+ 
+-let init_path ?(dir="") () =
++let reinit_path ?(standard_library=Config.standard_library) ?(dir="") () =
+   let dirs =
+     if !Clflags.use_threads then "+threads" :: !Clflags.include_dirs
+     else
+@@ -33,10 +33,14 @@ let init_path ?(dir="") () =
+     !Compenv.first_include_dirs
+   in
+   let exp_dirs =
+-    List.map (Misc.expand_directory Config.standard_library) dirs in
+-  Load_path.init (dir :: List.rev_append exp_dirs (Clflags.std_include_dir ()));
++    List.map (Misc.expand_directory standard_library) dirs in
++  let std_include =
++    if !Clflags.no_std_include then [] else [standard_library] in
++  Load_path.init (dir :: List.rev_append exp_dirs std_include);
+   Env.reset_cache ()
+ 
++let init_path = reinit_path ?standard_library:None
++
+ (* Return the initial environment in which compilation proceeds. *)
+ 
+ (* Note: do not do init_path() in initial_env, this breaks
+diff --git a/driver/compmisc.mli b/driver/compmisc.mli
+index bb4c292b4f1e690811b8ed6cd35f98ff429dbe48..67a283b7605af368002286056c7a538c325c8c01 100644
+--- a/driver/compmisc.mli
++++ b/driver/compmisc.mli
+@@ -14,6 +14,7 @@
+ (**************************************************************************)
+ 
+ val init_path : ?dir:string -> unit -> unit
++val reinit_path : ?standard_library:string -> ?dir:string -> unit -> unit
+ val initial_env : unit -> Env.t
+ 
+ (* Support for flags that can also be set from an environment variable *)
+-- 
+2.53.0.windows.2
+

@@ -1,0 +1,868 @@
+From 95b856752f010a00a6125345dc78a73d3d958e2e Mon Sep 17 00:00:00 2001
+From: David Allsopp <david.allsopp@metastack.com>
+Date: Wed, 26 Feb 2025 22:53:27 +0000
+Subject: [PATCH] Add %standard_library_default
+
+%standard_library_default allows Config.standard_library_default to be
+converted to a compile-time derived value, as with existing compile-time
+constants such as %backend_type, etc. This paves the way for allowing
+Config.standard_library_default to be changed at link-time, rather than
+fixed when the Config module itself is compiled.
+
+(cherry picked from commit e995af59895ebf6188fae12c13db9bf6191ef7ad)
+
+diff --git a/.depend b/.depend
+index dfc878b3138814f9677a03eca550525ba4659f15..61b9c5d047534576460308cb9bf982085096999b 100644
+--- a/.depend
++++ b/.depend
+@@ -4168,6 +4168,7 @@ middle_end/flambda/closure_conversion.cmo : \
+     lambda/debuginfo.cmi \
+     middle_end/convert_primitives.cmi \
+     utils/config.cmi \
++    middle_end/compilenv.cmi \
+     middle_end/compilation_unit.cmi \
+     middle_end/flambda/base_types/closure_origin.cmi \
+     middle_end/flambda/base_types/closure_id.cmi \
+@@ -4197,6 +4198,7 @@ middle_end/flambda/closure_conversion.cmx : \
+     lambda/debuginfo.cmx \
+     middle_end/convert_primitives.cmx \
+     utils/config.cmx \
++    middle_end/compilenv.cmx \
+     middle_end/compilation_unit.cmx \
+     middle_end/flambda/base_types/closure_origin.cmx \
+     middle_end/flambda/base_types/closure_id.cmx \
+diff --git a/asmcomp/asmlink.ml b/asmcomp/asmlink.ml
+index d9b5753d46abc5494ea2fb962e5b4e1a59977434..a15a610ec21ce58af5cf18f90c2b4b91d4cb1107 100644
+--- a/asmcomp/asmlink.ml
++++ b/asmcomp/asmlink.ml
+@@ -229,6 +229,13 @@ let make_globals_map units_list ~crc_interfaces =
+     crc_interfaces defined
+ 
+ let make_startup_file ~ppf_dump units_list ~crc_interfaces =
++  let need_stdlib =
++    let needs_stdlib = function
++    | ({ui_need_stdlib = true; _}, _, _) -> true
++    | _ -> false
++    in
++      List.exists needs_stdlib units_list
++  in
+   let compile_phrase p = Asmgen.compile_phrase ~ppf_dump p in
+   Location.input_name := "caml_startup"; (* set name of "current" input *)
+   Compilenv.reset "_startup";
+@@ -242,6 +249,11 @@ let make_startup_file ~ppf_dump units_list ~crc_interfaces =
+   Array.iteri
+     (fun i name -> compile_phrase (Cmm_helpers.predef_exception i name))
+     Runtimedef.builtin_exceptions;
++  if need_stdlib then begin
++    compile_phrase
++      (Cmm_helpers.emit_global_string_constant
++        "caml_standard_library_nat" Config.standard_library_default)
++  end;
+   compile_phrase (Cmm_helpers.global_table name_list);
+   let globals_map = make_globals_map units_list ~crc_interfaces in
+   compile_phrase (Cmm_helpers.globals_map globals_map);
+diff --git a/asmcomp/asmpackager.ml b/asmcomp/asmpackager.ml
+index c7baa706a6f4ad76a8b85c356d0709899cb96c6b..2c79a0dd4804dd52b5b03727bb8d9f804f3ffb4a 100644
+--- a/asmcomp/asmpackager.ml
++++ b/asmcomp/asmpackager.ml
+@@ -211,6 +211,9 @@ let build_package_cmx members cmxfile =
+     else
+       Clambda (get_approx ui)
+   in
++  let ui_need_stdlib =
++    List.fold_left (fun acc unit -> acc || unit.ui_need_stdlib) false units
++  in
+   Export_info_for_pack.clear_import_state ();
+   let pkg_infos =
+     { ui_name = ui.ui_name;
+@@ -232,6 +235,7 @@ let build_package_cmx members cmxfile =
+       ui_force_link =
+           List.exists (fun info -> info.ui_force_link) units;
+       ui_export_info;
++      ui_need_stdlib;
+     } in
+   Compilenv.write_unit_info pkg_infos cmxfile
+ 
+diff --git a/asmcomp/cmm_helpers.ml b/asmcomp/cmm_helpers.ml
+index 7ad42ceaea6aa8a72b760794061506159750a6cb..a874f97459ef64ff3861bed2afcccb6104f41030 100644
+--- a/asmcomp/cmm_helpers.ml
++++ b/asmcomp/cmm_helpers.ml
+@@ -2678,6 +2678,9 @@ let predef_exception i name =
+   in
+   Cdata data_items
+ 
++let emit_global_string_constant name value =
++  Cdata (emit_string_constant (name, Global) value [])
++
+ (* Header for a plugin *)
+ 
+ let plugin_header units =
+diff --git a/asmcomp/cmm_helpers.mli b/asmcomp/cmm_helpers.mli
+index 4fe47dd7a90a543806e31586ebcd596a988c2273..412960070de935930d97c0cd2ace3f7a78c0d950 100644
+--- a/asmcomp/cmm_helpers.mli
++++ b/asmcomp/cmm_helpers.mli
+@@ -611,6 +611,9 @@ val code_segment_table: string list -> phrase
+ (** Generate data for a predefined exception *)
+ val predef_exception: int -> string -> phrase
+ 
++(** Generate data for a global string constant *)
++val emit_global_string_constant: string -> string -> phrase
++
+ val plugin_header: (Cmx_format.unit_infos * Digest.t) list -> phrase
+ 
+ (** Emit constant symbols *)
+diff --git a/bytecomp/bytegen.ml b/bytecomp/bytegen.ml
+index 12690f70617b96f92c7fdc4a5ac3a0d383d9f2e6..211da871cbe4e56c4fcfa76557b6f4b2d9ff952f 100644
+--- a/bytecomp/bytegen.ml
++++ b/bytecomp/bytegen.ml
+@@ -491,7 +491,8 @@ let comp_primitive p args =
+        | Ostype_unix -> "ostype_unix"
+        | Ostype_win32 -> "ostype_win32"
+        | Ostype_cygwin -> "ostype_cygwin"
+-       | Backend_type -> "backend_type" in
++       | Backend_type -> "backend_type"
++       | Standard_library_default -> "standard_library_default" in
+      Kccall(Printf.sprintf "caml_sys_const_%s" const_name, 1)
+   | Pisint -> Kisint
+   | Pisout -> Kisout
+diff --git a/bytecomp/bytelink.ml b/bytecomp/bytelink.ml
+index c2c6f212b10eda98015d5dc0eb8be64b47200106..af1f90b782feb9f0f9ff82721e531b792480b919 100644
+--- a/bytecomp/bytelink.ml
++++ b/bytecomp/bytelink.ml
+@@ -19,6 +19,8 @@ open Misc
+ open Config
+ open Cmo_format
+ 
++module String = Misc.Stdlib.String
++
+ type error =
+   | File_not_found of filepath
+   | Not_an_object_file of filepath
+@@ -216,7 +218,7 @@ let debug_info = ref ([] : (int * Instruct.debug_event list * string list) list)
+ 
+ (* Link in a compilation unit *)
+ 
+-let link_compunit output_fun currpos_fun inchan file_name compunit =
++let link_compunit accu output_fun currpos_fun inchan file_name compunit =
+   check_consistency file_name compunit;
+   seek_in inchan compunit.cu_pos;
+   let code_block = LongString.input_bytes inchan compunit.cu_codesize in
+@@ -233,45 +235,43 @@ let link_compunit output_fun currpos_fun inchan file_name compunit =
+     debug_info := (currpos_fun(), debug_event_list, debug_dirs) :: !debug_info
+   end;
+   Array.iter output_fun code_block;
+-  if !Clflags.link_everything then
+-    List.iter Symtable.require_primitive compunit.cu_primitives
++  let fold_primitive needs_stdlib name =
++    if !Clflags.link_everything then
++      Symtable.require_primitive name;
++    (needs_stdlib || name = "%standard_library_default")
++  in
++  List.fold_left fold_primitive accu compunit.cu_primitives
+ 
+ (* Link in a .cmo file *)
+ 
+-let link_object output_fun currpos_fun file_name compunit =
+-  let inchan = open_in_bin file_name in
+-  try
+-    link_compunit output_fun currpos_fun inchan file_name compunit;
+-    close_in inchan
+-  with
+-    Symtable.Error msg ->
+-      close_in inchan; raise(Error(Symbol_error(file_name, msg)))
+-  | x ->
+-      close_in inchan; raise x
++let link_object accu output_fun currpos_fun file_name compunit =
++  In_channel.with_open_bin file_name @@ fun inchan ->
++    try link_compunit accu output_fun currpos_fun inchan file_name compunit
++    with Symtable.Error msg -> raise(Error(Symbol_error(file_name, msg)))
+ 
+ (* Link in a .cma file *)
+ 
+-let link_archive output_fun currpos_fun file_name units_required =
+-  let inchan = open_in_bin file_name in
+-  try
+-    List.iter
+-      (fun cu ->
++let link_archive accu output_fun currpos_fun file_name units_required =
++  In_channel.with_open_bin file_name @@ fun inchan ->
++    List.fold_left
++      (fun accu cu ->
+          let name = file_name ^ "(" ^ cu.cu_name ^ ")" in
+          try
+-           link_compunit output_fun currpos_fun inchan name cu
++           link_compunit accu output_fun currpos_fun inchan name cu
+          with Symtable.Error msg ->
+            raise(Error(Symbol_error(name, msg))))
+-      units_required;
+-    close_in inchan
+-  with x -> close_in inchan; raise x
++      accu units_required
+ 
+ (* Link in a .cmo or .cma file *)
+ 
+-let link_file output_fun currpos_fun = function
++let link_file output_fun currpos_fun accu = function
+     Link_object(file_name, unit) ->
+-      link_object output_fun currpos_fun file_name unit
++      link_object accu output_fun currpos_fun file_name unit
+   | Link_archive(file_name, units) ->
+-      link_archive output_fun currpos_fun file_name units
++      link_archive accu output_fun currpos_fun file_name units
++
++let link_files output_fun currpos_fun =
++  List.fold_left (link_file output_fun currpos_fun) false
+ 
+ (* Output the debugging information *)
+ (* Format is:
+@@ -507,7 +507,9 @@ let link_bytecode ?final_name tolink exec_name standalone =
+        end;
+        let output_fun = output_bytes outchan
+        and currpos_fun () = pos_out outchan - start_code in
+-       List.iter (link_file output_fun currpos_fun) tolink;
++       let needs_stdlib =
++         link_files output_fun currpos_fun tolink
++       in
+        if check_dlls then Dll.close_all_dlls();
+        (* The final STOP instruction *)
+        output_byte outchan Opcodes.opSTOP;
+@@ -530,6 +532,21 @@ let link_bytecode ?final_name tolink exec_name standalone =
+          ~filename:final_name ~kind:"bytecode executable"
+          outchan (Symtable.initial_global_table());
+        Bytesections.record outchan "DATA";
++       let standard_library_default =
++         if standalone && needs_stdlib then
++           Some Config.standard_library_default
++         else
++           (* -custom executables don't need OSLD sections - the correct value
++              is already included in the runtime. *)
++           None
++       in
++       begin match standard_library_default with
++       | Some value ->
++           (* OCaml Standard Library Default location *)
++           output_string outchan value;
++           Bytesections.record outchan "OSLD"
++       | None -> ()
++       end;
+        (* The map of global identifiers *)
+        Symtable.output_global_map outchan;
+        Bytesections.record outchan "SYMB";
+@@ -601,6 +618,46 @@ let output_cds_file outfile =
+        Bytesections.write_toc_and_trailer outchan;
+     )
+ 
++(* [c_string_literal_of_string s] returns the C literal string representation of
++   [s], suitable for embedding in a C source file with type [char_os *]. The
++   result includes the quote markers. *)
++let c_string_literal_of_string s =
++  let b = Buffer.create (String.length s * 2) in
++  let utf16le = Bytes.create 4 in
++  let iter u =
++    match Uchar.to_int u with
++      (* Characters with C escape sequences *)
++    | 000 (* '\0' *) -> Buffer.add_string b "\\0"
++    | 009 (* '\t' *) -> Buffer.add_string b "\\t"
++    | 010 (* '\n' *) -> Buffer.add_string b "\\n"
++    | 013 (* '\r' *) -> Buffer.add_string b "\\r"
++    | 034 (* '\"' *) -> Buffer.add_string b "\\\""
++    | 092 (* '\\' *) -> Buffer.add_string b "\\\\"
++      (* Most C compilers will have no problem processing UTF-8 in the strings
++         with the characters above converted to their C representations. On
++         Windows, where the string is [wchar_t *], all characters for which
++         iswprint returns 0 are escaped using the extended [\x] notation. *)
++    | c when Config.target_win32 && (c < 32 (* ' ' *) || c >= 127) ->
++        (* Convert u to UTF-16LE, allowing for surrogate pairs *)
++        let len = Bytes.set_utf_16le_uchar utf16le 0 u in
++        for i = 1 to len / 2 do
++          Printf.bprintf b "\\x%04x" (Bytes.get_uint16_le utf16le ((i - 1) * 2))
++        done
++    | _ ->
++        Buffer.add_utf_8_uchar b u
++  in
++  if Config.target_win32 then
++    Buffer.add_char b 'L';
++  Buffer.add_char b '"';
++  Seq.iter iter (String.to_utf_8_seq s);
++  Buffer.add_char b '"';
++  Buffer.contents b
++
++let emit_runtime_standard_library_default outchan =
++  let literal = c_string_literal_of_string Config.standard_library_default in
++  Printf.fprintf outchan
++    "const char_os * caml_runtime_standard_library_default = %s;\n" literal
++
+ (* Output a bytecode executable as a C file *)
+ 
+ (* Primitives declared in the included headers but re-declared in the
+@@ -646,7 +703,7 @@ let link_bytecode_as_c tolink outfile with_main =
+          output_code_string outchan code;
+          currpos := !currpos + Bytes.length code
+        and currpos_fun () = !currpos in
+-       List.iter (link_file output_fun currpos_fun) tolink;
++       ignore (link_files output_fun currpos_fun tolink);
+        (* The final STOP instruction *)
+        Printf.fprintf outchan "\n0x%x};\n\n" Opcodes.opSTOP;
+        (* The table of global data *)
+@@ -663,6 +720,7 @@ let link_bytecode_as_c tolink outfile with_main =
+        output_data_string outchan
+          (Marshal.to_string sections []);
+        output_string outchan "\n};\n\n";
++       emit_runtime_standard_library_default outchan;
+        (* The table of primitives *)
+        Symtable.output_primitive_table outchan;
+        (* The entry point *)
+@@ -823,6 +881,7 @@ let link objfiles output_name =
+          \n\
+          enum caml_byte_program_mode caml_byte_program_mode = APPENDED;\n";
+          Symtable.output_primitive_table poc;
++         emit_runtime_standard_library_default poc;
+          output_string poc "\
+          #ifdef __cplusplus\n\
+          }\n\
+diff --git a/file_formats/cmx_format.mli b/file_formats/cmx_format.mli
+index 91ad2d1ff165d8df503c99f1a374748eb9eed288..24eb701fb4f0dbd8fa01182014e889dd07f456e2 100644
+--- a/file_formats/cmx_format.mli
++++ b/file_formats/cmx_format.mli
+@@ -45,7 +45,8 @@ type unit_infos =
+     mutable ui_apply_fun: int list;       (* Apply functions needed *)
+     mutable ui_send_fun: int list;        (* Send functions needed *)
+     mutable ui_export_info: export_info;
+-    mutable ui_force_link: bool }         (* Always linked *)
++    mutable ui_force_link: bool;          (* Always linked *)
++    mutable ui_need_stdlib: bool}         (* caml_standard_library_nat needed *)
+ 
+ (* Each .a library has a matching .cmxa file that provides the following
+    infos on the library: *)
+diff --git a/lambda/lambda.ml b/lambda/lambda.ml
+index 75598c038fc284517d04844192cbc2e9d45ef5fc..f38b3084823cfab42c407dd153a12e8a60b1e18f 100644
+--- a/lambda/lambda.ml
++++ b/lambda/lambda.ml
+@@ -25,6 +25,7 @@ type compile_time_constant =
+   | Ostype_win32
+   | Ostype_cygwin
+   | Backend_type
++  | Standard_library_default
+ 
+ type immediate_or_pointer =
+   | Immediate
+diff --git a/lambda/lambda.mli b/lambda/lambda.mli
+index 354cb0ab8c196c0c0839f21792faa4f20dd61c39..5533acbc5c915ba97a4bb2badfd6d0ef97a4cb01 100644
+--- a/lambda/lambda.mli
++++ b/lambda/lambda.mli
+@@ -26,6 +26,7 @@ type compile_time_constant =
+   | Ostype_win32
+   | Ostype_cygwin
+   | Backend_type
++  | Standard_library_default
+ 
+ type immediate_or_pointer =
+   | Immediate
+diff --git a/lambda/printlambda.ml b/lambda/printlambda.ml
+index 769df2d51fd24929a6a10bf71ce3b23c04f9e852..f8971162fa188b067d45823bf77d0309e50e01c6 100644
+--- a/lambda/printlambda.ml
++++ b/lambda/printlambda.ml
+@@ -255,7 +255,8 @@ let primitive ppf = function
+        | Ostype_unix -> "ostype_unix"
+        | Ostype_win32 -> "ostype_win32"
+        | Ostype_cygwin -> "ostype_cygwin"
+-       | Backend_type -> "backend_type" in
++       | Backend_type -> "backend_type"
++       | Standard_library_default -> "standard_library_default" in
+      fprintf ppf "sys.constant_%s" const_name
+   | Pisint -> fprintf ppf "isint"
+   | Pisout -> fprintf ppf "isout"
+diff --git a/lambda/translprim.ml b/lambda/translprim.ml
+index 6113864ca99b96558d93ad6221ac8bf9ea2e40e3..8458fc097be30bdc2b80e02bd4ea88c88e1d81b3 100644
+--- a/lambda/translprim.ml
++++ b/lambda/translprim.ml
+@@ -147,6 +147,8 @@ let primitives_table =
+     "%ostype_unix", Primitive ((Pctconst Ostype_unix), 1);
+     "%ostype_win32", Primitive ((Pctconst Ostype_win32), 1);
+     "%ostype_cygwin", Primitive ((Pctconst Ostype_cygwin), 1);
++    "%standard_library_default",
++    Primitive ((Pctconst Standard_library_default), 1);
+     "%frame_pointers", Frame_pointers;
+     "%negint", Primitive (Pnegint, 1);
+     "%succint", Primitive ((Poffsetint 1), 1);
+diff --git a/middle_end/closure/closure.ml b/middle_end/closure/closure.ml
+index 0fb50cb8806da3b5894beb7327549e62af25ab22..9a89f7ac8ac40ce04e9ff67da33731182a7652e1 100644
+--- a/middle_end/closure/closure.ml
++++ b/middle_end/closure/closure.ml
+@@ -1094,22 +1094,29 @@ let rec close ({ backend; fenv; cenv ; mutable_vars } as env) lam =
+         (Uletrec(udefs, ubody), approx)
+       end
+   (* Compile-time constants *)
+-  | Lprim(Pctconst c, [arg], _loc) ->
+-      let cst, approx =
+-        match c with
+-        | Big_endian -> make_const_bool B.big_endian
+-        | Word_size -> make_const_int (8*B.size_int)
+-        | Int_size -> make_const_int (8*B.size_int - 1)
+-        | Max_wosize -> make_const_int ((1 lsl ((8*B.size_int) - 10)) - 1 )
+-        | Ostype_unix -> make_const_bool (Sys.os_type = "Unix")
+-        | Ostype_win32 -> make_const_bool (Sys.os_type = "Win32")
+-        | Ostype_cygwin -> make_const_bool (Sys.os_type = "Cygwin")
+-        | Backend_type ->
+-            make_const_int 0 (* tag 0 is the same as Native here *)
++  | Lprim(Pctconst c, [arg], loc) ->
++      let cst f v =
++        let cst, approx = f v in
++        let arg, _approx = close env arg in
++        let id = Ident.create_local "dummy" in
++        Ulet(Immutable, Pgenval, VP.create id, arg, cst), approx
+       in
+-      let arg, _approx = close env arg in
+-      let id = Ident.create_local "dummy" in
+-      Ulet(Immutable, Pgenval, VP.create id, arg, cst), approx
++      begin match c with
++      | Big_endian -> cst make_const_bool B.big_endian
++      | Word_size -> cst make_const_int (8*B.size_int)
++      | Int_size -> cst make_const_int (8*B.size_int - 1)
++      | Max_wosize -> cst make_const_int ((1 lsl ((8*B.size_int) - 10)) - 1)
++      | Ostype_unix -> cst make_const_bool (Sys.os_type = "Unix")
++      | Ostype_win32 -> cst make_const_bool (Sys.os_type = "Win32")
++      | Ostype_cygwin -> cst make_const_bool (Sys.os_type = "Cygwin")
++      | Backend_type ->
++          cst make_const_int 0 (* tag 0 is the same as Native here *)
++      | Standard_library_default ->
++          Compilenv.need_stdlib_location ();
++          let dbg = Debuginfo.from_location loc in
++          let id = Ident.name Compilenv.stdlib_symbol_name in
++          Uprim(P.Pread_symbol id, [], dbg), Value_const (Uconst_ref (id, None))
++      end
+   | Lprim(Pignore, [arg], _loc) ->
+       let expr, approx = make_const_int 0 in
+       Usequence(fst (close env arg), expr), approx
+@@ -1489,7 +1496,9 @@ let collect_exported_structured_constants a =
+     | Uconst_ref (s, (Some c)) ->
+         Compilenv.add_exported_constant s;
+         structured_constant c
+-    | Uconst_ref (_s, None) -> assert false (* Cannot be generated *)
++    | Uconst_ref (s, None) ->
++        (* Only generated in one context *)
++        assert (s = Ident.name Compilenv.stdlib_symbol_name)
+     | Uconst_int _ -> ()
+   and structured_constant = function
+     | Uconst_block (_, ul) -> List.iter const ul
+diff --git a/middle_end/compilenv.ml b/middle_end/compilenv.ml
+index 247b069403da20693f7d770acb8f99413bb0e2e9..ca4e87ddc13deac6c89c5a0518aa12730394a339 100644
+--- a/middle_end/compilenv.ml
++++ b/middle_end/compilenv.ml
+@@ -86,7 +86,8 @@ let current_unit =
+     ui_apply_fun = [];
+     ui_send_fun = [];
+     ui_force_link = false;
+-    ui_export_info = default_ui_export_info }
++    ui_export_info = default_ui_export_info;
++    ui_need_stdlib = false }
+ 
+ let symbolname_for_pack pack name =
+   match pack with
+@@ -129,6 +130,7 @@ let reset ?packname name =
+   current_unit.ui_apply_fun <- [];
+   current_unit.ui_send_fun <- [];
+   current_unit.ui_force_link <- !Clflags.link_everything;
++  current_unit.ui_need_stdlib <- false;
+   Hashtbl.clear exported_constants;
+   structured_constants := structured_constants_empty;
+   current_unit.ui_export_info <- default_ui_export_info;
+@@ -241,11 +243,16 @@ let global_approx id =
+       | None -> Clambda.Value_unknown
+       | Some ui -> get_clambda_approx ui
+ 
++(* The name of the symbol defined globally for %standard_library_default *)
++let stdlib_symbol_name = Ident.create_persistent "caml_standard_library_nat"
++
+ (* Return the symbol used to refer to a global identifier *)
+ 
+ let symbol_for_global id =
+   if Ident.is_predef id then
+     "caml_exn_" ^ Ident.name id
++  else if Ident.same stdlib_symbol_name id then
++    Ident.name id
+   else begin
+     let unitname = Ident.name id in
+     match
+@@ -273,7 +280,7 @@ let is_predefined_exception sym =
+ 
+ let symbol_for_global' id =
+   let sym_label = Linkage_name.create (symbol_for_global id) in
+-  if Ident.is_predef id then
++  if Ident.is_predef id || Ident.same stdlib_symbol_name id then
+     Symbol.of_global_linkage predefined_exception_compilation_unit sym_label
+   else
+     Symbol.of_global_linkage (unit_for_global id) sym_label
+@@ -331,6 +338,11 @@ let need_send_fun n =
+   if not (List.mem n current_unit.ui_send_fun) then
+     current_unit.ui_send_fun <- n :: current_unit.ui_send_fun
+ 
++(* Record that caml_standard_library_nat is needed *)
++
++let need_stdlib_location () =
++  current_unit.ui_need_stdlib <- true
++
+ (* Write the description of the current unit *)
+ 
+ let write_unit_info info filename =
+diff --git a/middle_end/compilenv.mli b/middle_end/compilenv.mli
+index 8f1ef284f09f10afd74f483dbc1c6bca3781d28c..8fcc120e228e9c19358452d3012b2ef74198a7ad 100644
+--- a/middle_end/compilenv.mli
++++ b/middle_end/compilenv.mli
+@@ -101,6 +101,14 @@ val need_send_fun: int -> unit
+         (* Record the need of a currying (resp. application,
+            message sending) function with the given arity *)
+ 
++val need_stdlib_location: unit -> unit
++        (* Record that caml_standard_library_nat needs to be initialised if this
++           unit is linked. *)
++
++val stdlib_symbol_name: Ident.t
++        (* The name of the symbol defined globally for
++           %standard_library_default *)
++
+ val new_const_symbol : unit -> string
+ val closure_symbol : Closure_id.t -> Symbol.t
+         (* Symbol of a function if the function is
+diff --git a/middle_end/flambda/closure_conversion.ml b/middle_end/flambda/closure_conversion.ml
+index b218ed40dcca5bd1a927674c33c9cbee26677aae..d157202b1b59ece437c03b0057ca794b1c67d5ba 100644
+--- a/middle_end/flambda/closure_conversion.ml
++++ b/middle_end/flambda/closure_conversion.ml
+@@ -426,23 +426,30 @@ let rec close t env (lam : Lambda.lambda) : Flambda.t =
+         ~name:Names.raise)
+   | Lprim (Pctconst c, [arg], _loc) ->
+       let module Backend = (val t.backend) in
+-      let const =
+-        begin match c with
+-        | Big_endian -> lambda_const_bool Backend.big_endian
+-        | Word_size -> lambda_const_int (8*Backend.size_int)
+-        | Int_size -> lambda_const_int (8*Backend.size_int - 1)
+-        | Max_wosize ->
+-            lambda_const_int ((1 lsl ((8*Backend.size_int) - 10)) - 1)
+-        | Ostype_unix -> lambda_const_bool (String.equal Sys.os_type "Unix")
+-        | Ostype_win32 -> lambda_const_bool (String.equal Sys.os_type "Win32")
+-        | Ostype_cygwin -> lambda_const_bool (String.equal Sys.os_type "Cygwin")
+-        | Backend_type ->
+-            Lambda.const_int 0 (* tag 0 is the same as Native *)
+-        end
+-      in
+-      close t env
+-        (Lambda.Llet(Strict, Pgenval, Ident.create_local "dummy",
++      let cst f v =
++        let const = f v in
++        close t env (Lambda.Llet(Strict, Pgenval, Ident.create_local "dummy",
+                      arg, Lconst const))
++      in
++      begin match c with
++      | Big_endian -> cst lambda_const_bool Backend.big_endian
++      | Word_size -> cst lambda_const_int (8*Backend.size_int)
++      | Int_size -> cst lambda_const_int (8*Backend.size_int - 1)
++      | Max_wosize ->
++          cst lambda_const_int ((1 lsl ((8*Backend.size_int) - 10)) - 1)
++      | Ostype_unix ->
++          cst lambda_const_bool (String.equal Sys.os_type "Unix")
++      | Ostype_win32 ->
++          cst lambda_const_bool (String.equal Sys.os_type "Win32")
++      | Ostype_cygwin ->
++          cst lambda_const_bool (String.equal Sys.os_type "Cygwin")
++      | Backend_type -> cst Lambda.const_int 0 (* tag 0 is the same as Native *)
++      | Standard_library_default ->
++          Compilenv.need_stdlib_location ();
++          let symbol = t.symbol_for_global' Compilenv.stdlib_symbol_name in
++          t.imported_symbols <- Symbol.Set.add symbol t.imported_symbols;
++          name_expr (Symbol symbol) ~name:Names.pgetglobal
++      end
+   | Lprim (Pfield _, [Lprim (Pgetglobal id, [],_)], _)
+       when Ident.same id t.current_unit_id ->
+     Misc.fatal_errorf "[Pfield (Pgetglobal ...)] for the current compilation \
+diff --git a/runtime/Makefile b/runtime/Makefile
+index d81104d2bc0b3290a5831bed79f5836f510c7366..f6b929278fe47357ab25bf0dc242424dc632e5af 100644
+--- a/runtime/Makefile
++++ b/runtime/Makefile
+@@ -214,9 +214,16 @@ primitives: $(shell ./gen_primitives.sh > primitives.new; \
+                     cmp -s primitives primitives.new || echo primitives.new)
+ 	cp $^ $@
+ 
++ifeq "$(UNIX_OR_WIN32)" "unix"
++  CHAR_OS = char
++else
++  CHAR_OS = wchar_t
++endif
++
+ prims.c : primitives
+ 	export LC_ALL=C; \
+ 	(echo '#include "caml/config.h"'; \
++	 echo '#include "build_config.h"'; \
+ 	 echo 'typedef intnat value;'; \
+ 	 echo 'typedef value (*c_primitive)(void);'; \
+ 	 echo; \
+@@ -231,7 +238,9 @@ prims.c : primitives
+ 	 echo '  0 };'; \
+ 	 echo; \
+ 	 echo 'enum caml_byte_program_mode {STANDARD, APPENDED, EMBEDDED};'; \
+-   echo 'enum caml_byte_program_mode caml_byte_program_mode = STANDARD;') > $@
++   echo 'enum caml_byte_program_mode caml_byte_program_mode = STANDARD;'; \
++	 echo "const $(CHAR_OS) *caml_runtime_standard_library_default = \
++OCAML_STDLIB_DIR;") > $@
+ 
+ caml/opnames.h : caml/instruct.h
+ 	tr -d '\r' < $< | \
+@@ -268,6 +277,8 @@ build_config.h: $(ROOTDIR)/Makefile.config sak$(EXE)
+ 	  echo '#define HOST "$(HOST)"'; \
+ 	} > $@
+ 
++prims.$(O): build_config.h
++
+ # Libraries and programs
+ 
+ ocamlrun$(EXE): prims.$(O) libcamlrun.$(A)
+diff --git a/runtime/caml/dynlink.h b/runtime/caml/dynlink.h
+index b9c40fe694488ca3f14e52d006d908ab42ce72f5..a7441fcc0e4f38eb0d57995c0d6720e7c99aea85 100644
+--- a/runtime/caml/dynlink.h
++++ b/runtime/caml/dynlink.h
+@@ -46,10 +46,6 @@ extern void caml_free_shared_libs(void);
+ extern char_os * caml_parse_ld_conf(const char_os * stdlib,
+                                     struct ext_table * table);
+ 
+-/* The default location of the Standard Library as used by the runtime to find
+-   ld.conf */
+-extern const char_os *caml_runtime_standard_library_default;
+-
+ #endif /* CAML_INTERNALS */
+ 
+ #endif /* CAML_DYNLINK_H */
+diff --git a/runtime/caml/startup.h b/runtime/caml/startup.h
+index fb85173df1137b1d7014e9ee5a642b81b35bc7b3..e0b412b3909c78c297fee392a2032f73c3217e4d 100644
+--- a/runtime/caml/startup.h
++++ b/runtime/caml/startup.h
+@@ -54,6 +54,10 @@ enum caml_byte_program_mode {
+ 
+ extern enum caml_byte_program_mode caml_byte_program_mode;
+ 
++/* The default location of the Standard Library as used by the runtime to find
++   ld.conf */
++extern const char_os *caml_runtime_standard_library_default;
++
+ #endif /* CAML_INTERNALS */
+ 
+ #endif /* CAML_STARTUP_H */
+diff --git a/runtime/caml/sys.h b/runtime/caml/sys.h
+index 75b97818c108683cd7c9fabc977e3f6a04a37d88..e21736fbd1aa4404c292bef6a51fec61e5626281 100644
+--- a/runtime/caml/sys.h
++++ b/runtime/caml/sys.h
+@@ -43,6 +43,10 @@ CAMLnoreturn_end;
+ 
+ extern char_os * caml_exe_name;
+ 
++/* The default location of the Standard Library as used by the
++   %standard_library_default to find */
++extern char_os *caml_standard_library_default;
++
+ #ifdef __cplusplus
+ }
+ #endif
+diff --git a/runtime/dynlink.c b/runtime/dynlink.c
+index 7a482df19deab3803e64299f9f80030a8d7a49b7..fcdbaebe00cecfba6c3bca8ffaa0d715b042f8b0 100644
+--- a/runtime/dynlink.c
++++ b/runtime/dynlink.c
+@@ -35,6 +35,7 @@
+ #include "caml/osdeps.h"
+ #include "caml/prims.h"
+ #include "caml/signals.h"
++#include "caml/startup.h"
+ 
+ #include "build_config.h"
+ 
+@@ -55,10 +56,6 @@ struct ext_table caml_prim_name_table;
+ /* The table of shared libraries currently opened */
+ static struct ext_table shared_libs;
+ 
+-/* The default location of the Standard Library as used by the runtime to find
+-   ld.conf */
+-const char_os *caml_runtime_standard_library_default = OCAML_STDLIB_DIR;
+-
+ /* The search path for shared libraries */
+ struct ext_table caml_shared_libs_path;
+ 
+diff --git a/runtime/startup_byt.c b/runtime/startup_byt.c
+index 1d03f609a24db218dd447f84631f033b473398fa..d2470213c976c2c9b6472fbbec7683e12dcb2e20 100644
+--- a/runtime/startup_byt.c
++++ b/runtime/startup_byt.c
+@@ -473,6 +473,7 @@ CAMLexport void caml_main(char_os **argv)
+   char * req_prims;
+   char_os * shared_lib_path, * shared_libs;
+   char_os * exe_name, * proc_self_exe;
++  char_os * image_standard_library_default;
+ 
+   /* Initialize the domain */
+   caml_init_domain();
+@@ -582,6 +583,15 @@ CAMLexport void caml_main(char_os **argv)
+   req_prims = read_section(fd, &trail, "PRIM");
+   if (req_prims == NULL) caml_fatal_error("no PRIM section");
+   caml_build_primitive_table(shared_lib_path, shared_libs, req_prims);
++  /* Load the embedded overridden caml_standard_library_default value, if one is
++     available. Note that although -custom executables come through this
++     mechanism, they don't define OSLD sections because
++     caml_runtime_standard_library_default and caml_standard_library_default are
++     fundamentally equal and caml_runtime_standard_library_default is set when
++     the -custom executable is linked. */
++  image_standard_library_default = read_section_to_os(fd, &trail, "OSLD");
++  if (image_standard_library_default != NULL)
++    caml_standard_library_default = image_standard_library_default;
+   caml_stat_free(shared_lib_path);
+   caml_stat_free(shared_libs);
+   caml_stat_free(req_prims);
+diff --git a/runtime/sys.c b/runtime/sys.c
+index a77fd9d1cfb4794695db2d4a20a6b5534fb4e46d..4578a5769021ccf5e7a4294b685f92d162b010d7 100644
+--- a/runtime/sys.c
++++ b/runtime/sys.c
+@@ -59,6 +59,7 @@
+ #include "caml/sys.h"
+ #include "caml/version.h"
+ #include "caml/callback.h"
++#include "caml/startup.h"
+ #include "caml/startup_aux.h"
+ 
+ static char * error_message(void)
+@@ -661,6 +662,24 @@ CAMLprim value caml_sys_const_backend_type(value unit)
+ {
+   return Val_int(1); /* Bytecode backed */
+ }
++
++/* The native code linker doesn't synthesise calls to this primitive, instead
++   putting the required string statically in caml_standard_library_nat if any of
++   the compilation units use %standard_library_default. The primitive is omitted
++   completely in libasmrun as there are no other existing instances in the
++   native runtime where OCAML_STDLIB_DIR ends up being embedded. */
++#ifndef NATIVE_CODE
++/* If this remains unset than caml_runtime_standard_library_default is used */
++char_os *caml_standard_library_default = NULL;
++
++CAMLprim value caml_sys_const_standard_library_default(value unit)
++{
++  return caml_copy_string_of_os(
++    caml_standard_library_default ? caml_standard_library_default
++                                  : caml_runtime_standard_library_default);
++}
++#endif
++
+ CAMLprim value caml_sys_get_config(value unit)
+ {
+   CAMLparam0 ();   /* unit is unused */
+diff --git a/tools/cmpbyt.ml b/tools/cmpbyt.ml
+index 9d09a11330f3ce07206d80f677f3efdd4be05757..fc020033c03fad933e9e466169f3bb21768295f2 100644
+--- a/tools/cmpbyt.ml
++++ b/tools/cmpbyt.ml
+@@ -31,7 +31,7 @@ let rec cmpbytes ic1 ic2 len ofs =
+   end
+ 
+ let skip_section name =
+-  name = "DBUG" || name = "RNTM"
++  name = "DBUG" || name = "RNTM" || name = "OSLD"
+ 
+ let cmpbyt file1 file2 =
+   let ic1 = open_in_bin file1 in
+diff --git a/tools/objinfo.ml b/tools/objinfo.ml
+index 7d9b99c9b757c1a6c28c6165184218430434194a..c6f6829d4671973e28938a1ea4cc714bbd1c422c 100644
+--- a/tools/objinfo.ml
++++ b/tools/objinfo.ml
+@@ -32,6 +32,8 @@ let shape = ref false
+ 
+ module Magic_number = Misc.Magic_number
+ 
++let yesno_of_bool oc b = output_string oc (if b then "YES" else "no")
++
+ let input_stringlist ic len =
+   let get_string_list sect len =
+     let rec fold s e acc =
+@@ -77,13 +79,13 @@ let print_cmo_infos cu =
+         printf "YES\n";
+         printf "Primitives declared in this module:\n";
+         List.iter print_line l);
+-  printf "Force link: %s\n" (if cu.cu_force_link then "YES" else "no")
++  printf "Force link: %a\n" yesno_of_bool cu.cu_force_link
+ 
+ let print_spaced_string s =
+   printf " %s" s
+ 
+ let print_cma_infos (lib : Cmo_format.library) =
+-  printf "Force custom: %s\n" (if lib.lib_custom then "YES" else "no");
++  printf "Force custom: %a\n" yesno_of_bool lib.lib_custom;
+   printf "Extra C object files:";
+   (* PR#4949: print in linking order *)
+   List.iter print_spaced_string (List.rev lib.lib_ccobjs);
+@@ -180,7 +182,9 @@ let print_cmx_infos (ui, crc) =
+   printf "Currying functions:%a\n" pr_funs ui.ui_curry_fun;
+   printf "Apply functions:%a\n" pr_funs ui.ui_apply_fun;
+   printf "Send functions:%a\n" pr_funs ui.ui_send_fun;
+-  printf "Force link: %s\n" (if ui.ui_force_link then "YES" else "no")
++  printf "Force link: %a\n" yesno_of_bool ui.ui_force_link;
++  printf
++    "Requires caml_standard_library_nat: %a\n" yesno_of_bool ui.ui_need_stdlib
+ 
+ let print_cmxa_infos (lib : Cmx_format.library_infos) =
+   printf "Extra C object files:";
+@@ -245,6 +249,11 @@ let dump_byte ic =
+                  (input_stringlist ic len)
+            | "SYMB" ->
+                print_global_table (input_value ic)
++           | "OSLD" ->
++               let caml_standard_library_default =
++                 Bytesections.read_section_string ic section in
++               printf "caml_standard_library_default: %s\n"
++                      caml_standard_library_default
+            | _ -> ()
+        with _ -> ()
+     )
+diff --git a/tools/stripdebug.ml b/tools/stripdebug.ml
+index c977609f2e68c29f9f34c9a16e56262f1aaf7b18..7093861e945c00187cdad8a0a452712d9865eb71 100644
+--- a/tools/stripdebug.ml
++++ b/tools/stripdebug.ml
+@@ -31,12 +31,12 @@ let stripdebug infile outfile =
+                  outfile in
+   (* Skip the #! header, going straight to the first section. *)
+   seek_in ic pos_first_section;
+-  (* Copy each section except DBUG *)
++  (* Copy each section except DBUG and OSLD *)
+   Bytesections.init_record oc;
+   List.iter
+     (fun (name, len) ->
+-      if name = "DBUG" then begin
+-        seek_in ic (in_channel_length ic + len)
++      if name = "DBUG" || name = "OSLD" then begin
++        seek_in ic (pos_in ic + len)
+       end else begin
+         copy_file_chunk ic oc len;
+         Bytesections.record oc name
+diff --git a/utils/config.mli b/utils/config.mli
+index 814293faa59fe43b2c4295a46706af072b1a76e2..3acc5d3f55128515b5fa19d4eef1b0b71db7b88b 100644
+--- a/utils/config.mli
++++ b/utils/config.mli
+@@ -164,6 +164,11 @@ val model: string
+ val system: string
+ (** Name of operating system for the native-code compiler *)
+ 
++val target_win32: bool
++(** True if [target_os_type = "Win32"]
++
++    @since 5.5 *)
++
+ val asm: string
+ (** The assembler (and flags) to use for assembling
+     ocamlopt-generated code. *)
+diff --git a/utils/config.mlp b/utils/config.mlp
+index 15518287cec4f9a02d5f76a989c819036d2765ae..1f0291b5be3551fa026c0ba4e04a41f007c05bbe 100644
+--- a/utils/config.mlp
++++ b/utils/config.mlp
+@@ -123,6 +123,8 @@ let max_young_wosize = 256
+ let stack_threshold = 256 (* see runtime/caml/config.h *)
+ let stack_safety_margin = 60
+ 
++let target_win32 = Sys.win32
++
+ let architecture = "%%ARCH%%"
+ let model = "%%MODEL%%"
+ let system = "%%SYSTEM%%"
+-- 
+2.53.0.windows.2
+

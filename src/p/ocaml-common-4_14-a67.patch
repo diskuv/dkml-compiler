@@ -1,0 +1,288 @@
+From 0706824a7295e1df9f98202b9c0bb827d97b09d9 Mon Sep 17 00:00:00 2001
+From: David Allsopp <david.allsopp@metastack.com>
+Date: Mon, 16 Jun 2025 11:18:18 +0100
+Subject: [PATCH] Post-bootstrap cleanup
+
+boot/ocamlc now supports everything that the main compiler supports.
+
+(cherry picked from commit 3346af221c3a228dbc31106b4e4ebad02bb5cc1a)
+
+diff --git a/.gitignore b/.gitignore
+index 6b910250617f597a08d47ee26f352dea200dc9df..e038c15b968f62fde0dd4c32e2c04084c25d4444 100644
+--- a/.gitignore
++++ b/.gitignore
+@@ -209,11 +209,9 @@ _build
+ /stdlib/camlheader
+ /stdlib/target_camlheader*
+ /stdlib/camlheader_ur
+-/stdlib/runtime.info
+ /stdlib/labelled-*
+ /stdlib/caml
+ /stdlib/sys.ml
+-/stdlib/target_runtime.info
+ 
+ /testsuite/**/*.result
+ /testsuite/**/*.opt_result
+diff --git a/Makefile.common b/Makefile.common
+index 998e62fd6034b6b781653b6d91e471f9e1271f06..e0887539703a544a19efa53dd031885ea9bf0b34 100644
+--- a/Makefile.common
++++ b/Makefile.common
+@@ -206,43 +206,6 @@ SAK = $(ROOTDIR)/runtime/sak$(EXE)
+ BYTECODE_LAUNCHER_FLAGS = \
+   -launch-method $(call QUOTE_SINGLE,$(LAUNCH_METHOD) $(BINDIR))
+ 
+-# Historically, the native Windows ports are assumed to be finding ocamlrun
+-# using a PATH search. Since boot/ocamlc has no notion of the target, Windows
+-# requires -runtime-search to be passed explicitly.
+-ifeq "$(UNIX_OR_WIN32)" "win32"
+-BYTECODE_LAUNCHER_FLAGS += -runtime-search always
+-endif
+-
+-# $(BOOTSTRAPPED) will be non-empty after the compiler has been bootstrapped, as
+-# the -launch-method string will appear in it.
+-BOOTSTRAPPED := \
+-  $(shell grep -Fq 'launch-method' $(ROOTDIR)/boot/ocamlc && echo Bootstrapped)
+-
+-# Prior to bootstrapping, boot/ocamlc gets the correct host values from
+-# boot/runtime-launch-info and doesn't yet recognise -launch-method. After
+-# bootstrapping, both compilers must be passed -launch-method.
+-ifeq "$(BOOTSTRAPPED)" ""
+-ROOT_LINK_FLAGS := $(BYTECODE_LAUNCHER_FLAGS)
+-BYTECODE_LAUNCHER_FLAGS :=
+-endif
+-
+-ifeq "$(SUFFIXING)-$(UNIX_OR_WIN32)" "true-win32"
+-# Historically, the native Windows ports are assumed to be finding ocamlrun
+-# using a PATH search. -use-runtime ocamlrun-$(ZINC_RUNTIME_ID) won't work here
+-# as ocamlc will convert it to an absolute path. Instead, we (ab)use
+-# -runtime-variant to append the -$(ZINC_RUNTIME_ID) to the default ocamlrun.
+-BYTECODE_LAUNCHER_FLAGS += -runtime-variant -$(ZINC_RUNTIME_ID)
+-# boot/ocamlc is built with suffixing disabled, so this works both before and
+-# after bootstrapping, however this would cause $(ROOTDIR)/ocamlc to add the
+-# suffix twice. Thwart this by further (ab)using -runtime-variant.
+-ROOT_LINK_FLAGS += -runtime-variant ''
+-else ifeq "$(SUFFIXING)" "true"
+-# boot/ocamlc is built with suffixing disabled or not yet bootstrapped, so
+-# either way pass the suffixed runtime name explicitly with -use-runtime.
+-BYTECODE_LAUNCHER_FLAGS += \
+-  -use-runtime $(call QUOTE_SINGLE,$(BINDIR)/ocamlrun-$(ZINC_RUNTIME_ID))
+-endif
+-
+ MAYBE_ADD_BYTECODE_LAUNCHER_FLAGS = \
+   $(if $(filter -custom, $(1)),,\
+     -use-prims $(ROOTDIR)/runtime/primitives $(BYTECODE_LAUNCHER_FLAGS))
+diff --git a/bytecomp/bytelink.ml b/bytecomp/bytelink.ml
+index 87e1f5c071d1bb44128801a6db94d2fd932fbfe4..61399eb9037a3a43c4254dcd16bf44aed8c2de2b 100644
+--- a/bytecomp/bytelink.ml
++++ b/bytecomp/bytelink.ml
+@@ -432,9 +432,6 @@ let write_header outchan =
+     let zinc_runtime_id, offset =
+       if String.length data < 2 then
+         raise (Error (Camlheader ("corrupt header", header)))
+-      (* Compatibility with previous header format - remove post-bootstrap *)
+-      else if List.mem data.[0] ['/'; 'e'; 's'] then
+-        None, String.index data '\000' + 2
+       else if data.[0] = '\000' then
+         None, 1
+       else
+diff --git a/configure b/configure
+index 699e734fcc26ff717894dd0801295fe740c4e49e..bd896ed17d74e32770f4667ffc1604821bcd9edf 100755
+GIT binary patch
+delta 235
+zcmaEMS!L%Lm4+6^7N!>F7M3lnya(I=9b^S!w(b88vTw>@)#Fl7P@c}K!(pJHkd&F1
+zSX8Nyl3A3RT#{c@siTmYr;w3fTmn*~pfEjFheMZ7Av`lLCBM8_6QXmL4u_4nLUK`l
+zaj|Z4er`c#PHIuH4phTi9S%cz1(guTAa~c0cqdOk7tbJt%wmP&)Dne~e5fK@T@KCZ
+zk=h&*Jo!ZmB^jwu;VxYcmFaJ^I3%XOVdjvTzCnwFb-J21N5}Scx*W?(wihnuSi-tJ
+PXeEbn<#vB%&gpCb2hvLA
+
+delta 1039
+zcmaJ=&59F25N2JI?F2**f;k8&W@pLfKjKBiD7uR7#lX6thd`LjbTSPy-LbpF5?D7L
+z0=|Kbw?%OG1;pTO7d(mJ!FTWhd;%+ziJQ1T(0%Bt>hG)is_N?x`}Z&V?PzIqX|z1L
+z{5f&uc&M}&uy$4Uxn?1)Fy0a1a1Ua;c4U|8)}mWd=u%Flqp1h&0k|Rz@sCQc0^|7N
+z9oDTV?dZNL0Y>>$g7zIgiNyyX3xw1~3#+TJ1d4H&MxMaY8iQSjbD<GV(ttVbU;sTS
+zT&fhb8F%CWIxL{7k~X{V6YDAE)3(FAR{CA)IDt1gP93j&@$W=+O!)MUNCP0+w8(Pc
+z^ttPoqgpi$d&o-FB=u?0rd1?2mpek5H$`&TS_S)A<HdIC(dP5Vn_Cg6z5Q_O>5~%^
+z3es1og%<yWiOQJ~!<p36BFwiusX>$<%*ykaq^=fnP?}`r3#HBV0x4gMqh2!Zi5-=%
+zm_~uzyAfMmDU>Q>FM24BR3-DVKyGDY=YJV91&V6S*Ze7vd~zCOeilh4DJH$5=0TCz
+zW4lBS^#;IHuvSR5FT8rrUdQGMu<Ql91-l69L79T3s<~>eX-!VGYvpt1_1;n@-AvEE
+zn#NHgGdw>Y6PnX}j&aU<5g-0vXwe+Pi9L($ya;6ceV=?vti<DG_72F}>@lVXq&^tV
+zChzV>9w(G>-GSViYI3}_TCK@*r!}(XhslB_W(shBwr=x#hMw~<<E=EWjuKaITZ_Ft
+Og?Yvbk3VEn`^mo%ut&K7
+
+diff --git a/configure.ac b/configure.ac
+index 655687e83f3e165333c6110748450df22200e7cb..b18bcb72a0a8786f9936e3420c301b53749196c5 100644
+--- a/configure.ac
++++ b/configure.ac
+@@ -694,24 +694,6 @@ AS_IF([test "x$interpval" = "xyes"],
+   )]
+ )
+ 
+-# stdlib/runtime.info and stdlib/target_runtime.info are generated by commands
+-# in config.status, rather than by the .in mechanism, since the latter cannot
+-# reliably process binary files.
+-AC_CONFIG_COMMANDS([shebang],
+-  [printf '%s\n%s\000\n' "$launch_method" "$HOST_BINDIR" \
+-    > stdlib/runtime.info
+-  printf '%s\n%s\000\n' "$target_launch_method" "$TARGET_BINDIR" \
+-    > stdlib/target_runtime.info],
+-dnl These declarations are put in a here-document in configure, so the command
+-dnl in '$(...)' _is_ evaluated as the content is written to config.status (by
+-dnl standard interpretation of a here-document). The sed commands quote any
+-dnl nefarious single quotes which may appear in any of the strings.
+-  [launch_method='$(echo "$launch_method" | sed -e "s/'/'\"'\"'/g")'
+-  target_launch_method=\
+-'$(echo "$target_launch_method" | sed -e "s/'/'\"'\"'/g")'
+-  HOST_BINDIR='$(echo "$HOST_BINDIR" | sed -e "s/'/'\"'\"'/g")'
+-  TARGET_BINDIR='$(echo "$TARGET_BINDIR" | sed -e "s/'/'\"'\"'/g")'])
+-
+ # Are we building a cross-compiler
+ 
+ AS_IF(
+@@ -2372,18 +2354,16 @@ AC_CONFIG_COMMANDS_PRE([
+   AS_IF([test "x$prefix" = "xNONE"],[prefix="$ac_default_prefix"])
+   AS_IF([test "x$exec_prefix" = "xNONE"],[exec_prefix="$prefix"])
+   eval "exec_prefix=\"$exec_prefix\""
+-  # Set variables necessary to create utils/config.generated.ml and the two
+-  # runtime-launch-info templates in stdlib.
+-  # $ocaml_bindir is used for utils/config.generated.ml and is _empty_ if the
++  # Set variables necessary to create utils/config.generated.ml.
++  # $HOST_BINDIR is always the absolute path to the binary directory, in host
++  #   format (i.e. potentially with backslashes on Windows).
++  # $TARGET_BINDIR can be specified by the caller when building cross-compilers,
++  #   and the value then is used unaltered. Otherwise, $TARGET_BINDIR is set to
++  #   '.' when the compiler is configured with --with-relative-libdir or the
++  #   value of $HOST_BINDIR otherwise.
++  # $ocaml_bindir is used in utils/config.generated.ml and is _empty_ if the
+   #   compiler is configured with --with-relative-libdir (otherwise the path
+   #   would be embedded in config.cmo)
+-  # $HOST_BINDIR and $TARGET_BINDIR are used to generate the two
+-  #   runtime-launch-info files. $HOST_BINDIR is always the absolute path to the
+-  #   binary directory, in host format (i.e. potentially with backslashes on
+-  #   Windows). $TARGET_BINDIR can be specified by the caller when building
+-  #   cross-compilers, and the value then is used unaltered. Otherwise,
+-  #   $TARGET_BINDIR is set to '.' when the compiler is configured with
+-  #   --with-relative-libdir or the value of $HOST_BINDIR otherwise.
+   eval "HOST_BINDIR=\"$ocaml_bindir\""
+   AS_IF([test "x$bindir_to_libdir" = 'x'],
+     [ocaml_bindir="$HOST_BINDIR"],
+diff --git a/debugger/Makefile b/debugger/Makefile
+index 2c87de7f646b8973e7b085102dd46f44c0cc147d..7e1ff1a74af7cdf14b51cc3214d82b6c0fe63951 100644
+--- a/debugger/Makefile
++++ b/debugger/Makefile
+@@ -34,14 +34,7 @@ ifeq "$(TARGET_LIBDIR_IS_RELATIVE)" "true"
+   LINKFLAGS += $(addprefix -ccopt$(SPACE), $(BUILD_MAP_CFLAGS))
+ endif
+ else
+-LINKFLAGS += $(ROOT_LINK_FLAGS)
+-endif
+-ifeq "$(SUFFIXING)-$(UNIX_OR_WIN32)" "true-win32"
+-LINKFLAGS += -runtime-variant -$(ZINC_RUNTIME_ID)
+-else ifeq "$(SUFFIXING)" "true"
+-LINKFLAGS += \
+-  -use-prims $(ROOTDIR)/runtime/primitives \
+-  -use-runtime $(call QUOTE_SINGLE,$(BINDIR)/ocamlrun-$(ZINC_RUNTIME_ID))
++LINKFLAGS += $(BYTECODE_LAUNCHER_FLAGS)
+ endif
+ CAMLDEP=$(BEST_OCAMLDEP)
+ DEPFLAGS=-slash
+diff --git a/ocamldoc/Makefile b/ocamldoc/Makefile
+index 91d95f1d4be3460846d23f8fab3af40f47c78daf..74cc1e05f54a2dca7e065ef6ec2581008969becc 100644
+--- a/ocamldoc/Makefile
++++ b/ocamldoc/Makefile
+@@ -183,14 +183,7 @@ ifeq "$(TARGET_LIBDIR_IS_RELATIVE)" "true"
+ $(OCAMLDOC): LINKFLAGS += $(addprefix -ccopt$(SPACE), $(BUILD_MAP_CFLAGS))
+ endif
+ else
+-$(OCAMLDOC): LINKFLAGS += $(ROOT_LINK_FLAGS)
+-endif
+-ifeq "$(SUFFIXING)-$(UNIX_OR_WIN32)" "true-win32"
+-$(OCAMLDOC): LINKFLAGS += -runtime-variant -$(ZINC_RUNTIME_ID)
+-else ifeq "$(SUFFIXING)" "true"
+-$(OCAMLDOC): LINKFLAGS += \
+-  -use-prims $(ROOTDIR)/runtime/primitives \
+-  -use-runtime $(call QUOTE_SINGLE,$(BINDIR)/ocamlrun-$(ZINC_RUNTIME_ID))
++$(OCAMLDOC): LINKFLAGS += $(BYTECODE_LAUNCHER_FLAGS)
+ endif
+ 
+ $(OCAMLDOC): $(EXECMOFILES)
+diff --git a/stdlib/Makefile b/stdlib/Makefile
+index 3d0e7582a8a6acce1a397a90a8fb2b1097f412c4..a764eea18f5c8aa7ff453f7844def637b2e22e03 100644
+--- a/stdlib/Makefile
++++ b/stdlib/Makefile
+@@ -89,7 +89,7 @@ ifeq "$(INSTALL_SOURCE_ARTIFACTS)" "true"
+ 	  *.cmt *.cmti *.mli *.ml \
+ 	  "$(INSTALL_LIBDIR)"
+ endif
+-	$(INSTALL_DATA) target_$(HEADER_NAME) "$(INSTALL_LIBDIR)/$(HEADER_NAME)"
++	$(INSTALL_DATA) $(HEADER_NAME) "$(INSTALL_LIBDIR)/$(HEADER_NAME)"
+ 
+ ifeq "$(RUNTIMED)" "true"
+ install::
+@@ -141,14 +141,10 @@ target_camlheader%: tmpheader.exe
+ endif
+ 
+ MANGLING = $(filter true,$(SUFFIXING))
+-target_$(HEADER_NAME): tmpheader.exe
++$(HEADER_NAME) target_$(HEADER_NAME): tmpheader.exe
+ 	@{ printf '$(if $(MANGLING),$(ZINC_RUNTIME_ID_HI),\000)'; \
+      cat $^; } > $@
+ 
+-$(HEADER_NAME): runtime.info tmpheader.exe
+-	@{ cat $^; \
+-     printf '$(if $(filter true,$(SUFFIXING)),$(ZINC_RUNTIME_ID))'; } > $@
+-
+ # The mingw-w64 and MSVC versions of tmpheader.exe are linked with special flags
+ # to reduce their size (considerably). In particular, the entry point is
+ # overridden, which prevents the linking of crt0.
+@@ -197,7 +193,7 @@ stdlib.cmxa: $(OBJS:.cmo=.cmx)
+ 
+ .PHONY: distclean
+ distclean: clean
+-	rm -f sys.ml runtime.info target_runtime.info
++	rm -f sys.ml
+ 
+ .PHONY: clean
+ clean::
+diff --git a/stdlib/header.c b/stdlib/header.c
+index 95b72d723af199c28f260996d39b7c83f2ac4d9a..d5f5877be918ad3917cb654919d58b8799af7aae 100644
+--- a/stdlib/header.c
++++ b/stdlib/header.c
+@@ -355,15 +355,6 @@ NORETURN void search_and_exec_runtime(char_os *rntm, uint32_t rntm_bsz,
+   /* The first character of rntm is NUL for Search mode */
+   if (*rntm != 0) {
+     int status;
+-    /* boot/ocamlc writes a NUL-terminated string to RNTM. In this case,
+-       rntm_bindir_end points to that NUL (which will have been included in the
+-       length of RNTM recorded in the bytecode image) and immediately following
+-       it is the extra NUL character required by this function.
+-       Interpret this as Absolute. For Windows, where the RNTM written by
+-       boot/ocamlc will have just been "ocamlrun\0", this maintains the required
+-       Search behaviour! This can be removed after a bootstrap. */
+-    if (rntm_bindir_end + 1 == rntm_end)
+-      rntm_bindir_end++;
+     /* For Absolute mode, there is no NUL in RNTM, so rntm_bindir_end points to
+        the terminator pointed to be rntm_end. For Absolute_then_search, there is
+        a NUL in the middle of the RNTM "string", which rntm_bindir_end points
+diff --git a/tools/Makefile b/tools/Makefile
+index 518ffe310b6431040b6c0a5e31ba60db6549acfc..5ff2dd99f2a3f15ab466e89f225b1551905a92e5 100644
+--- a/tools/Makefile
++++ b/tools/Makefile
+@@ -306,14 +306,7 @@ checkstack$(EXE): checkstack.$(O)
+ caml_tex := caml-tex$(EXE)
+ 
+ ifeq "$(SUPPORTS_SHARED_LIBRARIES)" "true"
+-$(caml_tex): LINKFLAGS += $(ROOT_LINK_FLAGS)
+-endif
+-ifeq "$(SUFFIXING)-$(UNIX_OR_WIN32)" "true-win32"
+-$(caml_tex): LINKFLAGS += -runtime-variant -$(ZINC_RUNTIME_ID)
+-else ifeq "$(SUFFIXING)" "true"
+-$(caml_tex): LINKFLAGS += \
+-  -use-prims $(ROOTDIR)/runtime/primitives \
+-  -use-runtime $(call QUOTE_SINGLE,$(BINDIR)/ocamlrun-$(ZINC_RUNTIME_ID))
++$(caml_tex): LINKFLAGS += $(BYTECODE_LAUNCHER_FLAGS)
+ endif
+ 
+ # caml-tex uses str.cma and unix.cma and so must be compiled with
+-- 
+2.53.0.windows.2
+

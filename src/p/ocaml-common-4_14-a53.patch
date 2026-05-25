@@ -1,0 +1,136 @@
+From a3b5dfa4636c1ad3fb5b834ced858bc53590030e Mon Sep 17 00:00:00 2001
+From: David Allsopp <david.allsopp@metastack.com>
+Date: Sun, 6 Apr 2025 09:08:45 +0100
+Subject: [PATCH] Add Config.as_is_cc
+
+Indication as to whether ocamlopt assembles files via the C compiler or
+by calling the assembler directly.
+
+(cherry picked from commit 89671e0033846639a939db6e29d4541fb538b7fb)
+
+diff --git a/Makefile.build_config.in b/Makefile.build_config.in
+index 176110b0451fe4c4776c9e74776b7071c69252c2..cbfb69a067f7d5be36913deb5537a97358ea4796 100644
+--- a/Makefile.build_config.in
++++ b/Makefile.build_config.in
+@@ -27,6 +27,8 @@ INSTALL_PROG ?= @INSTALL_PROGRAM@
+ # Whether to install the native toplevel (ocamlnat)
+ INSTALL_OCAMLNAT = @install_ocamlnat@
+ 
++AS_IS_CC = @as_is_cc@
++
+ # The command to generate C dependency information
+ DEP_CC=@DEP_CC@ -MM
+ COMPUTE_DEPS=@compute_deps@
+diff --git a/configure b/configure
+index e693d4829e4b88253ed1707bf0ae2584971f2a41..0c3351e7b4c6c661d62d1aae44512ca03b35167f 100755
+GIT binary patch
+delta 305
+zcmeyhOl8*!l?{u6STl>`lan{k3wrdYz22V@h?#(x8Hibcn00%-KU;~1bYgKlSe<Q2
+zQE4hyN@`kSX--LeVzI5d`gEBYYzqas6rcd6a{7hsY!cIA*+i#5nZc$f43>w<*`_7t
+z6sJxXn#q=lRboOJo78lznQRi%*Un@!#j51dOg2MSXJ-Z7<ms}r*n;_Ws}z(}5bl~@
+z@S0sj1L!^_6|f>DuCz?9%ru3P)Z!8aG_?f<VATSN#RUb(>f6(1u>mpr_Ow|XB9#C`
+CS7&bk
+
+delta 141
+zcmdnBLgm*ol?{u6rW>iUi)`K>bm~ugmp>yAGXXI(5VHU=>-H{xwqg&Fl+?7u(wvg`
+z#9~_|6=!D!-DD-M>3p-<#HLHmU|TSK@+>x~>HRO+xu$=a!Dcw!VkTSWbiLcGQq#}P
+hWb>V_H;c`X3t__alv!-S?FO^ifS7%|!E6q$N&qfiG{yh`
+
+diff --git a/configure.ac b/configure.ac
+index e537a4f4b43ac925a92035597c057d92d7115180..8e6e93ea73be50492d7800c663d5796eb5472b54 100644
+--- a/configure.ac
++++ b/configure.ac
+@@ -133,6 +133,7 @@ AC_SUBST([has_monotonic_clock])
+ AC_SUBST([otherlibraries])
+ AC_SUBST([cc_has_debug_prefix_map])
+ AC_SUBST([as_has_debug_prefix_map])
++AC_SUBST([as_is_cc])
+ AC_SUBST([with_debugger]) # TODO: rename this variable
+ AC_SUBST([with_camltex])
+ AC_SUBST([ocamldoc])
+@@ -1368,27 +1369,34 @@ AS_IF([test -n "$target_alias"],
+ # to avoiding forking a C compiler process for each compilation by ocamlopt.
+ # Both AS and ASPP can be overridden by the user.
+ 
+-default_as="$CC -c"
+-default_aspp="$CC -c"
++as_is_cc=true
++default_as=''
+ 
+ AS_CASE([$as_target,$ocaml_cv_cc_vendor],
+   [*-*-linux*,gcc-*],
+     [AS_CASE([$as_cpu],
+       [x86_64|arm*|aarch64*|i[[3-6]]86|riscv*],
+-        [default_as="${toolpref}as"])],
++        [default_as="${toolpref}as"
++        as_is_cc=false])],
+   [*-*-cygwin,gcc-*],
+-    [default_as="${toolpref}as"],
++    [default_as="${toolpref}as"
++    as_is_cc=false],
+   [i686-pc-windows,*],
+     [default_as="ml -nologo -coff -Cp -c -Fo"
+-    default_aspp="$default_as"],
++    default_aspp="$default_as"
++    as_is_cc=false],
+   [x86_64-pc-windows,*],
+     [default_as="ml64 -nologo -Cp -c -Fo"
+-    default_aspp="$default_as"],
++    default_aspp="$default_as"
++    as_is_cc=false],
+   [*-*-darwin*,clang-*],
+-    [default_as="$default_as -Wno-trigraphs"
++    [default_as="$CC -c -Wno-trigraphs"
+     default_aspp="$default_as"],
+   [])
+ 
++AS_IF([test -z "$default_as"],[default_as="$CC -c"])
++AS_IF([test -z "$default_aspp"],[default_aspp="$CC -c"])
++
+ AS_IF([test "$with_pic"],
+   [fpic=true
+   AC_DEFINE([CAML_WITH_FPIC])
+diff --git a/utils/Makefile b/utils/Makefile
+index e728707be6db8b46536ee31320855b70509e1b19..3c967701bf46b9a1783d7626edf61f10471b0231 100644
+--- a/utils/Makefile
++++ b/utils/Makefile
+@@ -67,6 +67,7 @@ config.ml: config.mlp $(ROOTDIR)/Makefile.config Makefile
+ 	    $(call SUBST_STRING,MKMAINDLL) \
+ 	    $(call SUBST,MODEL) \
+ 	    $(call SUBST_STRING,NATIVECCLIBS) \
++	    $(call SUBST,AS_IS_CC) \
+ 	    $(call SUBST_STRING,OCAMLC_CFLAGS) \
+ 	    $(call SUBST_STRING,OCAMLC_CPPFLAGS) \
+ 	    $(call SUBST_STRING,OCAMLOPT_CFLAGS) \
+diff --git a/utils/config.mli b/utils/config.mli
+index 671d6d0710858f2a7e53d47696915135a2e39ca3..bebdf5bf4e631a54c79dcf6af278ad2d4495d54e 100644
+--- a/utils/config.mli
++++ b/utils/config.mli
+@@ -69,6 +69,12 @@ val c_has_debug_prefix_map : bool
+ val as_has_debug_prefix_map : bool
+ (** Whether the assembler supports --debug-prefix-map *)
+ 
++val as_is_cc : bool
++(** Whether the assembler is actually an assembler, or whether we are really
++    assembling files via the C compiler
++
++    @since 5.5 *)
++
+ val ocamlc_cflags : string
+ (** The flags ocamlc should pass to the C compiler *)
+ 
+diff --git a/utils/config.mlp b/utils/config.mlp
+index db0e71a44194b6363ebef08874943537c790befd..f5dc932d796685aaeaa42bd24c791d8b708052e3 100644
+--- a/utils/config.mlp
++++ b/utils/config.mlp
+@@ -47,6 +47,7 @@ let c_compiler = "%%CC%%"
+ let c_output_obj = "%%OUTPUTOBJ%%"
+ let c_has_debug_prefix_map = %%CC_HAS_DEBUG_PREFIX_MAP%%
+ let as_has_debug_prefix_map = %%AS_HAS_DEBUG_PREFIX_MAP%%
++let as_is_cc = %%AS_IS_CC%%
+ let ocamlc_cflags = "%%OCAMLC_CFLAGS%%"
+ let ocamlc_cppflags = "%%OCAMLC_CPPFLAGS%%"
+ (* #7678: ocamlopt uses these only to compile .c files, and the behaviour for
+-- 
+2.53.0.windows.2
+

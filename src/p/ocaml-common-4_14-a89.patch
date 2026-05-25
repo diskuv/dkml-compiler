@@ -1,0 +1,46 @@
+From be55699c12277495310a976afc8d13f39d39583a Mon Sep 17 00:00:00 2001
+From: David Allsopp <david.allsopp@metastack.com>
+Date: Thu, 24 Jul 2025 15:44:34 +0100
+Subject: [PATCH] Mark input dependencies as build
+
+Mitigates an issue with opam install --assume-built since build
+dependencies are ignored. The semantics should remain consistent: in
+particular, as there is only a single version of each of these packages,
+the key issue is that removing the package will still trigger the
+correct behaviour as the dependency graph will change.
+
+(cherry picked from commit e91a6e70eaf0cbd87e9cb21f6378e68983c9a60e)
+
+diff --git a/ocaml-variants.opam b/ocaml-variants.opam
+index c64769a6798613120e022740f1d4d4d819b95942..b68e41dbe0589f21fee6ad1e5e1338be6f4ebef3 100644
+--- a/ocaml-variants.opam
++++ b/ocaml-variants.opam
+@@ -35,18 +35,18 @@ depends: [
+   # facility is not yet available for other platforms.
+   "host-arch-x86_32" {os != "win32" & arch = "x86_32" & post}
+   ("host-arch-x86_64" {os != "win32" & arch = "x86_64" & post} |
+-   ("host-arch-x86_32" {os != "win32" & arch = "x86_64" & post} & "ocaml-option-32bit" {os != "win32" & arch = "x86_64"}))
++   ("host-arch-x86_32" {os != "win32" & arch = "x86_64" & post} & "ocaml-option-32bit" {build & os != "win32" & arch = "x86_64"}))
+   "host-arch-unknown" {os != "win32" & arch != "arm32" & arch != "arm64" & arch != "ppc64" & arch != "riscv64" & arch != "s390x" & arch != "x86_32" & arch != "x86_64" & post}
+ 
+   # Port selection (Windows)
+   # amd64 mingw-w64 / MSVC
+-  (("arch-x86_64" {os = "win32" & arch = "x86_64"} &
+-     (("system-mingw" & "mingw-w64-shims" {os-distribution = "cygwin" & post}) |
+-      "system-msvc")) |
++  (("arch-x86_64" {build & os = "win32" & arch = "x86_64"} &
++     (("system-mingw" {build} & "mingw-w64-shims" {os-distribution = "cygwin" & post}) |
++      "system-msvc" {build})) |
+   # i686 mingw-w64 / MSVC
+-   ("arch-x86_32" {os = "win32"} &
+-     (("system-mingw" & "mingw-w64-shims" {os-distribution = "cygwin" & post}) |
+-      "system-msvc")) |
++   ("arch-x86_32" {build & os = "win32"} &
++     (("system-mingw" {build} & "mingw-w64-shims" {os-distribution = "cygwin" & post}) |
++      "system-msvc" {build})) |
+   # Non-Windows systems
+    "host-system-other" {os != "win32" & post})
+ 
+-- 
+2.53.0.windows.2
+

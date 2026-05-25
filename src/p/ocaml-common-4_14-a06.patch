@@ -1,0 +1,40 @@
+From 8e8116bab94d4858d4437c4dbc9be38eba76d1c7 Mon Sep 17 00:00:00 2001
+From: David Allsopp <david.allsopp@metastack.com>
+Date: Fri, 10 Nov 2023 10:37:59 +0000
+Subject: [PATCH] headernt.c: fix segmentation fault when runtime not found
+
+(cherry picked from commit 25a4dc7c149d5c6412b1fcc51d75e67006ecede3)
+(cherry picked from commit 2889fc8ecf501e52b228e7690981d12bccba6aa3)
+
+diff --git a/Changes b/Changes
+index 7ef3664cd795f711a86d53c28ab73f6a9dce2d64..9b1caaba4b06a24c94bfbccc0e3db1d2d7a865df 100644
+--- a/Changes
++++ b/Changes
+@@ -14,6 +14,11 @@ OCaml 4.14.3 (17 February 2026)
+   (Vincent Laviron, report by François Pottier, review by Nathanaëlle Courant
+   and Gabriel Scherer)
+ 
++- #12726: fix segmentation fault under Windows when executing a bytecode file if
++  the runtime (`ocamlrun.exe`) cannot be found.
++  (Vadim Zborovskii, Nicolás Ojeda Bär, report by Vadim Zborovskii, review by
++  David Allsopp)
++
+ - #13430, #13434: protect memory-safety on Lazy.force races
+   (Gabriel Scherer and Vincent Laviron, report by Edwin Török,
+    review by Vincent Laviron)
+diff --git a/stdlib/headernt.c b/stdlib/headernt.c
+index 43109c865ea25b1304269873e6cf3f931e279e62..7f37149640b3381eea886a9a62fe07b503f8ead8 100644
+--- a/stdlib/headernt.c
++++ b/stdlib/headernt.c
+@@ -117,7 +117,7 @@ static __inline void __declspec(noreturn) run_runtime(wchar_t * runtime,
+   PROCESS_INFORMATION procinfo;
+   DWORD retcode;
+   if (SearchPath(NULL, runtime, L".exe", sizeof(path)/sizeof(wchar_t),
+-                 path, &runtime) == 0) {
++                 path, NULL) == 0) {
+     HANDLE errh;
+     errh = GetStdHandle(STD_ERROR_HANDLE);
+     write_console(errh, L"Cannot exec ");
+-- 
+2.53.0.windows.2
+

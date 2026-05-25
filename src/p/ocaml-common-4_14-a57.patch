@@ -1,0 +1,215 @@
+From 5030c0cb3dbde18075c00fb1d18a3d6ba317ff44 Mon Sep 17 00:00:00 2001
+From: David Allsopp <david.allsopp@metastack.com>
+Date: Fri, 20 Jun 2025 11:43:30 +0100
+Subject: [PATCH] ocamlobjinfo: display the runtime used by an image
+
+ocamlobjinfo now parses both RNTM and shebang lines in order to display
+the runtime being used by a bytecode executable.
+
+(cherry picked from commit 629efbfaae3aa87745dd3b55418a1ebe6740f156)
+
+diff --git a/.gitignore b/.gitignore
+index a3737edc9b9944003bc367d94e6f444749596238..6b910250617f597a08d47ee26f352dea200dc9df 100644
+--- a/.gitignore
++++ b/.gitignore
+@@ -76,6 +76,7 @@ _build
+ 
+ /bytecomp/opcodes.ml
+ /bytecomp/opcodes.mli
++/bytecomp/byterntm.ml
+ 
+ /debugger/debugger_lexer.ml
+ /debugger/debugger_parser.ml
+diff --git a/Changes b/Changes
+index 54bbcc2b128f01a2ad2b11cde52d0cf729c53c1b..b1c849d1a538413cf0f6fd972e3a33c820e95f2d 100644
+--- a/Changes
++++ b/Changes
+@@ -42,6 +42,10 @@ OCaml 4.14 maintenance version
+ 
+ ### Tools:
+ 
++- #14???: ocamlobjinfo now displays the runtime invoked by a bytecode
++  executable (either from the RNTM section or by analysing the shebang lines)
++  (David Allsopp, review by ???)
++
+ ### Manual and documentation:
+ 
+ ### Compiler user-interface and warnings:
+diff --git a/Makefile b/Makefile
+index f175718e8d4cb7615b17aeb83327e915a35dac27..10ee9fbee4066c9f241cacd2a56f809d46e3e551 100644
+--- a/Makefile
++++ b/Makefile
+@@ -690,12 +690,12 @@ natruntop:
+ otherlibs/dynlink/dynlink.cmxa: otherlibs/dynlink/native/dynlink.ml
+ 	$(MAKE) -C otherlibs/dynlink allopt
+ 
+-# Cleanup the lexer
++# Cleanup the lexers
+ 
+ partialclean::
+-	rm -f parsing/lexer.ml
++	rm -f bytecomp/byterntm.ml parsing/lexer.ml
+ 
+-beforedepend:: parsing/lexer.ml
++beforedepend:: bytecomp/byterntm.ml parsing/lexer.ml
+ 
+ # The bytecode compiler compiled with the native-code compiler
+ 
+diff --git a/bytecomp/byterntm.mli b/bytecomp/byterntm.mli
+new file mode 100644
+index 0000000000000000000000000000000000000000..404acfbdec819966491681370073b721cecf138b
+--- /dev/null
++++ b/bytecomp/byterntm.mli
+@@ -0,0 +1,21 @@
++(**************************************************************************)
++(*                                                                        *)
++(*                                 OCaml                                  *)
++(*                                                                        *)
++(*            David Allsopp, University of Cambridge & Tarides            *)
++(*                                                                        *)
++(*   Copyright 2025 David Allsopp Ltd.                                    *)
++(*                                                                        *)
++(*   All rights reserved.  This file is distributed under the terms of    *)
++(*   the GNU Lesser General Public License version 2.1, with the          *)
++(*   special exception on linking described in the file LICENSE.          *)
++(*                                                                        *)
++(**************************************************************************)
++
++(** Parser for RNTM in bytecode executables. Parses both the RNTM section and
++    the shebang launcher produced by {!Bytelink}. *)
++
++val read_runtime : in_channel -> string option
++(** Returns the runtime used by this tendered/standalone image. If the runtime
++    used cannot be parsed, or the image was linked using -without-runtime, then
++    [None] is returned. *)
+diff --git a/bytecomp/byterntm.mll b/bytecomp/byterntm.mll
+new file mode 100644
+index 0000000000000000000000000000000000000000..a669cb931d902eb69cc0dbab3a43870470b7ea3f
+--- /dev/null
++++ b/bytecomp/byterntm.mll
+@@ -0,0 +1,58 @@
++(**************************************************************************)
++(*                                                                        *)
++(*                                 OCaml                                  *)
++(*                                                                        *)
++(*            David Allsopp, University of Cambridge & Tarides            *)
++(*                                                                        *)
++(*   Copyright 2025 David Allsopp Ltd.                                    *)
++(*                                                                        *)
++(*   All rights reserved.  This file is distributed under the terms of    *)
++(*   the GNU Lesser General Public License version 2.1, with the          *)
++(*   special exception on linking described in the file LICENSE.          *)
++(*                                                                        *)
++(**************************************************************************)
++
++rule analyze = parse
++(* RNTM section or shebang directly to the runtime *)
++  | "#!" ([^ ' ' '\n']+ as runtime) '\n'
++  | ([^ '\000']+ as runtime) '\000' eof
++      { Some runtime }
++
++(* Shell script launcher (if it matches, this always matches more than the above
++   regexp) *)
++  | "#!" [^ ' ' '\n']+ "/sh\nexec '"
++      { analyze_sh_launcher (Buffer.create 1024) lexbuf }
++
++  | _ | eof
++      { None }
++
++and analyze_sh_launcher b = parse
++(* An embedded single quote in the filename passed to exec *)
++  | "'\\''"
++      { analyze_sh_launcher (Buffer.add_char b '\''; b) lexbuf }
++
++  | [^ '\'']+ as s
++      { analyze_sh_launcher (Buffer.add_string b s; b) lexbuf }
++
++(* End of the filename parsed; return the entire string *)
++  | "' \"$0\" \"$@\"\n"
++      { Some (Buffer.contents b) }
++
++  | _ | eof
++      { None }
++
++{
++let read_runtime ic =
++  seek_in ic 0;
++  let lexbuf =
++    try
++      if really_input_string ic 2 = "#!" then
++        let () = seek_in ic 0 in
++        Some (Lexing.from_channel ic)
++      else
++        let rntm = Bytesections.(read_section_string ic "RNTM") in
++        Some (Lexing.from_string rntm)
++    with End_of_file | Not_found -> None
++  in
++  Option.bind lexbuf analyze
++}
+diff --git a/compilerlibs/Makefile.compilerlibs b/compilerlibs/Makefile.compilerlibs
+index f6618999fc86e143603d5630e087d3840096a4d8..b6fde28dee2daa4198724a91516182d4024ff321 100644
+--- a/compilerlibs/Makefile.compilerlibs
++++ b/compilerlibs/Makefile.compilerlibs
+@@ -164,6 +164,7 @@ COMMON_CMI = $(UTILS_CMI) $(PARSING_CMI) $(TYPING_CMI) $(LAMBDA_CMI) $(COMP_CMI)
+ COMMON = $(UTILS) $(PARSING) $(TYPING) $(LAMBDA) $(COMP)
+ 
+ BYTECOMP = \
++  bytecomp/byterntm.cmo \
+   bytecomp/instruct.cmo \
+   bytecomp/bytegen.cmo \
+   bytecomp/printinstr.cmo \
+diff --git a/tools/.depend b/tools/.depend
+index 93974de7745d2f32c64302a001d0b23150ba0425..a43a23b06afb6f9568714cdbe06c93c5ab1ee30d 100644
+--- a/tools/.depend
++++ b/tools/.depend
+@@ -100,6 +100,7 @@ objinfo.cmo : \
+     ../file_formats/cmo_format.cmi \
+     ../file_formats/cmi_format.cmi \
+     ../bytecomp/bytesections.cmi \
++    ../bytecomp/byterntm.cmi \
+     ../utils/binutils.cmi
+ objinfo.cmx : \
+     ../bytecomp/symtable.cmx \
+@@ -117,6 +118,7 @@ objinfo.cmx : \
+     ../file_formats/cmo_format.cmi \
+     ../file_formats/cmi_format.cmx \
+     ../bytecomp/bytesections.cmx \
++    ../bytecomp/byterntm.cmx \
+     ../utils/binutils.cmx
+ ocamlcmt.cmo : \
+     ../typing/untypeast.cmi \
+diff --git a/tools/objinfo.ml b/tools/objinfo.ml
+index c6f6829d4671973e28938a1ea4cc714bbd1c422c..274c36b12d1b64f38718b92534f8139940d05ec4 100644
+--- a/tools/objinfo.ml
++++ b/tools/objinfo.ml
+@@ -219,10 +219,14 @@ let p_list title print = function
+       p_title title;
+       List.iter print l
+ 
++let p_runtime =
++  printf "Runtime:\n\t%s\n"
++
+ let dump_byte ic =
+   Bytesections.read_toc ic;
+   let toc = Bytesections.toc () in
+   let toc = List.sort Stdlib.compare toc in
++  Option.iter p_runtime (Byterntm.read_runtime ic);
+   List.iter
+     (fun (section, _) ->
+        try
+diff --git a/tools/ocamlsize b/tools/ocamlsize
+index 2ddb1959abdd7ef05301b9915887649fb35272b0..b9314125a9ec716eee60a1c1e8a3218f3d607606 100755
+--- a/tools/ocamlsize
++++ b/tools/ocamlsize
+@@ -20,7 +20,7 @@ foreach $f (@ARGV) {
+     read(FILE, $header, 2);
+     if ($header eq '#!') {
+       $path = <FILE>;
+-      if ($path eq '/bin/sh') {
++      if ($path =~ m/\/sh$/) {
+         # exec form of the shebang header
+         $path = <FILE>;
+         if ($path =~ s/^exec '(.*)' "\$0" "\$@\"$/$1/ > 0) {
+-- 
+2.53.0.windows.2
+

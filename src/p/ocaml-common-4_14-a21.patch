@@ -1,0 +1,87 @@
+From 6748637a898c6e0a6999dae470d64702f571059b Mon Sep 17 00:00:00 2001
+From: Samuel Hym <samuel@tarides.com>
+Date: Wed, 2 Oct 2024 13:24:03 +0200
+Subject: [PATCH] Add a configurable library directory on target
+
+Add a `TARGET_LIBDIR` variable to `configure` and assign a Makefile
+`TARGET_LIBDIR` variable with it
+Use the value of `LIBDIR` by default for this new variable
+Use `TARGET_LIBDIR` to define the `OCAML_STDLIB_DIR` macro used by the
+runtime
+
+When building a cross compiler, the OCaml standard library has no reason
+to be found at the same paths on the host and on the target. This allows
+users to provide a path that is meaningful to look for libraries to link
+dynamically on the target.
+
+Deviations from original:
+  - Variable introduced as an alias of LIBDIR, for convenience with
+    other subsequent patches.
+
+(cherry picked from commit 799fd8e2d0e0c250d03f5174f83d110ae5d24057)
+(cherry picked from commit 8d5c1cbb2e8cd10b214ea52481a98d2c44bca705)
+
+diff --git a/Makefile.config.in b/Makefile.config.in
+index 51fb2ceb7dd39dee9ebad1d325582a347617bf64..5348f45d68a459b658b42e4ca89f398d96a5b85c 100644
+--- a/Makefile.config.in
++++ b/Makefile.config.in
+@@ -46,9 +46,12 @@ BINDIR=@bindir@
+ 
+ datarootdir=@datarootdir@
+ 
+-### Where to install the standard library
++### Where to install the standard library on host
+ LIBDIR=@libdir@
+ 
++### Where to look for the standard library on target
++TARGET_LIBDIR=@TARGET_LIBDIR@
++
+ ### Where to install the stub code for the standard library
+ STUBLIBDIR=@libdir@/stublibs
+ 
+diff --git a/configure b/configure
+index be7e5b070aa0a6279e4d96f3019196776f9b036d..333c98c0ae8cd7b4f9643e7b59b1f10e7799ccaa 100755
+GIT binary patch
+delta 94
+zcmZ4XO!@pX<qdiPydjQ3?ye#6KAui4o<W;+19bkiNBA)UF%u9o12GE_vjQ>O_6R?A
+gqqPz!8f=wRax#-rGK-YBrYmk@_1J#lH+$H304WC{1poj5
+
+delta 50
+zcmX^AOnKQe<qdiPn{5KL|FviMF#<6Y5HkZY3lOscG28YGKX${l+c*DapYt668u}FS
+
+diff --git a/configure.ac b/configure.ac
+index eed08686df11b5185a0ce4f1c414ca0e12fa2a91..da2fc2c1fcb7c8255239148adc9a1e43e7571898 100644
+--- a/configure.ac
++++ b/configure.ac
+@@ -170,6 +170,7 @@ AC_SUBST([compute_deps])
+ AC_SUBST([naked_pointers])
+ AC_SUBST([naked_pointers_checker])
+ AC_SUBST([ar_supports_response_files])
++AC_SUBST([TARGET_LIBDIR])
+ AC_SUBST([QS])
+ AC_SUBST([target_bindir])
+ 
+@@ -2127,6 +2128,7 @@ AC_CONFIG_COMMANDS_PRE([
+   eval "ocaml_bindir=\"$bindir\""
+   eval "ocaml_libdir=\"$libdir\""
+   AS_IF([test x"$TARGET_BINDIR" = 'x'],[TARGET_BINDIR="$ocaml_bindir"])
++  TARGET_LIBDIR="$libdir"
+   AS_IF([test x"$target_launch_method" = 'x'],
+     [target_launch_method="$launch_method"])
+   prefix="$saved_prefix"
+diff --git a/runtime/Makefile b/runtime/Makefile
+index b62a5791a93a22b80f888b34dcdf989eada790c3..e51ed64157f147a5ad145cae38324833b5f0bbf8 100644
+--- a/runtime/Makefile
++++ b/runtime/Makefile
+@@ -263,7 +263,7 @@ C_LITERAL = $(shell ./sak$(EXE) encode-C-literal '$(1)')
+ 
+ build_config.h: $(ROOTDIR)/Makefile.config sak$(EXE)
+ 	echo '/* This file is generated from $(ROOTDIR)/Makefile.config */' > $@
+-	echo '#define OCAML_STDLIB_DIR $(call C_LITERAL,$(LIBDIR))' >> $@
++	echo '#define OCAML_STDLIB_DIR $(call C_LITERAL,$(TARGET_LIBDIR))' >> $@
+ 	echo '#define HOST "$(HOST)"' >> $@
+ 
+ # Libraries and programs
+-- 
+2.53.0.windows.2
+

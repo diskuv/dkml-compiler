@@ -1,0 +1,101 @@
+From 03f6ae76633630f006de8248249a46de1c46f14f Mon Sep 17 00:00:00 2001
+From: David Allsopp <david.allsopp@metastack.com>
+Date: Mon, 29 Aug 2022 10:34:52 +0100
+Subject: [PATCH] Create symlinks on Windows when available
+
+Previously Windows unconditionally uses `cp`, doubling the size required
+for the OCaml binaries. `configure` now determines if `ln` creates
+native symlinks and only uses `cp` if that fails. Users of the compiler
+are simply required to enable Developer Mode (or build OCaml using an
+elevated shell).
+
+(cherry picked from commit b082fd17f080c7fb7e13f2bbb57edb06cd1e81c8)
+(cherry picked from commit 372e5f98d1b5fd7472b776a501bbd19c341d9d95)
+
+diff --git a/Changes b/Changes
+index 893e10eab3fd3e8fd842ae93d7942ebfbcaf1302..944b16e0a2febd0e8d91ec13f93aa55cec5ba866 100644
+--- a/Changes
++++ b/Changes
+@@ -1,4 +1,4 @@
+-OCaml 4.14.3 (17 February 2026)
++OCaml 4.14 maintenance version
+ ------------------------------
+ 
+ ### Runtime system:
+@@ -34,6 +34,11 @@ OCaml 4.14.3 (17 February 2026)
+   not affect the bytecode executables installed as part of the build. The old
+   mechanism `make TARGET_BINDIR=..` no longer works.
+   (David Allsopp, review by Damien Doligez, Xavier Leroy and Olivier Nicole)
++
++- #13494: Use native symlinks on Windows for the OCaml installation, reducing
++  disk usage considerably.
++  (David Allsopp, review by Nicolás Ojeda Bär and Gabriel Scherer)
++
+ ### Bug fixes:
+ 
+ - #12070, #12075, #13209: auto-detect whether `ar` support @FILE arguments at
+@@ -84,10 +89,6 @@ OCaml 4.14.3 (17 February 2026)
+   demarshaling.
+   (Benoît Vaugon, review by David Allsopp and Gabriel Scherer)
+ 
+-- private: robustify intern.c
+-  (Xavier Leroy, review by Damien Doligez and Olivier Nicole)
+-
+-
+ OCaml 4.14.2 (14 March 2024)
+ ----------------------------
+ 
+diff --git a/aclocal.m4 b/aclocal.m4
+index 8b00d06f37576707156cb166ba3fcf9053b96005..84e1a2a66139a905044b389420877e9bef88626b 100644
+--- a/aclocal.m4
++++ b/aclocal.m4
+@@ -510,3 +510,18 @@ AC_DEFUN([OCAML_QUOTED_STRING_ID], [
+     fi
+   done
+ ])
++
++AC_DEFUN([OCAML_CHECK_LN_ON_WINDOWS], [
++  AC_MSG_CHECKING([for a workable solution for ln -sf])
++  ln -sf configure conftestLink
++  AS_IF([test -z "$(cmd /c dir conftestLink 2>/dev/null | grep -F SYMLINK)"],
++    [rm -f conftestLink
++    CYGWIN=winsymlinks:native ln -sf configure conftestLink
++    AS_IF([test -z "$(cmd /c dir conftestLink 2>/dev/null | grep -F SYMLINK)"],
++      [ln='cp -pf'],
++      [ln='CYGWIN=winsymlinks:native ln -sf']
++    )],
++    [ln='ln -sf']
++  )
++  AC_MSG_RESULT([$ln])
++])
+diff --git a/configure b/configure
+index 4d8b660e1f8891c59e2312ec1a3d68b7d25f0887..c0eecd0c313dd2b17017529008a23073e2445389 100755
+GIT binary patch
+delta 524
+zcmZ4SSo!O7<%Sl<7N!>F7M3ln6IM=7YGO5=7R1Cd{lP6JHi^WfoK%J4{G8H~%=|os
+zwEQB4oIC~H;<V|8&5ZK(i3;WUMcKI2=;`SxC@I*fnOQ5;aw$MHDkSIUrDdj<7Nvq&
+zC8@<FKACyhK>5rx1rSd`w@N`tMI$*kML|DVAtkd2MV*3?oqkGcnSNerPL4u-jY4`+
+zYJq~Tn?i7;uaBpnx2BS{LP<tyo`Mz7z@l6Q-82;4KtTls=ScT(Pe0r8%)H{t+#I0Y
+z#a4NVC7ETZ1YL;k#(H8LiQkPmdA91wKpzyOsdJ^~6sLm2$yS|^8`ZhE(lWWkkaR$z
+y1uQ=Op&YZRTuvS+>`l2;5{u(glQZ&xfeH}<M@Reom8?L_2E^>!=da}8^Z)=s)~aOy
+
+delta 53
+zcmezRTzSP~<%Sl<7N!>F7M3ln6ISvo06|Wkt$K2Sf^I>Ydi$HztU$~L#O&MOtmfeK
+F001_h6*m9?
+
+diff --git a/configure.ac b/configure.ac
+index 66ada6a87d0d456f0709e7435a562d31f89d2fb8..15350bbb61f0176bf4a63ceef7a84cdcef29d2e1 100644
+--- a/configure.ac
++++ b/configure.ac
+@@ -562,7 +562,7 @@ ocamlsrcdir=${ocamlsrcdir%X}
+ AS_CASE([$host],
+   [*-*-mingw32|*-pc-windows],
+     [unix_or_win32="win32"
+-    ln='cp -pf'
++    OCAML_CHECK_LN_ON_WINDOWS
+     ocamlsrcdir="$(LC_ALL=C.UTF-8 cygpath -w -- "$ocamlsrcdir")"
+     unixlib="win32unix"
+     ],
+-- 
+2.53.0.windows.2
+

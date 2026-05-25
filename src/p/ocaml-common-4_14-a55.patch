@@ -1,0 +1,57 @@
+From 4e04d69a6b4dcdabca03982d508a611d14d249fc Mon Sep 17 00:00:00 2001
+From: David Allsopp <david.allsopp@metastack.com>
+Date: Wed, 18 Jun 2025 11:10:28 +0100
+Subject: [PATCH] Simplify the computation for the runtime name
+
+(cherry picked from commit a70f9add93c4c33bdd55863be147e25b70721f96)
+
+diff --git a/bytecomp/bytelink.ml b/bytecomp/bytelink.ml
+index 03d53a4bbf3f423a050191f470b4579f9b3c89ce..b82465bbe92d646e4a198bbaf5c0564582cc2763 100644
+--- a/bytecomp/bytelink.ml
++++ b/bytecomp/bytelink.ml
+@@ -401,25 +401,22 @@ let find_bin_sh () =
+    called) *)
+ 
+ let write_header outchan =
+-  let use_runtime, runtime =
+-    if String.length !Clflags.use_runtime > 0 then
+-      (true, make_absolute !Clflags.use_runtime)
+-    else
+-      (false, "ocamlrun" ^ !Clflags.runtime_variant)
+-  in
+-  (* Write the header *)
+   let runtime_info =
+     let header = "camlheader" in
+     try read_runtime_launch_info (Load_path.find header)
+     with Not_found -> raise (Error (File_not_found header))
+   in
+   let runtime =
+-    (* Historically, the native Windows ports are assumed to be finding
+-       ocamlrun using a PATH search. *)
+-    if use_runtime || Sys.win32 then
+-      runtime
++    if String.length !Clflags.use_runtime > 0 then
++      make_absolute !Clflags.use_runtime
+     else
+-      Filename.concat runtime_info.bindir runtime
++      let runtime = "ocamlrun" ^ !Clflags.runtime_variant in
++      (* Historically, the native Windows ports are assumed to be finding
++         ocamlrun using a PATH search. *)
++      if Sys.win32 then
++        runtime
++      else
++        Filename.concat runtime_info.bindir runtime
+   in
+   (* Determine which method will be used for launching the executable:
+      Executable: concatenate the bytecode image to the executable stub
+@@ -446,6 +443,7 @@ let write_header outchan =
+       else
+         Shebang_runtime
+   in
++  (* Write the header *)
+   match launcher with
+   | Shebang_runtime ->
+       (* Use the runtime directly *)
+-- 
+2.53.0.windows.2
+

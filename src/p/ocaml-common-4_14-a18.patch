@@ -1,0 +1,78 @@
+From 13a274ca36f0142a706bdc46d36b216c6be5bdc8 Mon Sep 17 00:00:00 2001
+From: David Allsopp <david.allsopp@metastack.com>
+Date: Sun, 29 Sep 2024 11:44:12 +0100
+Subject: [PATCH] Correct OOM semantics of caml_stat_strdup_to_os
+
+The Windows implementation caml_stat_strdup_to_utf16 returned NULL on
+OOM, where caml_stat_strdup raises Out_of_memory. Windows implementation
+fixed to raise Out_of_memory.
+
+Deviations from original:
+  - Removed definition of caml_stat_strdup_noexc_to_os from caml/misc.h
+  - Implemented directly by using caml_stat_alloc
+
+(cherry picked from commit 3adf26f4284e4f8c74cfe347565466e6572e2d22)
+(cherry picked from commit e4f44b9c58cd5a3935c6bcca59316b743c6a0954)
+
+diff --git a/Changes b/Changes
+index 944b16e0a2febd0e8d91ec13f93aa55cec5ba866..e24c1b2fdc77a33f497814a53a365381c21c66f1 100644
+--- a/Changes
++++ b/Changes
+@@ -8,6 +8,11 @@ OCaml 4.14 maintenance version
+   entries found in ld.conf.
+   (David Allsopp, review by Stephen Dolan)
+ 
++* #13497: Correct implementation of caml_stat_strdup_to_utf16 to raise
++  Out_of_memory instead of returning of NULL (the behaviour of
++  caml_stat_strdup_to_os was inconsistent between Unix/Windows).
++  (David Allsopp, review by Nick Barnes, Antonin Décimo and Miod Vallat)
++
+ ### Code generation and optimizations:
+ 
+ ### Standard library:
+diff --git a/runtime/caml/osdeps.h b/runtime/caml/osdeps.h
+index bc8cd3b9e682b93b295b700d3ee312243734c839..21e1166359153b0d45d0be92858e5a0e082764dd 100644
+--- a/runtime/caml/osdeps.h
++++ b/runtime/caml/osdeps.h
+@@ -147,8 +147,10 @@ CAMLextern clock_t caml_win32_clock(void);
+    [caml_windows_unicode_runtime_enabled] is non-zero **and** [s] is valid
+    UTF-8, or the current Windows code page otherwise.
+ 
+-   The returned string is allocated with [caml_stat_alloc], so it should be free
+-   using [caml_stat_free].
++   The returned string is allocated with [caml_stat_alloc], so it should be
++   freed using [caml_stat_free].
++
++   If allocation fails, this raises Out_of_memory.
+ */
+ CAMLextern wchar_t* caml_stat_strdup_to_utf16(const char *s);
+ 
+@@ -156,8 +158,10 @@ CAMLextern wchar_t* caml_stat_strdup_to_utf16(const char *s);
+    re-encoded in UTF-8 if [caml_windows_unicode_runtime_enabled] is non-zero or
+    the current Windows code page otherwise.
+ 
+-   The returned string is allocated with [caml_stat_alloc], so it should be free
+-   using [caml_stat_free].
++   The returned string is allocated with [caml_stat_alloc], so it should be
++   freed using [caml_stat_free].
++
++   If allocation fails, this raises Out_of_memory.
+ */
+ CAMLextern char* caml_stat_strdup_of_utf16(const wchar_t *s);
+ 
+diff --git a/runtime/win32.c b/runtime/win32.c
+index 77e5f39fb057fb8c4e11d1d4d56ebfad5652da4b..13549852f9baaadc9952358c8624d288d488bc9f 100644
+--- a/runtime/win32.c
++++ b/runtime/win32.c
+@@ -936,7 +936,7 @@ CAMLexport wchar_t* caml_stat_strdup_to_utf16(const char *s)
+   int retcode;
+ 
+   retcode = win_multi_byte_to_wide_char(s, -1, NULL, 0);
+-  ws = caml_stat_alloc_noexc(retcode * sizeof(*ws));
++  ws = caml_stat_alloc(retcode * sizeof(*ws));
+   win_multi_byte_to_wide_char(s, -1, ws, retcode);
+ 
+   return ws;
+-- 
+2.53.0.windows.2
+

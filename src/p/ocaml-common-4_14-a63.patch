@@ -1,0 +1,648 @@
+From 783920beb4c0f6016847058fb3358df1ed193b1a Mon Sep 17 00:00:00 2001
+From: David Allsopp <david.allsopp@metastack.com>
+Date: Sun, 11 Apr 2021 16:12:02 +0100
+Subject: [PATCH] Mangle the bytecode runtime executable names
+
+New option --disable-suffixing controls whether the build should use any
+of the computed values for mangling its own files.
+
+(cherry picked from commit 2783945825b2f53f55dec7557f8c1bb91c46291a)
+
+diff --git a/Changes b/Changes
+index 0c735b825127026b35653fca4dfc0b29500a4b57..c0a35ee1e5cbf6219e1bf52e959cb7fb790abdb6 100644
+--- a/Changes
++++ b/Changes
+@@ -36,7 +36,10 @@ OCaml 4.14 maintenance version
+ 
+ - #14???: Introduce Runtime IDs for use in filename mangling to allow different
+   configurations and different versions of the runtime system to coexist
+-  harmoniously on a single system.
++  harmoniously on a single system. The IDs are used, along with the host
++  triplet, to provide mangled names for the ocamlrun executable and its
++  variants, with symlinks created for the original names. The behaviour is
++  disabled by configuring with --disable-suffixing.
+   (David Allsopp, review by ???)
+ 
+ ### Code generation and optimizations:
+diff --git a/Makefile b/Makefile
+index 0e8734ee9f6b673e437a2043f821906c0822d8b0..3157d01bfcc38d0ce4d237ac736f9c1731dbe943 100644
+--- a/Makefile
++++ b/Makefile
+@@ -45,7 +45,8 @@ COMPFLAGS=-strict-sequence -principal -absname \
+           -warn-error +a \
+           -bin-annot -safe-string -strict-formats $(INCLUDES)
+ LINKFLAGS=$(OC_COMMON_LINKFLAGS)
+-BYTECODE_LINKFLAGS = $(call ADD_BYTECODE_RUNTIME, $(LINKFLAGS)) $(LINKFLAGS)
++BYTECODE_LINKFLAGS = \
++  $(call MAYBE_ADD_BYTECODE_LAUNCHER_FLAGS, $(LINKFLAGS)) $(LINKFLAGS)
+ 
+ ifeq "$(strip $(NATDYNLINKOPTS))" ""
+ OCAML_NATDYNLINKOPTS=
+@@ -376,8 +377,9 @@ DOC_FILES=\
+   LICENSE
+ 
+ # Installation
++
+ .PHONY: install
+-install:
++install::
+ 	$(MKDIR) "$(INSTALL_BINDIR)"
+ 	$(MKDIR) "$(INSTALL_LIBDIR)"
+ ifeq "$(SUPPORTS_SHARED_LIBRARIES)" "true"
+diff --git a/Makefile.build_config.in b/Makefile.build_config.in
+index e077be4f0a937d8019b46ade04fa16536df86e71..c18cb03bb6869492ccb31d964773caa137263581 100644
+--- a/Makefile.build_config.in
++++ b/Makefile.build_config.in
+@@ -38,6 +38,7 @@ OCAML_CC_VENDOR = @ocaml_cc_vendor@
+ 
+ LAUNCH_METHOD = @launch_method@
+ TARGET_LAUNCH_METHOD = @target_launch_method@
++SUFFIXING = @suffixing@
+ 
+ BUILD_PATH_LOGICAL = @srcdir_abs@
+ BUILD_PATH_PHYSICAL = @srcdir_abs_real@
+diff --git a/Makefile.common b/Makefile.common
+index 28af536e6ecbd93699038bf37d942de1f6cd4c3b..998e62fd6034b6b781653b6d91e471f9e1271f06 100644
+--- a/Makefile.common
++++ b/Makefile.common
+@@ -226,6 +226,23 @@ ROOT_LINK_FLAGS := $(BYTECODE_LAUNCHER_FLAGS)
+ BYTECODE_LAUNCHER_FLAGS :=
+ endif
+ 
++ifeq "$(SUFFIXING)-$(UNIX_OR_WIN32)" "true-win32"
++# Historically, the native Windows ports are assumed to be finding ocamlrun
++# using a PATH search. -use-runtime ocamlrun-$(ZINC_RUNTIME_ID) won't work here
++# as ocamlc will convert it to an absolute path. Instead, we (ab)use
++# -runtime-variant to append the -$(ZINC_RUNTIME_ID) to the default ocamlrun.
++BYTECODE_LAUNCHER_FLAGS += -runtime-variant -$(ZINC_RUNTIME_ID)
++# boot/ocamlc is built with suffixing disabled, so this works both before and
++# after bootstrapping, however this would cause $(ROOTDIR)/ocamlc to add the
++# suffix twice. Thwart this by further (ab)using -runtime-variant.
++ROOT_LINK_FLAGS += -runtime-variant ''
++else ifeq "$(SUFFIXING)" "true"
++# boot/ocamlc is built with suffixing disabled or not yet bootstrapped, so
++# either way pass the suffixed runtime name explicitly with -use-runtime.
++BYTECODE_LAUNCHER_FLAGS += \
++  -use-runtime $(call QUOTE_SINGLE,$(BINDIR)/ocamlrun-$(ZINC_RUNTIME_ID))
++endif
++
+ MAYBE_ADD_BYTECODE_LAUNCHER_FLAGS = \
+   $(if $(filter -custom, $(1)),,\
+     -use-prims $(ROOTDIR)/runtime/primitives $(BYTECODE_LAUNCHER_FLAGS))
+diff --git a/bytecomp/bytelink.ml b/bytecomp/bytelink.ml
+index 97cf74c93cec5b67db3f29bf420dd1a5a1d63104..493351022e982ab1dbe0a1ef41fa6e658001b538 100644
+--- a/bytecomp/bytelink.ml
++++ b/bytecomp/bytelink.ml
+@@ -419,6 +419,37 @@ let write_sh_launcher outchan bin_sh bindir search runtime =
+    called) *)
+ 
+ let write_header outchan =
++  let zinc_runtime_id, write_exe_launcher =
++    let header =
++      let header = "camlheader" in
++      try Load_path.find header
++      with Not_found -> raise (Error (File_not_found header))
++    in
++    let data =
++      try In_channel.with_open_bin header In_channel.input_all
++      with Sys_error msg -> raise (Error (Camlheader (msg, header)))
++    in
++    let zinc_runtime_id, offset =
++      if String.length data < 2 then
++        raise (Error (Camlheader ("corrupt header", header)))
++      (* Compatibility with previous header format - remove post-bootstrap *)
++      else if List.mem data.[0] ['/'; 'e'; 's'] then
++        None, String.index data '\000' + 2
++      else if data.[0] = '\000' then
++        None, 1
++      else
++        let zinc = Misc.RuntimeID.of_zinc_hi (String.sub data 0 2) in
++        if Option.fold ~none:false ~some:Misc.RuntimeID.is_zinc zinc then
++          zinc, 2
++        else
++          raise (Error (Camlheader ("corrupt header", header)))
++    in
++    let write_exe_header outchan =
++      let len = String.length data in
++      Out_channel.output_substring outchan data offset (len - offset)
++    in
++    zinc_runtime_id, write_exe_header
++  in
+   (* Determine which method will be used for launching the executable:
+      Executable: concatenate the bytecode image to the executable stub
+      Shebang_runtime: #! line with the required runtime
+@@ -434,7 +465,11 @@ let write_header outchan =
+     if String.length !Clflags.use_runtime > 0 then
+       make_absolute !Clflags.use_runtime, Config.Absolute
+     else
+-      let runtime = "ocamlrun" ^ !Clflags.runtime_variant in
++      let runtime =
++        let runtime = "ocamlrun" ^ !Clflags.runtime_variant in
++        let some = Misc.RuntimeID.ocamlrun !Clflags.runtime_variant in
++        Option.fold ~none:runtime ~some zinc_runtime_id
++      in
+       if !Clflags.search_method <> Config.Absolute then
+         runtime, !Clflags.search_method
+       else
+@@ -461,18 +496,6 @@ let write_header outchan =
+       else
+         Shebang_runtime
+   in
+-  let write_exe_launcher data =
+-    (* Compatibility with previous header format - remove post-bootstrap *)
+-    let data =
+-      if data = "" || not (List.mem data.[0] ['/'; 'e'; 's']) then
+-        data
+-      else
+-        let exe_start = String.index data '\000' + 2 in
+-        let len = String.length data in
+-        String.sub data exe_start (len - exe_start)
+-    in
+-    Out_channel.output_string outchan data
+-  in
+   (* Write the header *)
+   match launcher with
+   | Shebang_runtime ->
+@@ -486,16 +509,7 @@ let write_header outchan =
+       Bytesections.init_record outchan
+   | Executable ->
+       (* Use the executable stub launcher *)
+-      let header =
+-        let header = "camlheader" in
+-        try Load_path.find header
+-        with Not_found -> raise (Error (File_not_found header))
+-      in
+-      let data =
+-        try In_channel.with_open_bin header In_channel.input_all
+-        with Sys_error msg -> raise (Error (Camlheader (msg, header)))
+-      in
+-      write_exe_launcher data;
++      write_exe_launcher outchan;
+       (* The runtime name needs recording in RNTM *)
+       let toc_writer = Bytesections.init_record outchan in
+       (* stdlib/header.c determines which mode is needed based on whether the
+diff --git a/bytecomp/byterntm.mli b/bytecomp/byterntm.mli
+index 66cbc5fb986ddf36aeac18cbe8d33561da68f6e3..d19c18b4a46a6def0b5367a80953b4023272d380 100644
+--- a/bytecomp/byterntm.mli
++++ b/bytecomp/byterntm.mli
+@@ -24,7 +24,8 @@ type search_method =
+ | Search
+     (** Always search for the interpreter *)
+ 
+-val read_runtime : in_channel -> (string * search_method) option
++val read_runtime :
++  in_channel -> (string * Misc.RuntimeID.t option * search_method) option
+ (** Returns the runtime used by this tendered/standalone image. If the runtime
+     used cannot be parsed, or the image was linked using -without-runtime, then
+     [None] is returned. *)
+diff --git a/bytecomp/byterntm.mll b/bytecomp/byterntm.mll
+index 18d15e83c5566c3527e04da95c0914c999272d06..2f223d7e6b98cb06240c65c89fbc512b37b7cadf 100644
+--- a/bytecomp/byterntm.mll
++++ b/bytecomp/byterntm.mll
+@@ -19,6 +19,22 @@ type search_method =
+ | Search
+ 
+ type state = Exec | R | C of string
++
++let cut_runtime_id search name =
++  let len = String.length name in
++  let id =
++    if len < 6 || name.[len - 5] <> '-' then
++      None
++    else
++      Misc.RuntimeID.of_string (String.sub name (len - 4) 4)
++  in
++  let name =
++    if id = None then
++      name
++    else
++      String.sub name 0 (len - 5)
++  in
++  Some (name, id, search)
+ }
+ 
+ rule analyze = parse
+@@ -29,19 +45,21 @@ rule analyze = parse
+     ([^ '\\' '/' '\000']+ as runtime) eof           (* Runtime portion *)
+       { if sep = '\000' then
+           if dir = "" then
+-            Some (runtime, Search)
++            cut_runtime_id Search runtime
+           else
+-            Some (runtime, Absolute_then_search (Filename.concat dir ""))
++            let dir = Filename.concat dir "" in
++            cut_runtime_id (Absolute_then_search dir) runtime
+         else
+-          Some (runtime, Absolute (dir ^ String.make 1 sep)) }
++          let dir = dir ^ String.make 1 sep in
++          cut_runtime_id (Absolute dir) runtime }
+ 
+ (* Legacy RNTM (remove after bootstrap) *)
+   | (([^ '\000']* ['/' '\\']) as dir)
+     ([^ '\\' '/' '\000']+ as runtime) '\000' eof
+       { if dir = "" then
+-          Some (runtime, Search)
++          Some (runtime, None, Search)
+         else
+-          Some (runtime, Absolute dir) }
++          Some (runtime, None, Absolute dir) }
+ 
+ (* Shell script launcher (if it matches, this always matches more than the above
+    regexp) *)
+@@ -68,7 +86,7 @@ and analyze_sh_launcher state b = parse
+           let dir =
+             String.sub name 0 (String.length name - String.length runtime)
+           in
+-          Some (runtime, Absolute dir)
++          cut_runtime_id (Absolute dir) runtime
+         else
+           None }
+ 
+@@ -77,7 +95,7 @@ and analyze_sh_launcher state b = parse
+       { if state = R then
+           let runtime = Buffer.contents b in
+           if c = None then
+-            Some (runtime, Search)
++            cut_runtime_id Search runtime
+           else
+             analyze_sh_launcher (C runtime) (Buffer.clear b; b) lexbuf
+         else
+@@ -87,7 +105,7 @@ and analyze_sh_launcher state b = parse
+   | "'\"$r\"\n"
+       { match state with
+         | C runtime ->
+-            Some (runtime, Absolute_then_search (Buffer.contents b))
++            cut_runtime_id (Absolute_then_search (Buffer.contents b)) runtime
+         | _ ->
+             None }
+ 
+diff --git a/configure b/configure
+index 2b48905e3996594da62882bf8a22fb71faca8266..699e734fcc26ff717894dd0801295fe740c4e49e 100755
+GIT binary patch
+delta 330
+zcmaEVLFL(Hl?}21oW-SSX_*z7dFh*F0%W-bQu7j%a#G_Fq88Ch;~ZdW6u<zYMgguy
+zAwNx_s5Gx6GdEQswIVgSv;<^Eu|i^Aib8QlVo_?!WW$}(ldtdL+kADW`t<F;0~q5h
+zr@I$2N^!spo_?{6Q69lNn9rzH50kT2$V^ixNi8l>P^wUY*j<*GqoiP~pk9%euWqeS
+zl98IHV8x|?aFK0VVoq@?S1O1=7A`3&P320<#FT)j2g(3}vVwC)YI62;o;pT>_QEbk
+aAZ7w$W*}w(Vpbq#17h~=g<Tx~<^ll69C?8N
+
+delta 69
+zcmaEMS>^o&l?}21o7DqkxHpGHFNxcnxl4Zf_Rc`YSj*|xY8WNjUvx79F%u9o12GE_
+RvjQ<25VLQ8(arI1E&yYDAqW5f
+
+diff --git a/configure.ac b/configure.ac
+index 4a3779bf88ad80ac832708232076e19ab25486a9..655687e83f3e165333c6110748450df22200e7cb 100644
+--- a/configure.ac
++++ b/configure.ac
+@@ -193,6 +193,7 @@ AC_SUBST([zinc_runtime_id_lo])
+ AC_SUBST([zinc_runtime_id_hi])
+ AC_SUBST([bytecode_runtime_id])
+ AC_SUBST([native_runtime_id])
++AC_SUBST([suffixing])
+ 
+ ## Generated files
+ 
+@@ -504,6 +505,12 @@ AC_ARG_WITH([relative-libdir],
+     [bindir_to_libdir="$withval"])],
+   [bindir_to_libdir=''])
+ 
++AC_ARG_ENABLE([suffixing],
++  [AS_HELP_STRING([--enable-suffixing],
++    [enable suffixing of runtime executables and shared libraries])],
++  [AS_IF([test "x$enableval" = 'xno'], [suffixing=false], [suffixing=true])],
++  [suffixing=false])
++
+ AC_ARG_WITH([afl],
+   [AS_HELP_STRING([--with-afl],
+     [use the AFL fuzzer])])
+diff --git a/debugger/Makefile b/debugger/Makefile
+index 6b7b1159343a31f8389a02b6f5e1983c393a73c0..2c87de7f646b8973e7b085102dd46f44c0cc147d 100644
+--- a/debugger/Makefile
++++ b/debugger/Makefile
+@@ -36,6 +36,13 @@ endif
+ else
+ LINKFLAGS += $(ROOT_LINK_FLAGS)
+ endif
++ifeq "$(SUFFIXING)-$(UNIX_OR_WIN32)" "true-win32"
++LINKFLAGS += -runtime-variant -$(ZINC_RUNTIME_ID)
++else ifeq "$(SUFFIXING)" "true"
++LINKFLAGS += \
++  -use-prims $(ROOTDIR)/runtime/primitives \
++  -use-runtime $(call QUOTE_SINGLE,$(BINDIR)/ocamlrun-$(ZINC_RUNTIME_ID))
++endif
+ CAMLDEP=$(BEST_OCAMLDEP)
+ DEPFLAGS=-slash
+ DEPINCLUDES=$(INCLUDES)
+diff --git a/lex/Makefile b/lex/Makefile
+index 210d4ccb0bb335d95633d8eeedae0c025b2f003c..e7add24ce4bdb8d1f5fd4e904d35e8e1849d5995 100644
+--- a/lex/Makefile
++++ b/lex/Makefile
+@@ -49,7 +49,9 @@ allopt: ocamllex.opt
+ opt.opt: allopt
+ 
+ ocamllex$(EXE): $(OBJS)
+-	$(CAMLC) $(LINKFLAGS) -compat-32 -o $@ $^
++	$(CAMLC) \
++	  $(call MAYBE_ADD_BYTECODE_LAUNCHER_FLAGS, $(LINKFLAGS)) $(LINKFLAGS) \
++	  -compat-32 -o $@ $^
+ 
+ ocamllex.opt$(EXE): $(OBJS:.cmo=.cmx)
+ 	$(CAMLOPT_CMD) -o $@ $^
+diff --git a/ocamldoc/Makefile b/ocamldoc/Makefile
+index c8b578b3ad5d124889ec6336173a89e0e8aec04a..91d95f1d4be3460846d23f8fab3af40f47c78daf 100644
+--- a/ocamldoc/Makefile
++++ b/ocamldoc/Makefile
+@@ -185,6 +185,13 @@ endif
+ else
+ $(OCAMLDOC): LINKFLAGS += $(ROOT_LINK_FLAGS)
+ endif
++ifeq "$(SUFFIXING)-$(UNIX_OR_WIN32)" "true-win32"
++$(OCAMLDOC): LINKFLAGS += -runtime-variant -$(ZINC_RUNTIME_ID)
++else ifeq "$(SUFFIXING)" "true"
++$(OCAMLDOC): LINKFLAGS += \
++  -use-prims $(ROOTDIR)/runtime/primitives \
++  -use-runtime $(call QUOTE_SINGLE,$(BINDIR)/ocamlrun-$(ZINC_RUNTIME_ID))
++endif
+ 
+ $(OCAMLDOC): $(EXECMOFILES)
+ 	$(OCAMLC) -o $@ -linkall $(LINKFLAGS) $(OCAMLDOC_BCLIBRARIES) $^
+diff --git a/runtime/Makefile b/runtime/Makefile
+index 7fbdc924301fb2b8aca9d9b24edd5e36623fbbe0..c08100c09406cbf311afd76810a3780415a892ac 100644
+--- a/runtime/Makefile
++++ b/runtime/Makefile
+@@ -53,20 +53,20 @@ endif
+ 
+ # Targets to build and install
+ 
+-PROGRAMS := ocamlrun$(EXE)
++PROGRAMS := ocamlrun
+ BYTECODE_STATIC_LIBRARIES := libcamlrun.$(A)
+ BYTECODE_SHARED_LIBRARIES :=
+ NATIVE_STATIC_LIBRARIES := libasmrun.$(A)
+ NATIVE_SHARED_LIBRARIES :=
+ 
+ ifeq "$(RUNTIMED)" "true"
+-PROGRAMS += ocamlrund$(EXE)
++PROGRAMS += ocamlrund
+ BYTECODE_STATIC_LIBRARIES += libcamlrund.$(A)
+ NATIVE_STATIC_LIBRARIES += libasmrund.$(A)
+ endif
+ 
+ ifeq "$(INSTRUMENTED_RUNTIME)" "true"
+-PROGRAMS += ocamlruni$(EXE)
++PROGRAMS += ocamlruni
+ BYTECODE_STATIC_LIBRARIES += libcamlruni.$(A)
+ NATIVE_STATIC_LIBRARIES += libasmruni.$(A)
+ endif
+@@ -145,8 +145,8 @@ endif
+ # Build, install and clean targets
+ 
+ .PHONY: all
+-all: $(BYTECODE_STATIC_LIBRARIES) $(BYTECODE_SHARED_LIBRARIES) $(PROGRAMS) \
+-     sak$(EXE)
++all: $(BYTECODE_STATIC_LIBRARIES) $(BYTECODE_SHARED_LIBRARIES) \
++     $(PROGRAMS:%=%$(EXE)) sak$(EXE)
+ 
+ .PHONY: allopt
+ ifneq "$(NATIVE_COMPILER)" "false"
+@@ -158,8 +158,30 @@ endif
+ 
+ INSTALL_INCDIR=$(INSTALL_LIBDIR)/caml
+ .PHONY: install
+-install:
+-	$(INSTALL_PROG) $(PROGRAMS) "$(INSTALL_BINDIR)"
++
++ifeq "$(SUFFIXING)" "true"
++MANGLE_RUNTIME_NAME = $(TARGET)-$(1)-$(BYTECODE_RUNTIME_ID)$(EXE)
++else
++MANGLE_RUNTIME_NAME = $(1)$(EXE)
++endif
++
++define INSTALL_RUNTIME
++install::
++	$(INSTALL_PROG) \
++    $(1)$(EXE) "$(INSTALL_BINDIR)/$(call MANGLE_RUNTIME_NAME,$(1))"
++ifeq "$(SUFFIXING)" "true"
++	cd "$(INSTALL_BINDIR)" && \
++    $(LN) "$(TARGET)-$(1)-$(BYTECODE_RUNTIME_ID)$(EXE)" "$(1)$(EXE)"
++	cd "$(INSTALL_BINDIR)" && \
++    $(LN) "$(TARGET)-$(1)-$(BYTECODE_RUNTIME_ID)$(EXE)" \
++	    "$(1)-$(ZINC_RUNTIME_ID)$(EXE)"
++endif
++endef
++
++$(foreach runtime, $(PROGRAMS), \
++  $(eval $(call INSTALL_RUNTIME,$(runtime))))
++
++install::
+ 	$(INSTALL_DATA) ld.conf $(BYTECODE_STATIC_LIBRARIES) "$(INSTALL_LIBDIR)"
+ ifneq "$(BYTECODE_SHARED_LIBRARIES)" ""
+ 	$(INSTALL_PROG) $(BYTECODE_SHARED_LIBRARIES) "$(INSTALL_LIBDIR)"
+diff --git a/runtime/startup_byt.c b/runtime/startup_byt.c
+index c1bbf1a0636e9f6722d23d2cf40ddbc20a5a6c8d..ea2d7dd7b41ad1fafaa4d342705bfa6dcea132bb 100644
+--- a/runtime/startup_byt.c
++++ b/runtime/startup_byt.c
+@@ -395,6 +395,7 @@ static void do_print_config(void)
+   printf("word_size: %d\n", 8 * (int)sizeof(value) - 1);
+   printf("os_type: %s\n", OCAML_OS_TYPE);
+   printf("host: %s\n", HOST);
++  printf("bytecode_runtime_id: %s\n", BYTECODE_RUNTIME_ID);
+   printf("flat_float_array: %s\n",
+ #ifdef FLAT_FLOAT_ARRAY
+          "true");
+diff --git a/stdlib/Makefile b/stdlib/Makefile
+index 0d8081bc353ea4c7436bb0482199dce29025e29b..3d0e7582a8a6acce1a397a90a8fb2b1097f412c4 100644
+--- a/stdlib/Makefile
++++ b/stdlib/Makefile
+@@ -140,11 +140,14 @@ target_camlheader%: tmpheader.exe
+ 
+ endif
+ 
++MANGLING = $(filter true,$(SUFFIXING))
+ target_$(HEADER_NAME): tmpheader.exe
+-	@cat $^ > $@
++	@{ printf '$(if $(MANGLING),$(ZINC_RUNTIME_ID_HI),\000)'; \
++     cat $^; } > $@
+ 
+ $(HEADER_NAME): runtime.info tmpheader.exe
+-	@cat $^ > $@
++	@{ cat $^; \
++     printf '$(if $(filter true,$(SUFFIXING)),$(ZINC_RUNTIME_ID))'; } > $@
+ 
+ # The mingw-w64 and MSVC versions of tmpheader.exe are linked with special flags
+ # to reduce their size (considerably). In particular, the entry point is
+diff --git a/tools/.depend b/tools/.depend
+index a43a23b06afb6f9568714cdbe06c93c5ab1ee30d..154dafeac475bc9120442d3914a830e6428ac7e8 100644
+--- a/tools/.depend
++++ b/tools/.depend
+@@ -93,6 +93,7 @@ objinfo.cmo : \
+     ../middle_end/linkage_name.cmi \
+     ../typing/ident.cmi \
+     ../middle_end/flambda/export_info.cmi \
++    ../utils/config.cmi \
+     ../middle_end/compilation_unit.cmi \
+     ../file_formats/cmxs_format.cmi \
+     ../file_formats/cmx_format.cmi \
+@@ -111,6 +112,7 @@ objinfo.cmx : \
+     ../middle_end/linkage_name.cmx \
+     ../typing/ident.cmx \
+     ../middle_end/flambda/export_info.cmx \
++    ../utils/config.cmx \
+     ../middle_end/compilation_unit.cmx \
+     ../file_formats/cmxs_format.cmi \
+     ../file_formats/cmx_format.cmi \
+diff --git a/tools/Makefile b/tools/Makefile
+index c26a7037916953a9b2f35cc44845d163c1e7c9da..518ffe310b6431040b6c0a5e31ba60db6549acfc 100644
+--- a/tools/Makefile
++++ b/tools/Makefile
+@@ -60,8 +60,8 @@ $(foreach program, $(programs_byte) $(programs_opt),\
+   $(eval $(call PROGRAM_SYNONYM,$(program))))
+ 
+ $(programs_byte:%=%$(EXE)):
+-	$(CAMLC) $(call ADD_BYTECODE_RUNTIME, $(LINKFLAGS)) $(LINKFLAGS) \
+-	         -I $(ROOTDIR) -o $@ $(filter-out %.cmi,$^)
++	$(CAMLC) $(call MAYBE_ADD_BYTECODE_LAUNCHER_FLAGS, $(LINKFLAGS)) \
++	         $(LINKFLAGS) -I $(ROOTDIR) -o $@ $(filter-out %.cmi,$^)
+ 
+ $(programs_opt:%=%$(EXE)):
+ 	$(CAMLOPT_CMD) $(LINKFLAGS) -I $(ROOTDIR) -o $@ $(filter-out %.cmi,$^)
+@@ -308,6 +308,13 @@ caml_tex := caml-tex$(EXE)
+ ifeq "$(SUPPORTS_SHARED_LIBRARIES)" "true"
+ $(caml_tex): LINKFLAGS += $(ROOT_LINK_FLAGS)
+ endif
++ifeq "$(SUFFIXING)-$(UNIX_OR_WIN32)" "true-win32"
++$(caml_tex): LINKFLAGS += -runtime-variant -$(ZINC_RUNTIME_ID)
++else ifeq "$(SUFFIXING)" "true"
++$(caml_tex): LINKFLAGS += \
++  -use-prims $(ROOTDIR)/runtime/primitives \
++  -use-runtime $(call QUOTE_SINGLE,$(BINDIR)/ocamlrun-$(ZINC_RUNTIME_ID))
++endif
+ 
+ # caml-tex uses str.cma and unix.cma and so must be compiled with
+ # $(ROOTDIR)/ocamlc not $(ROOTDIR)/boot/ocamlc since the boot
+diff --git a/tools/objinfo.ml b/tools/objinfo.ml
+index bfe395774d1e71e4ace85acaf7daceb05fe6b029..e620d4bac7eca6d00fad8b4052c04e4007fdf5f7 100644
+--- a/tools/objinfo.ml
++++ b/tools/objinfo.ml
+@@ -219,14 +219,56 @@ let p_list title print = function
+       p_title title;
+       List.iter print l
+ 
+-let p_runtime (runtime, search) =
++let p_runtime_id ({Misc.RuntimeID.dev; release; no_flat_float_array; fp; tsan;
++                   int31; static; naked_pointers; mutable_string; ansi;
++                   reserved} as t) =
++  let version =
++    if release > Config.release_number then
++      ""
++    else
++      if release = 0 then
++        " (Objective Caml 3.12)"
++      else if release < 16 then
++        Printf.sprintf " (OCaml 4.%02d)" (release - 1)
++      else
++        Printf.sprintf " (OCaml 5.%d)" (release - 16)
++  in
++  printf "\t%s = Release %d%s%s\n"
++    (Misc.RuntimeID.to_string t)
++    release version (if dev then " - development/altered version" else "");
++  if reserved > 0 then
++    printf "\t  - %d reserved header bit%s\n"
++      reserved (if reserved = 1 then "" else "s");
++  if no_flat_float_array then
++    printf "\t  - Flat float array representation disabled\n";
++  if fp then
++    printf "\t  - Frame pointers enabled\n";
++  if tsan then
++    printf "\t  - TSAN enabled\n";
++  if int31 then
++    printf "\t  - Compiled without 64-bit support\n";
++  if static then
++    printf "\t  - Compiled without support dynamic loading\n";
++  if not naked_pointers then
++    printf "\t  - Compiled without support for naked pointers\n";
++  if not mutable_string then
++    printf "\t  - Compiled with immutable strings\n";
++  if ansi then
++    printf "\t  - Windows Unicode support disabled\n"
++
++let p_runtime (runtime, id, search) =
++  let runtime =
++    let some id = runtime ^ "-" ^ Misc.RuntimeID.to_string id in
++    Option.fold ~none:runtime ~some id
++  in
+   let runtime =
+     match search with
+     | Byterntm.Search -> runtime
+     | Byterntm.Absolute dir -> dir ^ runtime
+     | Byterntm.Absolute_then_search dir -> Printf.sprintf "[%s]%s" dir runtime
+   in
+-  printf "Runtime:\n\t%s\n" runtime
++  printf "Runtime:\n\t%s\n" runtime;
++  Option.iter p_runtime_id id
+ 
+ let dump_byte ic =
+   Bytesections.read_toc ic;
+diff --git a/utils/Makefile b/utils/Makefile
+index 7a64b17fa7f5bbd08deb57e6c35859a4959352fd..ce13b8f41c7d8891531d4f5097fe327f7e217c8d 100644
+--- a/utils/Makefile
++++ b/utils/Makefile
+@@ -92,6 +92,7 @@ config.ml: config.mlp $(ROOTDIR)/Makefile.config Makefile
+ 	    $(call SUBST,CC_HAS_DEBUG_PREFIX_MAP) \
+ 	    $(call SUBST,AS_HAS_DEBUG_PREFIX_MAP) \
+ 	    $(call SUBST,AR_SUPPORTS_RESPONSE_FILES) \
++	    $(call SUBST,SUFFIXING) \
+ 	    $(call SUBST_STRING,TARGET_LAUNCH_METHOD) \
+ 	    $(call SUBST_STRING,BYTECODE_RUNTIME_ID) \
+ 	    $(call SUBST_STRING,NATIVE_RUNTIME_ID) \
+diff --git a/utils/config.mlp b/utils/config.mlp
+index 2585cb587c435caa1f9b110e7553679854999313..cadd9060a8f29aac70a6715d7de1e400d7b0d269 100644
+--- a/utils/config.mlp
++++ b/utils/config.mlp
+@@ -184,6 +184,7 @@ let systhread_supported = %%SYSTHREAD_SUPPORT%%;;
+ 
+ let flexdll_dirs = [%%FLEXDLL_DIR%%];;
+ 
++let suffixing = %%SUFFIXING%%
+ let launch_method = "%%TARGET_LAUNCH_METHOD%%"
+ 
+ let launch_method =
+diff --git a/utils/misc.ml b/utils/misc.ml
+index 21216cac8821c7eb7a51673b918412b97a5fde2d..a91da9e6717fb2c6e56e70c539d4d9bd2de43687 100644
+--- a/utils/misc.ml
++++ b/utils/misc.ml
+@@ -1242,4 +1242,14 @@ module RuntimeID = struct
+               ansi = set 3 q3; mutable_string = set 4 q3}
+       else
+         None
++
++  let of_zinc_hi ?(dev = not Config.is_release)
++                 ?(release = Config.release_number) s =
++    Option.map (fun id -> {id with dev; release}) (of_string ("00" ^ s))
++
++  let ocamlrun variant runtime_id =
++    if is_zinc runtime_id then
++      Printf.sprintf "ocamlrun%s-%s" variant (to_string runtime_id)
++    else
++      invalid_arg "Misc.RuntimeID.ocamlrun"
+ end
+diff --git a/utils/misc.mli b/utils/misc.mli
+index 5efb24695d3e9ddc8cdf731193dd9a4d167e8283..7849cb72ca3e3ecac6d075e7a430735caf638c6c 100644
+--- a/utils/misc.mli
++++ b/utils/misc.mli
+@@ -744,4 +744,12 @@ module RuntimeID : sig
+ 
+   val of_string: string -> t option
+   (** Converts the 4-character representation back to a {!t} *)
++
++  val of_zinc_hi: ?dev:bool -> ?release:int -> string -> t option
++  (** Converts hi 2 characters of the representation back to a {!t} (using the
++      default version information from {!Config}. *)
++
++  val ocamlrun: string -> t -> string
++  (** [ocamlrun variant runtime_id] returns the name for the runtime for the
++      given Zinc Runtime ID. *)
+ end
+-- 
+2.53.0.windows.2
+

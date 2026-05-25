@@ -1,0 +1,86 @@
+From 7e8165a7f8567877b11ef45d953c62d093388353 Mon Sep 17 00:00:00 2001
+From: David Allsopp <david.allsopp@metastack.com>
+Date: Sat, 10 Apr 2021 15:13:19 +0100
+Subject: [PATCH] Add caml_runtime_standard_library_default
+
+Previously, the bytecode runtime just used OCAML_STDLIB_DIR from
+build_config.h. This value is now stored once in dynlink.o as
+caml_runtime_standard_library_default.
+
+(cherry picked from commit b3eaa24cf884bcb97a428add3c2aa09730073489)
+
+diff --git a/runtime/caml/dynlink.h b/runtime/caml/dynlink.h
+index a7441fcc0e4f38eb0d57995c0d6720e7c99aea85..b9c40fe694488ca3f14e52d006d908ab42ce72f5 100644
+--- a/runtime/caml/dynlink.h
++++ b/runtime/caml/dynlink.h
+@@ -46,6 +46,10 @@ extern void caml_free_shared_libs(void);
+ extern char_os * caml_parse_ld_conf(const char_os * stdlib,
+                                     struct ext_table * table);
+ 
++/* The default location of the Standard Library as used by the runtime to find
++   ld.conf */
++extern const char_os *caml_runtime_standard_library_default;
++
+ #endif /* CAML_INTERNALS */
+ 
+ #endif /* CAML_DYNLINK_H */
+diff --git a/runtime/dynlink.c b/runtime/dynlink.c
+index 7f22ad44ac84e51f0ce73818a01f7ab6ff9386db..7a482df19deab3803e64299f9f80030a8d7a49b7 100644
+--- a/runtime/dynlink.c
++++ b/runtime/dynlink.c
+@@ -55,6 +55,10 @@ struct ext_table caml_prim_name_table;
+ /* The table of shared libraries currently opened */
+ static struct ext_table shared_libs;
+ 
++/* The default location of the Standard Library as used by the runtime to find
++   ld.conf */
++const char_os *caml_runtime_standard_library_default = OCAML_STDLIB_DIR;
++
+ /* The search path for shared libraries */
+ struct ext_table caml_shared_libs_path;
+ 
+@@ -282,7 +286,8 @@ void caml_build_primitive_table(char_os * lib_path,
+   if (lib_path != NULL)
+     for (p = lib_path; *p != 0; p += strlen_os(p) + 1)
+       caml_ext_table_add(&caml_shared_libs_path, p);
+-  tofree2 = caml_parse_ld_conf(OCAML_STDLIB_DIR, &caml_shared_libs_path);
++  tofree2 = caml_parse_ld_conf(caml_runtime_standard_library_default,
++                               &caml_shared_libs_path);
+   /* Open the shared libraries */
+   caml_ext_table_init(&shared_libs, 8);
+   if (libs != NULL)
+diff --git a/runtime/startup_byt.c b/runtime/startup_byt.c
+index c7bf857279a824dd221cb9d5f5db7eb7b1c5072d..1d03f609a24db218dd447f84631f033b473398fa 100644
+--- a/runtime/startup_byt.c
++++ b/runtime/startup_byt.c
+@@ -372,7 +372,7 @@ static const char_os * get_stdlib_location(void)
+   const char_os * stdlib;
+   stdlib = caml_secure_getenv(T("OCAMLLIB"));
+   if (stdlib == NULL) stdlib = caml_secure_getenv(T("CAMLLIB"));
+-  if (stdlib == NULL) stdlib = OCAML_STDLIB_DIR;
++  if (stdlib == NULL) stdlib = caml_runtime_standard_library_default;
+   return stdlib;
+ }
+ 
+@@ -386,7 +386,7 @@ static void do_print_config(void)
+   /* Print the runtime configuration */
+   printf("version: %s\n", OCAML_VERSION_STRING);
+   printf("standard_library_default: %s\n",
+-         caml_stat_strdup_of_os(OCAML_STDLIB_DIR));
++         caml_stat_strdup_of_os(caml_runtime_standard_library_default));
+   printf("standard_library: %s\n",
+          caml_stat_strdup_of_os(get_stdlib_location()));
+   printf("int_size: %d\n", 8 * (int)sizeof(value));
+@@ -436,7 +436,8 @@ static void do_print_config(void)
+   puts("shared_libs_path:");
+   caml_decompose_path(&caml_shared_libs_path,
+                       caml_secure_getenv(T("CAML_LD_LIBRARY_PATH")));
+-  caml_parse_ld_conf(OCAML_STDLIB_DIR, &caml_shared_libs_path);
++  caml_parse_ld_conf(caml_runtime_standard_library_default,
++                     &caml_shared_libs_path);
+   for (i = 0; i < caml_shared_libs_path.size; i++) {
+     dir = caml_shared_libs_path.contents[i];
+     if (dir[0] == 0)
+-- 
+2.53.0.windows.2
+

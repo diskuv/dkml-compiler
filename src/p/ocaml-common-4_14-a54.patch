@@ -1,0 +1,250 @@
+From 38472b0a9f2d68eff09e1f3483bffa5ef222b8fa Mon Sep 17 00:00:00 2001
+From: David Allsopp <david.allsopp@metastack.com>
+Date: Wed, 12 Feb 2025 13:57:24 +0000
+Subject: [PATCH] Increase reproducibility of relative artefacts
+
+(cherry picked from commit 3ccb0364a2a0d3a641c9fd15c47dd11967afd06c)
+
+diff --git a/Makefile.build_config.in b/Makefile.build_config.in
+index cbfb69a067f7d5be36913deb5537a97358ea4796..1173585a920df2706cdcab69b0533af0e6c6ca5c 100644
+--- a/Makefile.build_config.in
++++ b/Makefile.build_config.in
+@@ -33,6 +33,16 @@ AS_IS_CC = @as_is_cc@
+ DEP_CC=@DEP_CC@ -MM
+ COMPUTE_DEPS=@compute_deps@
+ 
++# The C compiler vendor
++OCAML_CC_VENDOR = @ocaml_cc_vendor@
++
++BUILD_PATH_LOGICAL = @srcdir_abs@
++BUILD_PATH_PHYSICAL = @srcdir_abs_real@
++BUILD_MAP_FLAGS = @build_map_flags@
++BUILD_MAP_CFLAGS = $(foreach flag, $(BUILD_MAP_FLAGS), \
++  $(call QUOTE_SINGLE,$(flag)$(BUILD_PATH_LOGICAL)=+build) \
++  $(if $(BUILD_PATH_PHYSICAL), \
++    $(call $(QUOTE_SINGLE),$(flag)$(BUILD_PATH_PHYSICAL)=+build)))
+ # This is munged into utils/config.ml, not overridable by other parts of
+ # the build system.
+ OC_DLL_LDFLAGS=@oc_dll_ldflags@
+diff --git a/Makefile.common b/Makefile.common
+index 80743d1e69b0d46f43102a48f0b876186db5acbf..27bd27ec6b4555d90c641a7021ee60df62839fdd 100644
+--- a/Makefile.common
++++ b/Makefile.common
+@@ -27,6 +27,8 @@ MKDIR=mkdir -p
+ EMPTY :=
+ # $(SPACE) contains a single space
+ SPACE := $(EMPTY) $(EMPTY)
++$(SPACE) :=
++HASH := \#
+ 
+ ifeq "$(UNIX_OR_WIN32)" "win32"
+ DIR_SEP := \$ # There must a space following the $
+@@ -119,6 +121,21 @@ SUBST=-e 's!%%$1%%!$(call SED_ESCAPE,$($1))!'
+ # in config.mlp.  Thus, backslashes and double quotes must be escaped.
+ SUBST_STRING=-e 's!%%$1%%!$(call SED_ESCAPE,$(call OCAML_ESCAPE,$($1)))!'
+ 
++ifeq "$(TARGET_LIBDIR_IS_RELATIVE)" "true"
++  SRCDIR_ENCODED = $(subst =,%+,$(subst :,%.,$(subst %,%$(HASH),$(SRCDIR_ABS))))
++  SRCDIR_ABS_REAL := $(shell realpath $(SRCDIR_ABS) 2>/dev/null)
++  SRCDIR_REAL_ENCODED = \
++    $(subst =,%+,$(subst :,%.,$(subst %,%$(HASH),$(SRCDIR_ABS_REAL))))
++  BUILD_PATH_PREFIX_MAP ?=
++  export BUILD_PATH_PREFIX_MAP := \
++    $(BUILD_PATH_PREFIX_MAP)$\
++      :.=$(SRCDIR_ENCODED)$\
++      $(if $(SRCDIR_REAL_ENCODED),:.=$(SRCDIR_REAL_ENCODED))
++  PRIVATE_CFLAGS = $(BUILD_MAP_CFLAGS)
++else
++  PRIVATE_CFLAGS =
++endif # ifeq "$(TARGET_LIBDIR_IS_RELATIVE)" "true"
++
+ # Allow Makefile.cross to override the Standard Library default for the compiler
+ # itself.
+ HOST_LIBDIR ?= $(TARGET_LIBDIR)
+@@ -143,8 +160,8 @@ REQUIRED_HEADERS := $(RUNTIME_HEADERS) $(wildcard *.h)
+ endif
+ 
+ %.$(O): %.c $(REQUIRED_HEADERS)
+-	$(CC) -c $(OC_CFLAGS) $(CFLAGS) $(OC_CPPFLAGS) $(CPPFLAGS) \
+-	  $(OUTPUTOBJ)$@ $<
++	$(CC) -c $(OC_CFLAGS) $(CFLAGS) $(PRIVATE_CFLAGS) \
++	  $(OC_CPPFLAGS) $(CPPFLAGS) $(OUTPUTOBJ)$@ $<
+ 
+ $(DEPDIR):
+ 	$(MKDIR) $@
+diff --git a/configure b/configure
+index 0c3351e7b4c6c661d62d1aae44512ca03b35167f..065bbe798b4a7f298f498aa0d668f9a5977bc047 100755
+GIT binary patch
+delta 1600
+zcmc&!Uq}=|9A?k<R<}eV>##pGj_X~Lo0-*vvWbXU6etGyU@*70H|s5}x7W^|o+u~;
+z3BA=(^JotdJw+hhLG)11L2!>f<+G5F(Sua8yLh+ioo5jAFfhNFZ@&5ce&09q{<ZY-
+zgY@>y`1wTEFq3FT%^=-Wr-?{xEos<DO%P;b)eOWUMO#AK+ST#W&%O#uiNyjK?~J>&
+zi<T`F!#BAv;g!-D$3}>a1~v{AOJn>)Ex<t08b25b@JkDopjcevNhpZEQs5^~TADgz
+z`X~iT6*v^>`aAyk%4&fxt`@?&6_$0~Ffna`LZ=L5kR><?j5Kgk7<d_XgS6#<#Jt$i
+z;Vo*`Ookn>Mf&8IaAB!J?H3BAb8eF|s*?gcE(Vvb^(66ZPdaOwT~GwT(1C-A19Cx_
+zM*@KYU@n;TfO~Zs^s{3-FI+O+*6Ie^Pzf3y8on`dcW6S1ODw`#$^uZ$A#E0EDXiT`
+znkOid=2Sb4ux(qmCoz&I)oxi%;zV{@&e&Ktax#-&vCO2B#&ZxX0+-LR5lO|x1uyW)
+zB|6B3I%)GF-}nqPv_w@+!x@Kw{RwIB+0d!yb~tiCeE!q-w!?w)=!2)+<+xiitIaEn
+zsI%C2t0E0wzdba1hwb_kCci%cyUVVVWxjoDl!9+uSAKk>h5r65oTkesI3buwetDyH
+zNBrjN2wgAnO|4Ru)M$HzJJuYiLu{f)9}5@hiyz#P{M2R#MX$n<rEL-6J=X_0IFAVo
+z=)dO~)#!Ch#3sS44gIb?4(^YEX;Q@?-Xp2&4cg0v`pRx-FT0`E>9P^(L#ujV>K}NZ
+zR&M`E{`g<Y52am(0RD#-)Cz7}fqgkr{^LaC);@l!M!4r^fUc)pTj|E5s8EPD_HX_H
+DPgE#3
+
+delta 138
+zcmZ3oM`hOvl?}21(}g@4B{wGqT>P;;&6DvgTf12RBM>tIF*6XeY&Q#FZAj+MPfpCu
+zDK1J*$t;?FU^A<|B$9xwN;ML1yVw@iVkQ&~lee*kPj}qLD%>u)oprn9cDA(q_V@bi
+L+u!SRn7#u5Eps&L
+
+diff --git a/configure.ac b/configure.ac
+index 8e6e93ea73be50492d7800c663d5796eb5472b54..3ea07afb6353aa0cfdc7787ec0d4c42303ec5de2 100644
+--- a/configure.ac
++++ b/configure.ac
+@@ -59,6 +59,9 @@ instrumented_runtime=false
+ instrumented_runtime_libs=""
+ bootstrapping_flexdll=false
+ target_libdir_is_relative=false
++srcdir_abs=''
++srcdir_abs_real=''
++build_map_flags=''
+ 
+ # Information about the package
+ 
+@@ -178,6 +181,9 @@ AC_SUBST([TARGET_LIBDIR])
+ AC_SUBST([QS])
+ AC_SUBST([target_bindir])
+ AC_SUBST([target_libdir_is_relative])
++AC_SUBST([srcdir_abs])
++AC_SUBST([srcdir_abs_real])
++AC_SUBST([build_map_flags])
+ 
+ ## Generated files
+ 
+@@ -612,8 +618,8 @@ AS_CASE([$lt_cv_ar_at_file],
+ # See https://lists.gnu.org/archive/html/autoconf/2019-07/msg00002.html
+ # for the detailed explanation.
+ 
+-ocamlsrcdir=$(unset CDPATH; cd -- "$srcdir" && printf %sX "$PWD") || fail
+-ocamlsrcdir=${ocamlsrcdir%X}
++srcdir_abs=$(unset CDPATH; cd -- "$srcdir" && printf %sX "$PWD") || fail
++srcdir_abs=${srcdir_abs%X}
+ 
+ # Libraries to build depending on the host
+ 
+@@ -622,11 +628,12 @@ AS_CASE([$cygwin_build_env,$host],
+     [unix_or_win32="win32"
+     OCAML_CHECK_LN_ON_WINDOWS
+     default_separator='\'
+-    ocamlsrcdir="$(LC_ALL=C.UTF-8 cygpath -w -- "$ocamlsrcdir")"
++    ocamlsrcdir="$(LC_ALL=C.UTF-8 cygpath -w -- "$srcdir_abs")"
+     unixlib="win32unix"
+     ],
+   [unix_or_win32="unix"
+   ln='ln -sf'
++  ocamlsrcdir="$srcdir_abs"
+   default_separator='/'
+   unixlib="unix"])
+ 
+@@ -1817,6 +1824,20 @@ AS_CASE([$ocaml_cv_cc_vendor,$host],
+   [sunc*,sparc-sun-*], [cc_has_debug_prefix_map=false],
+   [OCAML_CC_HAS_DEBUG_PREFIX_MAP])
+ 
++## -ffile-prefix-map support by the C compiler - used in the build, not by
++## the compiler
++AS_IF([test x"$bindir_to_libdir" != 'x'],
++  [srcdir_abs_real="$(realpath "$srcdir_abs" 2>/dev/null)"
++  AS_IF([test x"$srcdir_abs_real" = "x$srcdir_abs"],
++    [srcdir_abs_real=''])
++  AX_CHECK_COMPILE_FLAG([-Wa,--debug-prefix-map=old=new],
++    [build_map_flags='-Wa,--debug-prefix-map='], [], [$warn_error_flag])
++  AX_CHECK_COMPILE_FLAG([-ffile-prefix-map=old=new],
++    [build_map_flags="$build_map_flags -ffile-prefix-map="],
++    [AS_IF([$cc_has_debug_prefix_map],
++      [build_map_flags="$build_map_flags -fdebug-prefix-map="])],
++    [$warn_error_flag])])
++
+ ## Does stat support nanosecond precision
+ 
+ AC_CHECK_MEMBER([struct stat.st_atim.tv_nsec],
+diff --git a/debugger/Makefile b/debugger/Makefile
+index 4518272c0b9ece212001a41401b603cc80aa8ee6..aaae909e1bd721c98537e4d338fe4bb21f42ce63 100644
+--- a/debugger/Makefile
++++ b/debugger/Makefile
+@@ -26,6 +26,14 @@ COMPFLAGS=$(INCLUDES) -absname -w +a-4-9-41-42-44-45-48-70 -warn-error +A \
+           -safe-string -strict-sequence -strict-formats
+ LINKFLAGS=-linkall -I $(UNIXDIR) -I $(DYNLINKDIR) -I $(ROOTDIR)/runtime \
+           -set-runtime-default 'standard_library_default=$(TARGET_LIBDIR)'
++ifeq "$(SUPPORTS_SHARED_LIBRARIES)" "false"
++ifeq "$(TARGET_LIBDIR_IS_RELATIVE)" "true"
++  # ocamldebug is linked with -g which will result in a -custom executable when
++  # shared libraries are not available. Ensure that the primitives object is
++  # compiled with the correct flags
++  LINKFLAGS += $(addprefix -ccopt$(SPACE), $(BUILD_MAP_CFLAGS))
++endif
++endif
+ CAMLDEP=$(BEST_OCAMLDEP)
+ DEPFLAGS=-slash
+ DEPINCLUDES=$(INCLUDES)
+diff --git a/ocamldoc/Makefile b/ocamldoc/Makefile
+index b5b6411fded3ee5f4e348e0df18306588d9f4ca2..229d875c62546ea2531ad03ba2f0d34a4161cef4 100644
+--- a/ocamldoc/Makefile
++++ b/ocamldoc/Makefile
+@@ -175,6 +175,15 @@ OCAMLDOC_NCLIBRARIES = $(OCAMLDOC_LIBRARIES:%=%.cmxa)
+ 
+ $(eval $(call PROGRAM_SYNONYM,ocamldoc))
+ 
++ifeq "$(SUPPORTS_SHARED_LIBRARIES)" "false"
++ifeq "$(TARGET_LIBDIR_IS_RELATIVE)" "true"
++  # ocamldebug is linked with -g which will result in a -custom executable when
++  # shared libraries are not available. Ensure that the primitives object is
++  # compiled with the correct flags
++$(OCAMLDOC): LINKFLAGS += $(addprefix -ccopt$(SPACE), $(BUILD_MAP_CFLAGS))
++endif
++endif
++
+ $(OCAMLDOC): $(EXECMOFILES)
+ 	$(OCAMLC) -o $@ -linkall $(LINKFLAGS) $(OCAMLDOC_BCLIBRARIES) $^
+ 
+diff --git a/otherlibs/systhreads/Makefile b/otherlibs/systhreads/Makefile
+index 5fff9c44ff972c77223a40436101c8af85891fa6..8f8cf540163ec8c76e376c53879b179f4489d513 100644
+--- a/otherlibs/systhreads/Makefile
++++ b/otherlibs/systhreads/Makefile
+@@ -95,8 +95,8 @@ st_stubs.%.$(O): st_stubs.c
+ else
+ st_stubs.%.$(O): st_stubs.c $(RUNTIME_HEADERS) $(wildcard *.h)
+ endif
+-	$(CC) -c $(OC_CFLAGS) $(CFLAGS) $(OC_CPPFLAGS) $(CPPFLAGS) \
+-	  $(OUTPUTOBJ)$@ $<
++	$(CC) -c $(OC_CFLAGS) $(CFLAGS) $(PRIVATE_CFLAGS) \
++	  $(OC_CPPFLAGS) $(CPPFLAGS) $(OUTPUTOBJ)$@ $<
+ 
+ partialclean:
+ 	rm -f *.cm*
+diff --git a/runtime/Makefile b/runtime/Makefile
+index f6b929278fe47357ab25bf0dc242424dc632e5af..69371b2ce73e76f600a6340c7fe44b2cf68f6343 100644
+--- a/runtime/Makefile
++++ b/runtime/Makefile
+@@ -371,8 +371,8 @@ $(1).$(O): $(2).c
+ else
+ $(1).$(O): $(2).c $(CONFIGURED_HEADERS) $(BUILT_HEADERS) $(RUNTIME_HEADERS)
+ endif # ifneq "$(COMPUTE_DEPS)" "false"
+-	$$(CC) -c $$(OC_CFLAGS) $$(CFLAGS) $$(OC_CPPFLAGS) $$(CPPFLAGS) \
+-	  $$(OUTPUTOBJ)$$@ $$<
++	$$(CC) -c $$(OC_CFLAGS) $$(PRIVATE_CFLAGS) $$(CFLAGS) $$(OC_CPPFLAGS) \
++	  $$(CPPFLAGS) $$(OUTPUTOBJ)$$@ $$<
+ endef
+ 
+ object_types := % %.b %.bd %.bi %.bpic
+diff --git a/testsuite/tests/tool-debugger/find-artifacts/debuggee.ml b/testsuite/tests/tool-debugger/find-artifacts/debuggee.ml
+index 70aee3ff0484838e513930fe85aa0b07798da667..1ea382f7b1f88986040a84fc6ca1afcd80bb893d 100644
+--- a/testsuite/tests/tool-debugger/find-artifacts/debuggee.ml
++++ b/testsuite/tests/tool-debugger/find-artifacts/debuggee.ml
+@@ -1,4 +1,5 @@
+ (* TEST
++unset BUILD_PATH_PREFIX_MAP;
+ ocamldebug_script = "${test_source_directory}/input_script"
+ * debugger
+ ** shared-libraries
+-- 
+2.53.0.windows.2
+

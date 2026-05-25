@@ -1,0 +1,72 @@
+From e9ffc5133cb0075fe6e031dd7afa40d6b5aed25e Mon Sep 17 00:00:00 2001
+From: Jonah Beckford <9566106-jonahbeckford@users.noreply.gitlab.com>
+Date: Mon, 25 May 2026 08:47:13 -0700
+Subject: [PATCH] OCaml 4.14.3+relocatable base version commit
+
+(cherry picked from commit 5fe7f0fbcbadb25089d543267346d09d602d0dfa)
+
+diff --git a/VERSION b/VERSION
+index afdd56ce207a935b60ab4582efd8d4d4d130d6a3..8b2f8892f8f6a3ad21faec585421eb3bae754ba1 100644
+--- a/VERSION
++++ b/VERSION
+@@ -1,4 +1,4 @@
+-4.14.3
++4.14.3+relocatable
+ 
+ # Starting with OCaml 4.14, although the version string that appears above is
+ # still correct and this file can thus still be used to figure it out,
+diff --git a/build-aux/ocaml_version.m4 b/build-aux/ocaml_version.m4
+index bc01047db271326aabee9ab6d1d7b818c8270720..0e3f955516f75cd96a92f708528393fc8bf475a6 100644
+--- a/build-aux/ocaml_version.m4
++++ b/build-aux/ocaml_version.m4
+@@ -25,7 +25,7 @@
+ # The following macro, OCAML__DEVELOPMENT_VERSION, should be either
+ # [true] of [false].
+ 
+-m4_define([OCAML__DEVELOPMENT_VERSION], [false])
++m4_define([OCAML__DEVELOPMENT_VERSION], [true])
+ 
+ # The three following components (major, minor and patch level) MUST be
+ # integers. They MUST NOT be left-padded with zeros and all of them,
+@@ -36,7 +36,7 @@ m4_define([OCAML__VERSION_MINOR], [14])
+ m4_define([OCAML__VERSION_PATCHLEVEL], [3])
+ # Note that the OCAML__VERSION_EXTRA string defined below is always empty
+ # for officially-released versions of OCaml.
+-m4_define([OCAML__VERSION_EXTRA], [])
++m4_define([OCAML__VERSION_EXTRA], [relocatable])
+ 
+ # The OCAML__VERSION_EXTRA_PREFIX macro defined below should be a
+ # single character:
+diff --git a/configure b/configure
+index adea36f01f80db248b0df9ce8698b24a0ca5bd16..d9af9b6dfa5f07cde94aee3486da9d967e1abe57 100755
+GIT binary patch
+delta 423
+zcmdmeT)Fq8@&-8$9_^ykoc!d(lEkE()Xj1njZP>cljnQMp$Kf=>-8=SRb=(T@7$;&
+zi`KSFqliqOAjT-a+2f?GFRJhkaSosD7sVKFX>%jFWBNo@M#<@iofs8RRBwOm#8}3`
+zi=;4>Yx2VoDRbMBqS90@E`Mi7U!V9OS07i$VApuph>##hTlL`l+*AdPfSl4|9R(#M
+zuPSM(PoLt=n8=MJw*9L&V;&2#$n@j@MjI4?`2mb&D6VQ34P*pjCLm@8VwUZqfvh31
+w%s?ki7dXu>+upT~6^PlkcdcV@k^u>C2MVw7K`~=HFdWL*QHAv6IeL!(0O)<0od5s;
+
+delta 173
+zcmeA@sl5BR@&-AM%~~9dPLsEL$!&h<^)77l?S<dDH{V;^F1@+%WQ_0hItdP+?W*F8
+zx3niGew3K5?98aJ-QSt9jAQymZ$=rGw8Wg^=^wlq#aaCF^HQfP`!FVM@AqNMW0}qo
+z$Y?X&KajDk{bC>^5HkTWGZ3?EzZl3G5)09J>NLA-yX$&ZAZFX{x}LoWV&Zn7_zIux
+OK)cJ>w<&P+9svOE?L;pC
+
+diff --git a/ocaml-variants.opam b/ocaml-variants.opam
+index fed4e49fb05adf53e23cc0ad0d38b8232366a664..f24327c157071791a6a4025eeb0176c932632b1d 100644
+--- a/ocaml-variants.opam
++++ b/ocaml-variants.opam
+@@ -1,7 +1,7 @@
+ opam-version: "2.0"
+-version: "4.14.3"
++version: "4.14.3+relocatable"
+ license: "LGPL-2.1-or-later WITH OCaml-LGPL-linking-exception"
+-synopsis: "Official OCaml 4.14.3 release"
++synopsis: "Relocatable OCaml 4.14 branch"
+ maintainer: "caml-list@inria.fr"
+ authors: [
+   "Xavier Leroy"
+-- 
+2.53.0.windows.2
+

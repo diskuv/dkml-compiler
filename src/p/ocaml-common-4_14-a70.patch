@@ -1,0 +1,40 @@
+From 5ab739c590b6f236f947f6f4a74077560ab204de Mon Sep 17 00:00:00 2001
+From: David Allsopp <david.allsopp@metastack.com>
+Date: Tue, 22 Jul 2025 17:06:04 +0100
+Subject: [PATCH] Don't install two different bigarray.mli files
+
+Unfortunately, when installing source artefacts, the legacy bigarray
+library blats its copy of bigarray.mli over the Standard Library's.
+Preserve this unfortunate behaviour (since in this case bigarray.mli
+corresponds with bigarray.cmti) but suppress the installation of the
+Standard Library's bigarray.mli to prevent the same destination file
+being used twice.
+
+(cherry picked from commit 283aa3e58e05fd937e21f9e44fc27e82c3d65bda)
+
+diff --git a/stdlib/Makefile b/stdlib/Makefile
+index a764eea18f5c8aa7ff453f7844def637b2e22e03..99c3b5a0eae94356f86bcd6ac8c409923ce1869f 100644
+--- a/stdlib/Makefile
++++ b/stdlib/Makefile
+@@ -80,13 +80,17 @@ install::
+     exit 1; \
+   fi
+ 
++# bigarray.mli is only installed if the legacy bigarray library is _not_ being
++# compiled (since its bigarray.mli will override ours)
+ install::
+ 	$(INSTALL_DATA) \
+ 	  stdlib.cma std_exit.cmo *.cmi camlheader_ur \
+ 	  "$(INSTALL_LIBDIR)"
+ ifeq "$(INSTALL_SOURCE_ARTIFACTS)" "true"
+ 	$(INSTALL_DATA) \
+-	  *.cmt *.cmti *.mli *.ml \
++	  *.cmt *.cmti *.ml \
++	  $(if $(filter bigarray, $(OTHERLIBRARIES)), \
++	    $(filter-out bigarray.mli, $(wildcard *.mli)), *.mli) \
+ 	  "$(INSTALL_LIBDIR)"
+ endif
+ 	$(INSTALL_DATA) $(HEADER_NAME) "$(INSTALL_LIBDIR)/$(HEADER_NAME)"
+-- 
+2.53.0.windows.2
+

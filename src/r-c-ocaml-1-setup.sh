@@ -630,6 +630,50 @@ apply_patch() {
     log_trace git -C "$apply_patch_SRCDIR_MIXED" am --ignore-date --committer-date-is-author-date < "$WORK/current-patch"
 }
 
+verify_applied_patches() {
+    verify_applied_patches_SRCDIR=$1
+    shift
+    verify_applied_patches_CATEGORY=$1
+    shift
+    verify_applied_patches_HOSTCROSS=$1
+    shift
+
+    set +u # Fix bash bug with empty arrays
+    verify_applied_patches_COUNT=${#PATCHES[@]}
+    set -u
+    if [ "$verify_applied_patches_COUNT" -eq 0 ]; then
+        return 0
+    fi
+
+    verify_applied_patches_EXPECTED="$WORK/expected-patch-subjects"
+    verify_applied_patches_ACTUAL="$WORK/actual-patch-subjects"
+    : > "$verify_applied_patches_EXPECTED"
+    : > "$verify_applied_patches_ACTUAL"
+
+    for patchfile in "${PATCHES[@]}"; do
+        patchbase=$(basename "$patchfile")
+        printf "Diskuv %s %s patch %s\n" \
+            "$verify_applied_patches_CATEGORY" \
+            "$verify_applied_patches_HOSTCROSS" \
+            "$patchbase" >> "$verify_applied_patches_EXPECTED"
+    done
+
+    git -C "$verify_applied_patches_SRCDIR" \
+        log --reverse -n "$verify_applied_patches_COUNT" --format=%s HEAD \
+        > "$verify_applied_patches_ACTUAL"
+
+    if ! cmp -s "$verify_applied_patches_EXPECTED" "$verify_applied_patches_ACTUAL"; then
+        echo "FATAL: Applied patch subjects did not match the expected patch list for $verify_applied_patches_CATEGORY $verify_applied_patches_HOSTCROSS" >&2
+        echo "Expected subjects:" >&2
+        cat "$verify_applied_patches_EXPECTED" >&2
+        echo "Actual subjects:" >&2
+        cat "$verify_applied_patches_ACTUAL" >&2
+        exit 1
+    fi
+
+    echo "verified_patches($verify_applied_patches_CATEGORY $verify_applied_patches_HOSTCROSS) = ${PATCHES[*]}" >&2
+}
+
 apply_patches() {
     apply_patches_SRCDIR=$1
     shift
@@ -646,6 +690,7 @@ apply_patches() {
     for patchfile in "${PATCHES[@]}"; do
         apply_patch "$patchfile" "$apply_patches_SRCDIR" "$apply_patches_CATEGORY" "$apply_patches_HOSTCROSS"
     done
+    verify_applied_patches "$apply_patches_SRCDIR" "$apply_patches_CATEGORY" "$apply_patches_HOSTCROSS"
     set -u
 }
 

@@ -1,0 +1,25 @@
+From 63553b3feff8da2ea67a0329a972d40f5b11b5ca Mon Sep 17 00:00:00 2001
+From: David Allsopp <david.allsopp@metastack.com>
+Date: Thu, 17 Jul 2025 16:16:31 +0100
+Subject: [PATCH] Experimentally, use it
+
+(cherry picked from commit 11825a01672d123798589fdfa3aa8bf894eb26d5)
+
+diff --git a/ocaml-variants.opam b/ocaml-variants.opam
+index 0ed93f0bc13e8655eef4828d54d9f500f5e27a5c..c64769a6798613120e022740f1d4d4d819b95942 100644
+--- a/ocaml-variants.opam
++++ b/ocaml-variants.opam
+@@ -96,8 +96,9 @@ build: [
+     "--disable-warn-error"
+   ]
+   [make "-j%{jobs}%"]
++  [make "INSTALL_MODE=opam" "install"]
+ ]
+-install: [make "install"]
++install: ["sh" "./%{name}%-fixup.sh" prefix]
+ depopts: [
+   "ocaml-option-32bit"
+   "ocaml-option-afl"
+-- 
+2.53.0.windows.2
+

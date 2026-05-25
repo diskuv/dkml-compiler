@@ -1,0 +1,37 @@
+From 0d9581bf0a613688d22a5589549eceb3864703ff Mon Sep 17 00:00:00 2001
+From: David Allsopp <david.allsopp@metastack.com>
+Date: Sun, 26 Jan 2025 22:41:21 +0000
+Subject: [PATCH] Add Dll.search_path
+
+Provides a copy of the DLL search path for the test harness.
+
+(cherry picked from commit 79071c4ddd659a33b917101a6d451e888063e8ef)
+(cherry picked from commit 4421aa9e45b2b8a02d4ef5dbd2f94801254d1007)
+
+diff --git a/bytecomp/dll.ml b/bytecomp/dll.ml
+index 0f45d15b75cfa63171802801b3ac29a1184a2ad9..ecdfaefa9c1f8bb86c2daf420752132a114883f2 100644
+--- a/bytecomp/dll.ml
++++ b/bytecomp/dll.ml
+@@ -196,3 +196,5 @@ let reset () =
+   opened_dlls :=[];
+   names_of_opened_dlls := [];
+   linking_in_core := false
++
++let search_path () = !search_path
+diff --git a/bytecomp/dll.mli b/bytecomp/dll.mli
+index 5d80e1d4bef5af148c0c4ecbf5f9119d9bbc3110..c93a5b3452887b98c5d9fd12082f1cf8d433a5e1 100644
+--- a/bytecomp/dll.mli
++++ b/bytecomp/dll.mli
+@@ -55,6 +55,9 @@ val add_path: string list -> unit
+ (* Remove the given directories from the search path for DLLs *)
+ val remove_path: string list -> unit
+ 
++(* Return the current search path for DLLs *)
++val search_path: unit -> string list
++
+ (* Initialization for separate compilation.
+    Initialize the DLL search path to the directories given in the
+    environment variable CAML_LD_LIBRARY_PATH, plus contents of ld.conf file
+-- 
+2.53.0.windows.2
+

@@ -1,0 +1,56 @@
+From a895a260a10a2c9e0d61a90ee190075c6cdacb6d Mon Sep 17 00:00:00 2001
+From: David Allsopp <david.allsopp@metastack.com>
+Date: Sat, 1 Mar 2025 16:24:46 +0000
+Subject: [PATCH] Detect but ignore -fdebug-prefix-map on mingw-w64
+
+mingw-w64 is based on GCC, so supports -fdebug-prefix-map, but the test
+for it is skipped in configure. The test is no longer skipped (which
+means that Config.c_has_debug_prefix_map returns true) but the flag is
+still explicitly not used by the compilers (as before).
+
+(cherry picked from commit 027e314de05f7694aad65cfd6cf829e798934be3)
+
+diff --git a/configure b/configure
+index c6a3a52900ac829e3d9840b3958cd00d9b434916..e693d4829e4b88253ed1707bf0ae2584971f2a41 100755
+GIT binary patch
+delta 33
+pcmdnGT;<m?m4+6^7N!>F7M2#)7Pc+y3l!ULE3$9Dt;lifBLLyo4SoOs
+
+delta 63
+zcmeyhOl9kGm4+6^7N!>F7M2#)7Pc+y3lurEbaONF(#wsFroUBW*PH%}kxgv+S4DQU
+S>0Qihvh6_D_OFT@tseo|L>BD;
+
+diff --git a/configure.ac b/configure.ac
+index 36109defa854918f90a349944984309d55d65d3b..e537a4f4b43ac925a92035597c057d92d7115180 100644
+--- a/configure.ac
++++ b/configure.ac
+@@ -1804,7 +1804,6 @@ AC_CHECK_FUNC([pwrite], [AC_DEFINE([HAS_PWRITE])])
+ 
+ ## -fdebug-prefix-map support by the C compiler
+ AS_CASE([$ocaml_cv_cc_vendor,$host],
+-  [*,*-*-mingw32], [cc_has_debug_prefix_map=false],
+   [*,*-pc-windows], [cc_has_debug_prefix_map=false],
+   [xlc*,powerpc-ibm-aix*], [cc_has_debug_prefix_map=false],
+   [sunc*,sparc-sun-*], [cc_has_debug_prefix_map=false],
+diff --git a/utils/ccomp.ml b/utils/ccomp.ml
+index 33a4c9d0b4168e783985a92f5c7f5bcfda7329af..9b26559d52f2f8f5f5118cb4b14c962e1805bfd0 100644
+--- a/utils/ccomp.ml
++++ b/utils/ccomp.ml
+@@ -90,7 +90,13 @@ let compile_file ?output ?(opt="") ?stable_name name =
+       ("", "") in
+   let debug_prefix_map =
+     match stable_name with
+-    | Some stable when Config.c_has_debug_prefix_map ->
++    | Some stable
++      when Config.c_has_debug_prefix_map
++           && not (String.starts_with ~prefix:"mingw" Config.system) ->
++      (* -fdebug-prefix-map exists on mingw-w64 but at present it is not used
++         for BUILD_PATH_PREFIX_MAP because there isn't yet a good story for how
++         to deal with Cygwin, where the paths are Cygwin-style paths and MSYS2,
++         where they are native Windows paths. *)
+       Printf.sprintf " -fdebug-prefix-map=%s=%s" name stable
+     | Some _ | None -> "" in
+   let exit =
+-- 
+2.53.0.windows.2
+

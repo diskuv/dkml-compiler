@@ -1,0 +1,58 @@
+From b6ca5424b0e9529de7733b41a5251ab219fb80b6 Mon Sep 17 00:00:00 2001
+From: David Allsopp <david.allsopp@metastack.com>
+Date: Tue, 10 Jun 2025 12:24:19 +0100
+Subject: [PATCH] Permit single-quotes in prefix
+
+Minor tweaks needed to allow configuring, say, for "$PWD/install'd here"
+
+(cherry picked from commit c42ce4a2179457b40b7be5cc1db90d876506e39d)
+
+diff --git a/Makefile b/Makefile
+index 3623cbd6761618ef3f15fd273aedf43f3cc778ba..f175718e8d4cb7615b17aeb83327e915a35dac27 100644
+--- a/Makefile
++++ b/Makefile
+@@ -165,7 +165,8 @@ else
+     CAMLC='$$(BOOT_OCAMLC)' all
+ 	$(MAKE) -C $(FLEXDLL_SOURCES) $(FLEXLINK_BUILD_ENV) \
+ 	  OCAMLRUN='$$(ROOTDIR)/boot/ocamlruns$(EXE)' NATDYNLINK=false \
+-	  OCAMLOPT='$(value BOOT_OCAMLC) $(USE_RUNTIME_PRIMS) $(USE_STDLIB)' \
++	  OCAMLOPT=$(call QUOTE_SINGLE,$(value BOOT_OCAMLC) $(USE_RUNTIME_PRIMS) \
++	                                                    $(USE_STDLIB)) \
+ 	  flexlink.exe support
+ 	mv $(FLEXDLL_SOURCES)/flexlink.exe boot/flexlink.byte$(EXE)
+ 	cp $(addprefix $(FLEXDLL_SOURCES)/, $(FLEXDLL_OBJECTS)) boot/
+diff --git a/man/Makefile b/man/Makefile
+index 10cc8bbe417b4e14a8379e1cab540e4e06132ad3..05424bab473741ca23b5e6899de7699e93a2470d 100644
+--- a/man/Makefile
++++ b/man/Makefile
+@@ -22,5 +22,5 @@ MANPAGES = $(addsuffix .1,\
+ 
+ .PHONY: install
+ install:
+-	$(MKDIR) '$(INSTALL_PROGRAMS_MAN_DIR)'
+-	$(INSTALL_DATA) $(MANPAGES) '$(INSTALL_PROGRAMS_MAN_DIR)'
++	$(MKDIR) $(call QUOTE_SINGLE,$(INSTALL_PROGRAMS_MAN_DIR))
++	$(INSTALL_DATA) $(MANPAGES) $(call QUOTE_SINGLE,$(INSTALL_PROGRAMS_MAN_DIR))
+diff --git a/runtime/Makefile b/runtime/Makefile
+index 69371b2ce73e76f600a6340c7fe44b2cf68f6343..dea7c62498cb4eedb4582d0ca57205e3e05f860d 100644
+--- a/runtime/Makefile
++++ b/runtime/Makefile
+@@ -267,13 +267,13 @@ sak$(EXE): sak.$(O)
+ sak.$(O): sak.c caml/misc.h caml/config.h
+ 	$(SAK_CC) -c $(SAK_CFLAGS) $(OUTPUTOBJ)$@ $<
+ 
+-C_LITERAL = $(shell ./sak$(EXE) encode-C-literal '$(1)')
++C_LITERAL = $(shell ./sak$(EXE) encode-C-literal $(call QUOTE_SINGLE,$(1)))
+ 
+ build_config.h: $(ROOTDIR)/Makefile.config sak$(EXE)
+ 	{ \
+ 	  echo '/* This file is generated from $(ROOTDIR)/Makefile.config */'; \
+ 	  printf '#define OCAML_STDLIB_DIR %s\n' \
+-	         '$(call C_LITERAL,$(TARGET_LIBDIR))'; \
++	         $(call QUOTE_SINGLE,$(call C_LITERAL,$(TARGET_LIBDIR))); \
+ 	  echo '#define HOST "$(HOST)"'; \
+ 	} > $@
+ 
+-- 
+2.53.0.windows.2
+

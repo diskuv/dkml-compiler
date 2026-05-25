@@ -1,0 +1,109 @@
+From 977b12d6285935757f0d0372e2df9f053ba36e35 Mon Sep 17 00:00:00 2001
+From: David Allsopp <david.allsopp@metastack.com>
+Date: Thu, 30 Jan 2025 13:21:29 +0000
+Subject: [PATCH] Tidy installation of static builds
+
+- $libdir/stublibs is no longer created for a --disable-shared build
+- When $libdir/stublibs is not created, it is also not added to ld.conf
+
+(cherry picked from commit 5ca89cf24dae1b24071d3f5688947d052fbf1172)
+
+diff --git a/Changes b/Changes
+index 8da5ff12847b55c81a57f91d3ee1419ea13ad737..333b89535487d37dd26e940e142b2f890ff9ef63 100644
+--- a/Changes
++++ b/Changes
+@@ -67,7 +67,9 @@ OCaml 4.14 maintenance version
+   (David Allsopp and Samuel Hym, review by Antonin Décimo and Gabriel Scherer)
+ 
+ - #14???: New configure option --with-stublibs allows an additional directory
+-  to be added to the start of ld.conf.
++  to be added to the start of ld.conf. Additionally, the stublibs subdirectory
++  is no longer created, nor added to ld.conf, when building OCaml with
++  --disable-shared.
+   (David Allsopp, review by ???)
+ 
+ ### Bug fixes:
+diff --git a/Makefile b/Makefile
+index 1c12235e76f62a86327a2343f9e8fa72ad24f5c5..b38edf9c8e254a3281c1958de879c802d8fb5bf9 100644
+--- a/Makefile
++++ b/Makefile
+@@ -375,7 +375,9 @@ DOC_FILES=\
+ install:
+ 	$(MKDIR) "$(INSTALL_BINDIR)"
+ 	$(MKDIR) "$(INSTALL_LIBDIR)"
++ifeq "$(SUPPORTS_SHARED_LIBRARIES)" "true"
+ 	$(MKDIR) "$(INSTALL_STUBLIBDIR)"
++endif
+ 	$(MKDIR) "$(INSTALL_COMPLIBDIR)"
+ 	$(MKDIR) "$(INSTALL_DOCDIR)"
+ 	$(MAKE) -C runtime install
+diff --git a/configure b/configure
+index 6960b8cf96bc91071028adcd5dc5432b3430faca..d4d986d73a5366dc263da55ccdf516adef7236fe 100755
+GIT binary patch
+delta 85
+zcmezJUisDs<%Sl<7N!>F7M2#)7Pc1lEgT}n(=YL|%P^^{OuzV%RgzJC`U6c4o9+I^
+m9M|huGSd_w!kpF$B^jxCTnY-)RX%apFr{T~kNw0kofQB%A|3?*
+
+delta 47
+zcmV+~0MP&1@FVo^BY=bfgaU*Egam{Iga(8Mv<MV)m*FW0JGY2)2-kj>hw=zIx5n}a
+Flm*(C6T|=j
+
+diff --git a/configure.ac b/configure.ac
+index e8aa3b50e150889f5f5e1598d7123f57dfe8d4b1..cc70a8217a616e71ae401e7bd85faf9209adbf96 100644
+--- a/configure.ac
++++ b/configure.ac
+@@ -2153,11 +2153,14 @@ AC_CONFIG_COMMANDS([runtime/ld.conf],
+   [rm -f runtime/ld.conf
+   test x"$ocaml_additional_stublibs_dir" = 'x' || \
+     echo "$ocaml_additional_stublibs_dir" > runtime/ld.conf
+-  echo ".${default_separator}stublibs" >> runtime/ld.conf
++  if $supports_shared_libraries; then
++    echo ".${default_separator}stublibs" >> runtime/ld.conf
++  fi
+   echo "." >> runtime/ld.conf],
+   [ocaml_additional_stublibs_dir=\
+ '$(echo "$ocaml_additional_stublibs_dir" | sed -e "s/'/'\"'\"'/g")'
+   ocaml_libdir='$(echo "$ocaml_libdir" | sed -e "s/'/'\"'\"'/g")'
+-  default_separator='$default_separator'])
++  default_separator='$default_separator'
++  supports_shared_libraries='$supports_shared_libraries'])
+ 
+ AC_OUTPUT
+diff --git a/otherlibs/Makefile.otherlibs.common b/otherlibs/Makefile.otherlibs.common
+index 17c8e2dfd7272f9e0f6d1355447a516dc52b4d68..86aa464d48de773d05fcf0b640be821d8ab0f98c 100644
+--- a/otherlibs/Makefile.otherlibs.common
++++ b/otherlibs/Makefile.otherlibs.common
+@@ -89,10 +89,9 @@ lib$(CLIBNAME).$(A): $(COBJS)
+ 	$(MKLIB_CMD) -oc $(CLIBNAME) $(COBJS) $(LDOPTS)
+ 
+ install::
+-	if test -f dll$(CLIBNAME)$(EXT_DLL); then \
+-	  $(INSTALL_PROG) \
+-	    dll$(CLIBNAME)$(EXT_DLL) "$(INSTALL_STUBLIBDIR)"; \
+-	fi
++ifeq "$(SUPPORTS_SHARED_LIBRARIES)" "true"
++	$(INSTALL_PROG) dll$(CLIBNAME)$(EXT_DLL) "$(INSTALL_STUBLIBDIR)"
++endif
+ ifneq "$(STUBSLIB)" ""
+ 	$(INSTALL_DATA) $(STUBSLIB) "$(INSTALL_LIBDIR)/"
+ endif
+diff --git a/otherlibs/systhreads/Makefile b/otherlibs/systhreads/Makefile
+index 73fc9a55e3dcf4c742870eb8715d156034454c07..5fff9c44ff972c77223a40436101c8af85891fa6 100644
+--- a/otherlibs/systhreads/Makefile
++++ b/otherlibs/systhreads/Makefile
+@@ -108,9 +108,9 @@ clean: partialclean
+ INSTALL_THREADSLIBDIR=$(INSTALL_LIBDIR)/$(LIBNAME)
+ 
+ install:
+-	if test -f dllthreads$(EXT_DLL); then \
+-	  $(INSTALL_PROG) dllthreads$(EXT_DLL) "$(INSTALL_STUBLIBDIR)"; \
+-	fi
++ifeq "$(SUPPORTS_SHARED_LIBRARIES)" "true"
++	$(INSTALL_PROG) dllthreads$(EXT_DLL) "$(INSTALL_STUBLIBDIR)"
++endif
+ 	$(INSTALL_DATA) libthreads.$(A) "$(INSTALL_LIBDIR)"
+ 	mkdir -p "$(INSTALL_THREADSLIBDIR)"
+ 	$(INSTALL_DATA) \
+-- 
+2.53.0.windows.2
+

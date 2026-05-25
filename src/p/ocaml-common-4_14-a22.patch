@@ -1,0 +1,54 @@
+From 3d9d9c0596faceaf204b26dd7601cb9399dea02a Mon Sep 17 00:00:00 2001
+From: David Allsopp <david.allsopp@metastack.com>
+Date: Sat, 8 Feb 2025 16:36:20 +0000
+Subject: [PATCH] Fix backslashes in runtime/build_config.h
+
+echo cannot portably be used to display strings containing backslashes
+and the echo builtin in dash in particular always transforms \\ to \
+which breaks the transformation in sak.
+
+Use printf instead.
+
+Co-authored-by: Samuel Hym <samuel@tarides.com>
+(cherry picked from commit 9d3164630236aa4e6a070966b934474f5fd1a3f8)
+(cherry picked from commit a442252cdeb9285772cf0207dbf87686af39d4cc)
+
+diff --git a/Changes b/Changes
+index e5e4c00c595064fbca6049996b7a17930c9f6593..f5e2df974457604f21f5dadc899debc1ab1dbced 100644
+--- a/Changes
++++ b/Changes
+@@ -46,6 +46,11 @@ OCaml 4.14 maintenance version
+   disk usage considerably.
+   (David Allsopp, review by Nicolás Ojeda Bär and Gabriel Scherer)
+ 
++- #13789: Harden the escaping of backslashes when generating
++  runtime/build_config.h (in particular, if the underlying implementation of sh
++  is dash, rather than bash, this now works correctly).
++  (David Allsopp and Samuel Hym, review by Antonin Décimo and Gabriel Scherer)
++
+ ### Bug fixes:
+ 
+ - #12070, #12075, #13209: auto-detect whether `ar` support @FILE arguments at
+diff --git a/runtime/Makefile b/runtime/Makefile
+index e51ed64157f147a5ad145cae38324833b5f0bbf8..9b500d7c8c60a86af71757dbfa4cfde291f5ed8b 100644
+--- a/runtime/Makefile
++++ b/runtime/Makefile
+@@ -262,9 +262,12 @@ sak.$(O): sak.c caml/misc.h caml/config.h
+ C_LITERAL = $(shell ./sak$(EXE) encode-C-literal '$(1)')
+ 
+ build_config.h: $(ROOTDIR)/Makefile.config sak$(EXE)
+-	echo '/* This file is generated from $(ROOTDIR)/Makefile.config */' > $@
+-	echo '#define OCAML_STDLIB_DIR $(call C_LITERAL,$(TARGET_LIBDIR))' >> $@
+-	echo '#define HOST "$(HOST)"' >> $@
++	{ \
++	  echo '/* This file is generated from $(ROOTDIR)/Makefile.config */'; \
++	  printf '#define OCAML_STDLIB_DIR %s\n' \
++	         '$(call C_LITERAL,$(TARGET_LIBDIR))'; \
++	  echo '#define HOST "$(HOST)"'; \
++	} > $@
+ 
+ # Libraries and programs
+ 
+-- 
+2.53.0.windows.2
+

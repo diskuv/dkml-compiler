@@ -1,0 +1,975 @@
+From 564e7d9e382db4edb9dba901eae87e94d7e58cb7 Mon Sep 17 00:00:00 2001
+From: David Allsopp <david.allsopp@metastack.com>
+Date: Sat, 10 Apr 2021 15:13:19 +0100
+Subject: [PATCH] Allow libdir to be found relative to bindir
+
+When configured with --with-relative-libdir, the runtime uses the
+directory of the executable to determine the location of the Standard
+Library. Thus, ocamlrun and the compilers look for ../lib/ocaml by
+default.
+
+This is implemented by changing caml_standard_library_default to be a
+relative path, and then computing the actual value at startup (for
+bytecode) and when queried (for native).
+
+Executables (and objects) produced by the compiler always have an
+absolute value of caml_standard_library_default. ocamlc.opt and
+ocamlopt.opt are built using -set-runtime-default to force
+caml_standard_library_default to be a relative value.
+
+(cherry picked from commit 205bab8a0d62ddb6ff357de719e5e57406de8745)
+
+diff --git a/Changes b/Changes
+index 3bb2f2793a80ffed9c06d6cce537cc06e31001f5..54bbcc2b128f01a2ad2b11cde52d0cf729c53c1b 100644
+--- a/Changes
++++ b/Changes
+@@ -26,8 +26,12 @@ OCaml 4.14 maintenance version
+   both Windows and Unix.
+   (David Allsopp, review by ???)
+ 
+-- #14???: Executables linked with `ocamlc -custom` now always attempt to load
+-  bytecode from the executable itself, rather than first trying `argv[0]`.
++- #14???: Added --with-relative-bindir which allows the runtime and the
++  compilers to locate the Standard Library relative to where the binaries
++  themselves are installed, removing the absolute path previously embedded in
++  caml_standard_library_default. Executables linked with `ocamlc -custom` now
++  always attempt to load bytecode from the executable itself, rather than first
++  trying `argv[0]`.
+   (David Allsopp, review by ???)
+ 
+ ### Code generation and optimizations:
+diff --git a/Makefile b/Makefile
+index b38edf9c8e254a3281c1958de879c802d8fb5bf9..3623cbd6761618ef3f15fd273aedf43f3cc778ba 100644
+--- a/Makefile
++++ b/Makefile
+@@ -44,7 +44,7 @@ COMPFLAGS=-strict-sequence -principal -absname \
+           -w +a-4-9-40-41-42-44-45-48-66-70 \
+           -warn-error +a \
+           -bin-annot -safe-string -strict-formats $(INCLUDES)
+-LINKFLAGS=
++LINKFLAGS=$(OC_COMMON_LINKFLAGS)
+ 
+ ifeq "$(strip $(NATDYNLINKOPTS))" ""
+ OCAML_NATDYNLINKOPTS=
+@@ -353,7 +353,8 @@ endif
+ flexlink.opt$(EXE):
+ 	$(MAKE) -C $(FLEXDLL_SOURCES) $(FLEXLINK_BUILD_ENV) \
+     OCAML_FLEXLINK='$(value OCAMLRUN) $$(ROOTDIR)/boot/flexlink.byte$(EXE)' \
+-	  OCAMLOPT="$(FLEXLINK_OCAMLOPT) -nostdlib -I ../stdlib" flexlink.exe
++	  OCAMLOPT="$(FLEXLINK_OCAMLOPT) -nostdlib -I ../stdlib \
++$(SET_RELATIVE_STDLIB)" flexlink.exe
+ 	mv $(FLEXDLL_SOURCES)/flexlink.exe $@
+ 
+ partialclean::
+@@ -929,6 +930,7 @@ ocamldoc.opt: ocamlc.opt ocamlyacc ocamllex
+ ocamltest: ocamlc ocamlyacc ocamllex otherlibraries
+ 	$(MAKE) -C ocamltest all
+ 
++
+ ocamltest.opt: ocamlc.opt ocamlyacc ocamllex
+ 	$(MAKE) -C ocamltest allopt
+ 
+diff --git a/Makefile.build_config.in b/Makefile.build_config.in
+index e654375de7da6f2abf5680ab6336974a48d2c3ae..176110b0451fe4c4776c9e74776b7071c69252c2 100644
+--- a/Makefile.build_config.in
++++ b/Makefile.build_config.in
+@@ -54,6 +54,7 @@ DOCDIR=@docdir@
+ 
+ ### Where to look for the standard library on target
+ TARGET_LIBDIR=@TARGET_LIBDIR@
++TARGET_LIBDIR_IS_RELATIVE=@target_libdir_is_relative@
+ OCAML_BINDIR = @ocaml_bindir@
+ 
+ # Platform-dependent command to create symbolic links
+diff --git a/Makefile.common b/Makefile.common
+index 1f9a8454dfb471275a40e01c32bf78b0256daed6..80743d1e69b0d46f43102a48f0b876186db5acbf 100644
+--- a/Makefile.common
++++ b/Makefile.common
+@@ -28,6 +28,15 @@ EMPTY :=
+ # $(SPACE) contains a single space
+ SPACE := $(EMPTY) $(EMPTY)
+ 
++ifeq "$(UNIX_OR_WIN32)" "win32"
++DIR_SEP := \$ # There must a space following the $
++CONVERT_PATH = $(subst /,$(DIR_SEP),$(strip $(1)))
++else
++DIR_SEP = /
++CONVERT_PATH = $(strip $(1))
++endif
++
++QUOTE_SINGLE = '$(subst ','\'',$(1))'
+ DESTDIR ?=
+ INSTALL_BINDIR := $(DESTDIR)$(BINDIR)
+ INSTALL_LIBDIR := $(DESTDIR)$(LIBDIR)
+@@ -110,9 +119,14 @@ SUBST=-e 's!%%$1%%!$(call SED_ESCAPE,$($1))!'
+ # in config.mlp.  Thus, backslashes and double quotes must be escaped.
+ SUBST_STRING=-e 's!%%$1%%!$(call SED_ESCAPE,$(call OCAML_ESCAPE,$($1)))!'
+ 
+-# Allow Makefile.cross to add flags to OC_COMMON_LINKFLAGS
+-OC_CROSS_LINKFLAGS ?=
+-OC_COMMON_LINKFLAGS += $(OC_CROSS_LINKFLAGS)
++# Allow Makefile.cross to override the Standard Library default for the compiler
++# itself.
++HOST_LIBDIR ?= $(TARGET_LIBDIR)
++
++OC_COMMON_LINKFLAGS ?=
++OC_COMMON_LINKFLAGS += \
++  -set-runtime-default \
++    $(call QUOTE_SINGLE,standard_library_default=$(HOST_LIBDIR))
+ 
+ # The rule to compile C files
+ 
+diff --git a/asmcomp/asmlink.ml b/asmcomp/asmlink.ml
+index c902158e4dc643195f15c3abd6b3c19e9ed1d31d..31dd6ef122e6a4ec4468dd5e66591c288189e01c 100644
+--- a/asmcomp/asmlink.ml
++++ b/asmcomp/asmlink.ml
+@@ -251,7 +251,7 @@ let make_startup_file ~ppf_dump units_list ~crc_interfaces =
+     Runtimedef.builtin_exceptions;
+   if need_stdlib then begin
+     let standard_library_default =
+-      Option.value ~default:Config.standard_library_default
++      Option.value ~default:Config.standard_library_effective
+                    !Clflags.standard_library_default in
+     compile_phrase
+       (Cmm_helpers.emit_global_string_constant
+diff --git a/bytecomp/bytelink.ml b/bytecomp/bytelink.ml
+index 6a9b87c4816f1bc752d3ccfded473095c5c4434e..03d53a4bbf3f423a050191f470b4579f9b3c89ce 100644
+--- a/bytecomp/bytelink.ml
++++ b/bytecomp/bytelink.ml
+@@ -536,7 +536,7 @@ let link_bytecode ?final_name tolink exec_name standalone =
+          if standalone && needs_stdlib then
+            (* -set-runtime-default *)
+            if !Clflags.standard_library_default = None then
+-             Some Config.standard_library_default
++             Some Config.standard_library_effective
+            else
+              !Clflags.standard_library_default
+          else
+@@ -659,7 +659,7 @@ let c_string_literal_of_string s =
+ 
+ let emit_runtime_standard_library_default outchan =
+   let stdlib =
+-    let default = Config.standard_library_default in
++    let default = Config.standard_library_effective in
+     Option.value ~default !Clflags.standard_library_default in
+   let literal = c_string_literal_of_string stdlib in
+   Printf.fprintf outchan
+diff --git a/bytecomp/dll.ml b/bytecomp/dll.ml
+index faff18da0568d53210f19d42f57ca5b5426fc160..d91e621e7e8dcc9ca7e352938177beb5717dd09e 100644
+--- a/bytecomp/dll.ml
++++ b/bytecomp/dll.ml
+@@ -161,7 +161,8 @@ let split_dll_path path =
+ let init_compile nostdlib =
+   search_path :=
+     ld_library_path_contents() @
+-    (if nostdlib then [] else ld_conf_contents Config.standard_library_default)
++    (if nostdlib then [] else
++      ld_conf_contents Config.standard_library_effective)
+ 
+ (* Initialization for linking in core (dynlink or toplevel) *)
+ 
+@@ -169,7 +170,7 @@ let init_toplevel dllpath =
+   search_path :=
+     ld_library_path_contents() @
+     split_dll_path dllpath @
+-    ld_conf_contents Config.standard_library_default;
++    ld_conf_contents Config.standard_library_effective;
+   opened_dlls :=
+     List.map (fun dll -> Execution dll)
+       (Array.to_list (get_current_dlls()));
+diff --git a/configure b/configure
+index 05b6e8fa3570a776d45f31de9a2aa166ba9c883d..7b3d1b2de1b5dfe371deb3474b7a619b228ec9fc 100755
+GIT binary patch
+delta 2170
+zcmaJ?OKTff6lRp@VY%2&oG9@Fb2^$JJGSIND1{m=5@KS5v4U*~6oYzabY)F4no;In
+zS$6YKi6JgDP^c+)SJF-Cs>F6dixT=5y3DR*okd+*sAw1Mx%04WM=oeUy1M6_?|k2P
+z&b<Cg`};fXrFQ4MW$Go<Et;(8Qj2hNo$im`8BX?xzl#2a{c9iZkz3(m);|QW90Ow<
+z8=Nxm3Wa4(>=JQHuwd#gaW|)c)u>^XO<IB=c<12NXfJmlo7GJlOYgt_Nq??!;;vC1
+z6g!G0UnUl#$z&Sl#kHT6i>>83WiQq`TTuS|u<tk?q1;n0i{`cxJ&9hNdlR`b5Z(@|
+z%!t)T%8(d)r1VYtP>S3M{>x`FNh<3Cocv3C@=!^oPM*quvMF{yJ2SG~ex~3P!RHJ<
+zXIt%O(J#InL(0~uovWyz5~FCW7b}#Ms4ENNx%f5}yB_tvi`~(9>g$7eDz-3x^Y-kb
+z7#NIS7BAYde(~}`Y<PPs6>Dv!;_Wx$pU1IYaqn$>Ohnr8^J4OIrT6|xU@E+yhs;K1
+zM(Sh3N7xZ+R<*)LRqdS!yaI5#Al$7>UI4_oz39@QUN@~$@mLa({V_VGtnU2&YGmgi
+z)^njtjS2DKhv;ClOE6j@-z5NMW|EW<!>eo%MnUTy45kg~alDqBzB=Lci#GL4ewbE!
+z7=#u)2X<sn=N_wAD2P8j!SpG$y{5!BPn3b_Y_?(YN;dRdI594LP&Zx5fQ0ivp+<N`
+z{Q5*0x*Ax{#9^Y0!$vnAd^yF7-=ZUhQ;OgW;&}N@gF$TD;h;Ob0y^!?Bl=KVm|vV-
+zEU54SdKW*f&2~JQN~d9&a#$y>NpuUL+SH(o;WPt|t>IF_saW_UK71EsAvyNE;UM8@
+zaO*ZVt2Aqox@}alrd@WhlWGkY3+6##7%w5LoOfCCeds#}Oa^s^TcYf^Uh<}w98ZfF
+z&o_%8NvTNVrO|qZQ>~d6b!C|0*kyCA?qaZ{96RsI{5TRo-G+(Ik&q?nL9&KZw@Q*5
+zTGeT(gn1BY(@&c-s?LNDcdoF!QoK38cx!&i!=|m=Sh_viIdZAr0g{9RO<nBy7&*|D
+zo-($<a-bc}j!luK)gYV9OF(qySar-MF-r|PJRo^e7n~Vta7XT2gkEvbJIG^|a2Pjp
+zGzT?@Q&fgn)~3&qPK^7^BCLY4ICj9pU7QA|!6p#R%8lmH-q1tGyaPIV0ZBA4BZ|<F
+zo5dR`(_RY|avjF9p-yb-&@1c2s(ZxPhnm-IVsVNB=AaOY)SL<uouC=HVdzd|A(PAa
+zl|3Y<8zRVaiY*-1>%>QeZ?RB_rl<3vXQX8*UIO)qQ2AB$n2A?a6|aTUt8TozTA}+c
+z_GbY1Qzv<3Nfo<)#V<zv7t1ewiR{S#WEOAx66$-MaEz{fs$5Fs<ZDU3nZEB!Tp#QL
+zNd^vyOn>6iWUze#TjR?Ioqo78J4;fPn<C$zc*=&3)XQhIacWc?+$wk~#<mhyTK_&x
+TOf}EQpU)#bL#??;&p`Y?zt7`%
+
+delta 226
+zcmeyhOy$NTl?^HZo9zOGxHhLotx4S6wkM)z`#%rH(`?&M`7?etZ$H|>2*gZ4%nZaV
+z+mCjzcK5eSO0sR2lw|+$aC^c(b`CMs)Uw1J1*QDt#N3?tq|CgO%p%(uB^6|TjFQsy
+zgAyFZ)6FF~l%}^ya0mz>ODl1uWlk59<WQW>xtG;r`)WxJ%VK3@1-9xc8mY+{`3k7U
+ZPA}}?kl(J-%b``zgRFdeBoC(|I{^4#Q}qA<
+
+diff --git a/configure.ac b/configure.ac
+index c52caa68d42f309abc932d986467630e719e8cc0..63d421fa18ae4db6f60d0fab3821e6d55d435191 100644
+--- a/configure.ac
++++ b/configure.ac
+@@ -58,6 +58,7 @@ extralibs=
+ instrumented_runtime=false
+ instrumented_runtime_libs=""
+ bootstrapping_flexdll=false
++target_libdir_is_relative=false
+ 
+ # Information about the package
+ 
+@@ -175,6 +176,7 @@ AC_SUBST([ar_supports_response_files])
+ AC_SUBST([TARGET_LIBDIR])
+ AC_SUBST([QS])
+ AC_SUBST([target_bindir])
++AC_SUBST([target_libdir_is_relative])
+ 
+ ## Generated files
+ 
+@@ -476,6 +478,14 @@ AC_ARG_ENABLE([function-sections],
+   [],
+   [enable_function_sections=auto])
+ 
++AC_ARG_WITH([relative-libdir],
++  [AS_HELP_STRING([--with-relative-libdir],
++    [location of the Standard Library, specified relative to --bindir])],
++  [AS_IF([test x"$withval" = 'xno'],
++    [bindir_to_libdir=''],
++    [bindir_to_libdir="$withval"])],
++  [bindir_to_libdir=''])
++
+ AC_ARG_WITH([afl],
+   [AS_HELP_STRING([--with-afl],
+     [use the AFL fuzzer])])
+@@ -662,7 +672,7 @@ AS_IF([test "x$interpval" = "xyes"],
+ # in config.status, rather than by the .in mechanism, since the latter cannot
+ # reliably process binary files.
+ AC_CONFIG_COMMANDS([shebang],
+-  [printf '%s\n%s\000\n' "$launch_method" "$ocaml_bindir" \
++  [printf '%s\n%s\000\n' "$launch_method" "$HOST_BINDIR" \
+     > stdlib/runtime.info
+   printf '%s\n%s\000\n' "$target_launch_method" "$TARGET_BINDIR" \
+     > stdlib/target_runtime.info],
+@@ -673,7 +683,7 @@ dnl nefarious single quotes which may appear in any of the strings.
+   [launch_method='$(echo "$launch_method" | sed -e "s/'/'\"'\"'/g")'
+   target_launch_method=\
+ '$(echo "$target_launch_method" | sed -e "s/'/'\"'\"'/g")'
+-  ocaml_bindir='$(echo "$ocaml_bindir" | sed -e "s/'/'\"'\"'/g")'
++  HOST_BINDIR='$(echo "$HOST_BINDIR" | sed -e "s/'/'\"'\"'/g")'
+   TARGET_BINDIR='$(echo "$TARGET_BINDIR" | sed -e "s/'/'\"'\"'/g")'])
+ 
+ # Are we building a cross-compiler
+@@ -976,6 +986,7 @@ AS_IF([test "x$ac_cv_lib_m_cos" = xyes ], [mathlib="-lm"], [mathlib=""])
+ 
+ AC_CHECK_HEADER([math.h])
+ AC_CHECK_HEADERS([unistd.h],[AC_DEFINE([HAS_UNISTD])])
++AC_CHECK_HEADER([libgen.h],[AC_DEFINE([HAS_LIBGEN_H], [1])])
+ AC_CHECK_HEADER([stdint.h],[AC_DEFINE([HAS_STDINT_H])])
+ AC_CHECK_HEADER([dirent.h], [AC_DEFINE([HAS_DIRENT])], [],
+   [#include <sys/types.h>])
+@@ -2185,6 +2196,23 @@ AS_CASE([$cygwin_build_env,$host],
+         [ocaml_libdir='${exec_prefix}\lib\ocaml'],
+         [ocaml_libdir="$libdir"])])])
+ 
++AS_IF([test x"$libdir" = x'${exec_prefix}/lib/ocaml'],
++  [AS_IF([test x"$bindir_to_libdir" != 'x'],
++    [ocaml_libdir="$bindir_to_libdir"
++    target_libdir_is_relative=true
++    AS_CASE([$cygwin_build_env,$host],
++      [true,*-w64-mingw32*|true,*-pc-windows],
++        [build_bindir_to_libdir="$(LC_ALL=C.UTF-8 cygpath \
++                                   "$bindir_to_libdir")"],
++      [build_bindir_to_libdir="$bindir_to_libdir"])
++    AS_CASE([$build_bindir_to_libdir],
++      [./*],[libdir="$bindir${build_bindir_to_libdir[#].}"],
++      [../*],[libdir="$bindir/$build_bindir_to_libdir"],
++      [AC_MSG_ERROR([--with-relative-libdir requires a relative path])])])],
++  [AS_IF([test x"$bindir_to_libdir" != 'x'],
++    [AC_MSG_ERROR(m4_normalize([--with-relative-libdir and --libdir cannot both
++      be specified]))])])
++
+ # Define a few macros that were defined in config/m-nt.h
+ # but whose value is not guessed properly by configure
+ # (all this should be understood and fixed)
+@@ -2218,10 +2246,30 @@ AC_CONFIG_COMMANDS_PRE([
+   AS_IF([test "x$prefix" = "xNONE"],[prefix="$ac_default_prefix"])
+   AS_IF([test "x$exec_prefix" = "xNONE"],[exec_prefix="$prefix"])
+   eval "exec_prefix=\"$exec_prefix\""
+-  eval "ocaml_bindir=\"$ocaml_bindir\""
++  # Set variables necessary to create utils/config.generated.ml and the two
++  # runtime-launch-info templates in stdlib.
++  # $ocaml_bindir is used for utils/config.generated.ml and is _empty_ if the
++  #   compiler is configured with --with-relative-libdir (otherwise the path
++  #   would be embedded in config.cmo)
++  # $HOST_BINDIR and $TARGET_BINDIR are used to generate the two
++  #   runtime-launch-info files. $HOST_BINDIR is always the absolute path to the
++  #   binary directory, in host format (i.e. potentially with backslashes on
++  #   Windows). $TARGET_BINDIR can be specified by the caller when building
++  #   cross-compilers, and the value then is used unaltered. Otherwise,
++  #   $TARGET_BINDIR is set to '.' when the compiler is configured with
++  #   --with-relative-libdir or the value of $HOST_BINDIR otherwise.
++  eval "HOST_BINDIR=\"$ocaml_bindir\""
++  AS_IF([test "x$bindir_to_libdir" = 'x'],
++    [ocaml_bindir="$HOST_BINDIR"],
++    [ocaml_bindir=''])
++  AS_IF([test x"$TARGET_BINDIR" = 'x'],
++    [AS_IF([test "x$bindir_to_libdir" = 'x'],
++      [TARGET_BINDIR="$HOST_BINDIR"],
++      [TARGET_BINDIR='.'])])
+   eval "ocaml_libdir=\"$ocaml_libdir\""
+-  AS_IF([test x"$TARGET_BINDIR" = 'x'],[TARGET_BINDIR="$ocaml_bindir"])
+-  TARGET_LIBDIR="$ocaml_libdir"
++  AS_IF([test "x$bindir_to_libdir" = 'x'],
++    [TARGET_LIBDIR="$ocaml_libdir"],
++    [TARGET_LIBDIR="$bindir_to_libdir"])
+   AS_IF([test x"$target_launch_method" = 'x'],
+     [target_launch_method="$launch_method"])
+   prefix="$saved_prefix"
+diff --git a/debugger/Makefile b/debugger/Makefile
+index 82acbffa7db977414e217a7de6ed48fc7187ba1c..4518272c0b9ece212001a41401b603cc80aa8ee6 100644
+--- a/debugger/Makefile
++++ b/debugger/Makefile
+@@ -24,7 +24,8 @@ UNIXDIR=$(ROOTDIR)/otherlibs/$(UNIXLIB)
+ CAMLC=$(BEST_OCAMLC) -g -nostdlib -I $(ROOTDIR)/stdlib
+ COMPFLAGS=$(INCLUDES) -absname -w +a-4-9-41-42-44-45-48-70 -warn-error +A \
+           -safe-string -strict-sequence -strict-formats
+-LINKFLAGS=-linkall -I $(UNIXDIR) -I $(DYNLINKDIR) -I $(ROOTDIR)/runtime
++LINKFLAGS=-linkall -I $(UNIXDIR) -I $(DYNLINKDIR) -I $(ROOTDIR)/runtime \
++          -set-runtime-default 'standard_library_default=$(TARGET_LIBDIR)'
+ CAMLDEP=$(BEST_OCAMLDEP)
+ DEPFLAGS=-slash
+ DEPINCLUDES=$(INCLUDES)
+diff --git a/ocamldoc/Makefile b/ocamldoc/Makefile
+index 8c6a2f65c87b59ed0bf1b1eb5fc3dcde339a8313..b5b6411fded3ee5f4e348e0df18306588d9f4ca2 100644
+--- a/ocamldoc/Makefile
++++ b/ocamldoc/Makefile
+@@ -78,7 +78,8 @@ INCLUDES=$(INCLUDES_DEP) $(INCLUDES_NODEP)
+ COMPFLAGS=$(INCLUDES) -absname -w +a-4-9-41-42-44-45-48-70 -warn-error +A \
+   -safe-string -strict-sequence -strict-formats -bin-annot -principal
+ 
+-LINKFLAGS=$(INCLUDES) -nostdlib
++LINKFLAGS=$(INCLUDES) -nostdlib \
++  -set-runtime-default 'standard_library_default=$(TARGET_LIBDIR)'
+ 
+ CMOFILES=\
+   odoc_config.cmo \
+diff --git a/ocamltest/ocamltest_config.ml.in b/ocamltest/ocamltest_config.ml.in
+index db4dd221ade3be6f4e26327021bc12c73164fadf..dc5b894618f583d9d3e9d1c1d2ac21976b714ee2 100644
+--- a/ocamltest/ocamltest_config.ml.in
++++ b/ocamltest/ocamltest_config.ml.in
+@@ -88,3 +88,5 @@ let function_sections = %%FUNCTION_SECTIONS%%
+ let instrumented_runtime = %%INSTRUMENTED_RUNTIME%%
+ 
+ let naked_pointers = %%NAKED_POINTERS%%
++
++let has_relative_libdir = @target_libdir_is_relative@
+diff --git a/ocamltest/ocamltest_config.mli b/ocamltest/ocamltest_config.mli
+index 3ce8c9558e7c56938b5bbbcf6a3b173b0a993f99..d640021223971cc44fe1cb9d1c3dc19e7fc2851e 100644
+--- a/ocamltest/ocamltest_config.mli
++++ b/ocamltest/ocamltest_config.mli
+@@ -124,3 +124,6 @@ val instrumented_runtime : bool
+ 
+ val naked_pointers : bool
+ (** Whether the runtime system supports naked pointers outside the heap *)
++
++val has_relative_libdir : bool
++(** Whether the compiler has been configured using --with-relative-libdir *)
+diff --git a/runtime/caml/osdeps.h b/runtime/caml/osdeps.h
+index 4cf32d891d236c0a2c22881960b61be020822004..4b3dd11b5b0ff375facd4849732ac3e06088eca1 100644
+--- a/runtime/caml/osdeps.h
++++ b/runtime/caml/osdeps.h
+@@ -108,6 +108,21 @@ extern char_os *caml_secure_getenv(char_os const *var);
+    cannot be determined, return -1. */
+ extern int caml_num_rows_fd(int fd);
+ 
++/* caml_locate_standard_library returns the location of the Standard Library.
++   The location returned is absolute, if stdlib_default is a relative path then
++   the result is computed relative to the directory portion of exe_name.
++
++   If dirname is not NULL and stdlib_default is a relative path, a copy of the
++   directory name part of exe_name is returned. If stdlib_default is an absolute
++   path, dirname is never changed.
++
++   Both strings are allocated with [caml_stat_alloc], so should be freed using
++   [caml_stat_free].
++*/
++CAMLextern char_os *caml_locate_standard_library (const char_os *exe_name,
++                                                  const char_os *stdlib_default,
++                                                  char_os **dirname);
++
+ #ifdef _WIN32
+ 
+ extern int caml_win32_rename(const wchar_t *, const wchar_t *);
+@@ -146,6 +161,18 @@ CAMLextern clock_t caml_win32_clock(void);
+ 
+ #endif /* _WIN32 */
+ 
++/* True if:
++   - dir equals "."
++   - dir equals ".."
++   - dir begins "./"
++   - dir begins "../"
++   The tests for null avoid the need to call strlen_os. */
++#define Is_relative_dir(dir) \
++  (dir[0] == '.' \
++   && (dir[1] == 0 \
++       || Is_separator(dir[1]) \
++       || (dir[1] == '.' && (dir[2] == 0 || Is_separator(dir[2])))))
++
+ #endif /* CAML_INTERNALS */
+ 
+ #ifdef _WIN32
+diff --git a/runtime/caml/s.h.in b/runtime/caml/s.h.in
+index 8e4efdcc72853b25b4add5b6514d403f7c53e7b2..20f91ac33d97d3b626b7542c1b3add65a55222ca 100644
+--- a/runtime/caml/s.h.in
++++ b/runtime/caml/s.h.in
+@@ -100,6 +100,10 @@
+ 
+ /* Define HAS_UNISTD if you have /usr/include/unistd.h. */
+ 
++#undef HAS_LIBGEN_H
++
++/* Define HAS_LIBGEN_H if you have /usr/include/libgen.h. */
++
+ #undef HAS_DIRENT
+ 
+ /* Define HAS_DIRENT if you have /usr/include/dirent.h and the result of
+diff --git a/runtime/caml/startup.h b/runtime/caml/startup.h
+index e0b412b3909c78c297fee392a2032f73c3217e4d..18085d599a464147f30e9c57b3028db548a5ec4a 100644
+--- a/runtime/caml/startup.h
++++ b/runtime/caml/startup.h
+@@ -57,6 +57,7 @@ extern enum caml_byte_program_mode caml_byte_program_mode;
+ /* The default location of the Standard Library as used by the runtime to find
+    ld.conf */
+ extern const char_os *caml_runtime_standard_library_default;
++extern const char_os *caml_runtime_standard_library_effective;
+ 
+ #endif /* CAML_INTERNALS */
+ 
+diff --git a/runtime/dynlink.c b/runtime/dynlink.c
+index fd1a56312157a54a8c360a49ebe740c865c886f0..c6c0d02bff9b6b568db65482460279be1f4b0eaf 100644
+--- a/runtime/dynlink.c
++++ b/runtime/dynlink.c
+@@ -245,7 +245,7 @@ CAMLprim value caml_dynlink_parse_runtime_ld_conf(value ignored)
+      is built, but this primitive is never actually called. */
+   return parse_ld_conf(T(""));
+ #else
+-  return parse_ld_conf(caml_runtime_standard_library_default);
++  return parse_ld_conf(caml_runtime_standard_library_effective);
+ #endif
+ }
+ 
+@@ -301,7 +301,7 @@ void caml_build_primitive_table(char_os * lib_path,
+   if (lib_path != NULL)
+     for (p = lib_path; *p != 0; p += strlen_os(p) + 1)
+       caml_ext_table_add(&caml_shared_libs_path, p);
+-  tofree2 = caml_parse_ld_conf(caml_runtime_standard_library_default,
++  tofree2 = caml_parse_ld_conf(caml_runtime_standard_library_effective,
+                                &caml_shared_libs_path);
+   /* Open the shared libraries */
+   caml_ext_table_init(&shared_libs, 8);
+diff --git a/runtime/startup_byt.c b/runtime/startup_byt.c
+index d2470213c976c2c9b6472fbbec7683e12dcb2e20..c1bbf1a0636e9f6722d23d2cf40ddbc20a5a6c8d 100644
+--- a/runtime/startup_byt.c
++++ b/runtime/startup_byt.c
+@@ -71,6 +71,8 @@
+ #define SEEK_END 2
+ #endif
+ 
++const char_os * caml_runtime_standard_library_effective = NULL;
++
+ static char magicstr[EXEC_MAGIC_LENGTH+1];
+ static int print_magic = 0;
+ static int print_config = 0;
+@@ -372,7 +374,7 @@ static const char_os * get_stdlib_location(void)
+   const char_os * stdlib;
+   stdlib = caml_secure_getenv(T("OCAMLLIB"));
+   if (stdlib == NULL) stdlib = caml_secure_getenv(T("CAMLLIB"));
+-  if (stdlib == NULL) stdlib = caml_runtime_standard_library_default;
++  if (stdlib == NULL) stdlib = caml_runtime_standard_library_effective;
+   return stdlib;
+ }
+ 
+@@ -436,7 +438,7 @@ static void do_print_config(void)
+   puts("shared_libs_path:");
+   caml_decompose_path(&caml_shared_libs_path,
+                       caml_secure_getenv(T("CAML_LD_LIBRARY_PATH")));
+-  caml_parse_ld_conf(caml_runtime_standard_library_default,
++  caml_parse_ld_conf(caml_runtime_standard_library_effective,
+                      &caml_shared_libs_path);
+   for (i = 0; i < caml_shared_libs_path.size; i++) {
+     dir = caml_shared_libs_path.contents[i];
+@@ -472,7 +474,7 @@ CAMLexport void caml_main(char_os **argv)
+   value res;
+   char * req_prims;
+   char_os * shared_lib_path, * shared_libs;
+-  char_os * exe_name, * proc_self_exe;
++  char_os * exe_name, * proc_self_exe, * argv0;
+   char_os * image_standard_library_default;
+ 
+   /* Initialize the domain */
+@@ -500,7 +502,7 @@ CAMLexport void caml_main(char_os **argv)
+   /* Determine position of bytecode file */
+   pos = 0;
+ 
+-  proc_self_exe = caml_executable_name();
++  argv0 = proc_self_exe = caml_executable_name();
+ 
+   if (caml_byte_program_mode != APPENDED || proc_self_exe == NULL) {
+     /* First, try argv[0] (when ocamlrun is called by a bytecode program) */
+@@ -518,18 +520,28 @@ CAMLexport void caml_main(char_os **argv)
+     if (proc_self_exe != NULL) {
+       exe_name = proc_self_exe;
+       fd = caml_attempt_open(&exe_name, &trail, 0);
+-    } else {
+-      caml_stat_free(proc_self_exe);
+     }
+     if (fd < 0 && caml_byte_program_mode == APPENDED)
+       error("unable to open file '%s'", caml_stat_strdup_of_os(exe_name));
+-  } else {
+-    caml_stat_free(proc_self_exe);
+   }
+ 
++  if (argv0 == NULL) {
++    if (exe_name != proc_self_exe)
++      free(proc_self_exe);
++    argv0 = caml_search_exe_in_path(exe_name);
++  }
++
++  if (argv0 == NULL)
++    argv0 = caml_search_exe_in_path(exe_name);
++
+   if (fd < 0) {
+     pos = parse_command_line(argv);
+     if (print_config) {
++      caml_runtime_standard_library_effective =
++        caml_locate_standard_library(argv0,
++                                     caml_runtime_standard_library_default,
++                                     NULL);
++
+       do_print_config();
+       exit(0);
+     }
+@@ -560,6 +572,22 @@ CAMLexport void caml_main(char_os **argv)
+   }
+   /* Read the table of contents (section descriptors) */
+   caml_read_section_descriptors(fd, &trail);
++
++  caml_runtime_standard_library_effective =
++    caml_locate_standard_library(argv0,
++                                 caml_runtime_standard_library_default, NULL);
++  caml_stat_free(argv0);
++
++  /* Load the embedded overridden caml_standard_library_default value, if one is
++     available. Note that although -custom executables come through this
++     mechanism, they don't define OSLD sections because
++     caml_runtime_standard_library_default and caml_standard_library_default are
++     fundamentally equal and caml_runtime_standard_library_default is set when
++     the -custom executable is linked. */
++  image_standard_library_default = read_section_to_os(fd, &trail, "OSLD");
++  if (image_standard_library_default != NULL)
++    caml_standard_library_default = image_standard_library_default;
++
+   /* Initialize the abstract machine */
+   caml_init_gc (caml_init_minor_heap_wsz, caml_init_heap_wsz,
+                 caml_init_heap_chunk_sz, caml_init_percent_free,
+@@ -583,15 +611,6 @@ CAMLexport void caml_main(char_os **argv)
+   req_prims = read_section(fd, &trail, "PRIM");
+   if (req_prims == NULL) caml_fatal_error("no PRIM section");
+   caml_build_primitive_table(shared_lib_path, shared_libs, req_prims);
+-  /* Load the embedded overridden caml_standard_library_default value, if one is
+-     available. Note that although -custom executables come through this
+-     mechanism, they don't define OSLD sections because
+-     caml_runtime_standard_library_default and caml_standard_library_default are
+-     fundamentally equal and caml_runtime_standard_library_default is set when
+-     the -custom executable is linked. */
+-  image_standard_library_default = read_section_to_os(fd, &trail, "OSLD");
+-  if (image_standard_library_default != NULL)
+-    caml_standard_library_default = image_standard_library_default;
+   caml_stat_free(shared_lib_path);
+   caml_stat_free(shared_libs);
+   caml_stat_free(req_prims);
+@@ -639,7 +658,7 @@ CAMLexport value caml_startup_code_exn(
+            char_os **argv)
+ {
+   char_os * cds_file;
+-  char_os * exe_name;
++  char_os * exe_name, * proc_self_exe;
+ 
+   /* Initialize the domain */
+   caml_init_domain();
+@@ -666,8 +685,20 @@ CAMLexport value caml_startup_code_exn(
+   if (cds_file != NULL) {
+     caml_cds_file = caml_stat_strdup_os(cds_file);
+   }
+-  exe_name = caml_executable_name();
+-  if (exe_name == NULL) exe_name = caml_search_exe_in_path(argv[0]);
++  proc_self_exe = caml_executable_name();
++  if (proc_self_exe == NULL)
++    exe_name = caml_search_exe_in_path(argv[0]);
++  else
++    exe_name = proc_self_exe;
++
++  caml_runtime_standard_library_effective =
++    caml_locate_standard_library(exe_name,
++                                 caml_runtime_standard_library_default, NULL);
++
++  caml_runtime_standard_library_effective =
++    caml_locate_standard_library(exe_name,
++                                 caml_runtime_standard_library_default, NULL);
++
+   /* Initialize the abstract machine */
+   caml_init_gc (caml_init_minor_heap_wsz, caml_init_heap_wsz,
+                 caml_init_heap_chunk_sz, caml_init_percent_free,
+diff --git a/runtime/sys.c b/runtime/sys.c
+index 4578a5769021ccf5e7a4294b685f92d162b010d7..dd9be632219fc1400ec100bd8f3eb2a38500e694 100644
+--- a/runtime/sys.c
++++ b/runtime/sys.c
+@@ -680,6 +680,31 @@ CAMLprim value caml_sys_const_standard_library_default(value unit)
+ }
+ #endif
+ 
++CAMLprim value caml_sys_get_stdlib_dirs(value vstdlib_default)
++{
++  CAMLparam1(vstdlib_default);
++  CAMLlocal3(result, eff, root_dir);
++
++  char_os *stdlib_default = caml_stat_strdup_to_os(String_val(vstdlib_default));
++  char_os *root = NULL, *stdlib;
++
++  stdlib =
++    caml_locate_standard_library(caml_exe_name, stdlib_default, &root);
++
++  eff = caml_copy_string_of_os(stdlib);
++  if (root == NULL) {
++    root_dir = Val_none;
++  } else {
++    root_dir = caml_copy_string_of_os(root);
++    root_dir = caml_alloc_some(root_dir);
++  }
++  result = caml_alloc_small(2, 0);
++  Field(result, 0) = eff;
++  Field(result, 1) = root_dir;
++
++  CAMLreturn(result);
++}
++
+ CAMLprim value caml_sys_get_config(value unit)
+ {
+   CAMLparam0 ();   /* unit is unused */
+diff --git a/runtime/unix.c b/runtime/unix.c
+index 21715a761ee85c1a3d79eb91adfce0ea20c02bbf..7b5902eae2a0a73dc7a94c59d7520a544a0c9e95 100644
+--- a/runtime/unix.c
++++ b/runtime/unix.c
+@@ -46,6 +46,9 @@
+ #else
+ #include <sys/dir.h>
+ #endif
++#ifdef HAS_LIBGEN_H
++#include <libgen.h>
++#endif
+ #ifdef __APPLE__
+ #include <mach-o/dyld.h>
+ #endif
+@@ -434,3 +437,70 @@ int caml_num_rows_fd(int fd)
+   return -1;
+ #endif
+ }
++
++static char * caml_dirname (const char * path)
++{
++#ifdef HAS_LIBGEN_H
++  char *dir, *res;
++  dir = caml_stat_strdup(path);
++  res = caml_stat_strdup(dirname(dir));
++  caml_stat_free(dir);
++  return res;
++#else
++  /* See Filename.generic_dirname */
++  size_t n = strlen(path) - 1;
++  char *res;
++  if (n < 0) /* path is "" */
++    return caml_stat_strdup(".");
++  while (n >= 0 && path[n] == '/')
++    n--;
++  if (n < 0) /* path is entirely slashes */
++    return caml_stat_strdup("/");
++  while (n >= 0 && path[n] != '/')
++    n--;
++  if (n < 0) /* path is relative */
++    return caml_stat_strdup(".");
++  while (n >= 0 && path[n] == '/')
++    n--;
++  if (n < 0) /* path is a file at root */
++    return caml_stat_strdup("/");
++  /* n is the _index_ of the last character of the dirname */
++  res = caml_stat_alloc(n + 2);
++  memcpy(res, path, n + 1);
++  res[n + 1] = 0;
++  return res;
++#endif
++}
++
++CAMLextern char_os* caml_locate_standard_library (const char *exe_name,
++                                                  const char *stdlib_default,
++                                                  char **dirname)
++{
++  if (Is_relative_dir(stdlib_default)) {
++    char * root = caml_dirname(exe_name);
++    char * candidate =
++      caml_stat_strconcat(3, root, CAML_DIR_SEP, stdlib_default);
++    /* In practice, a system which can be configured --with-relative-libdir will
++       also have realpath. The directory is normalised here for consistency with
++       the behaviour on Windows, which doesn't have a direct equivalent of
++       dirname and performs the equivalent of realpath as a side-effect of
++       determining the root path. */
++#ifdef HAS_REALPATH
++    char * resolved_candidate = realpath(candidate, NULL);
++    /* If realpath fails, use the non-normalised path for error messages. */
++    if (resolved_candidate != NULL) {
++      caml_stat_free(candidate);
++      /* caml_realpath uses malloc */
++      candidate = caml_stat_strdup(resolved_candidate);
++      free(resolved_candidate);
++    }
++#endif
++    if (dirname == NULL)
++      caml_stat_free(root);
++    else
++      *dirname = root;
++    return candidate;
++  } else {
++    return caml_stat_strdup(stdlib_default);
++  }
++}
+diff --git a/runtime/win32.c b/runtime/win32.c
+index a11ddb5d6f81c7d58f57061c97476257e6822db4..22361d478cc6314271ea5348d055b7bc2164961e 100644
+--- a/runtime/win32.c
++++ b/runtime/win32.c
+@@ -39,6 +39,7 @@
+ #include <errno.h>
+ #include <string.h>
+ #include <signal.h>
++#include <wchar.h>
+ #include "caml/alloc.h"
+ #include "caml/codefrag.h"
+ #include "caml/fail.h"
+@@ -1104,3 +1105,89 @@ CAMLexport clock_t caml_win32_clock(void)
+   clocks_per_sec = INT64_LITERAL(10000000U) / (ULONGLONG)CLOCKS_PER_SEC;
+   return (clock_t)(total / clocks_per_sec);
+ }
++
++CAMLextern char_os* caml_locate_standard_library (const wchar_t *exe_name,
++                                                  const wchar_t *stdlib_default,
++                                                  wchar_t **dirname)
++{
++  if (Is_relative_dir(stdlib_default)) {
++    LPWSTR root = NULL, basename, candidate, resolved_candidate = NULL;
++    DWORD l = MAX_PATH + 1, buf_len;
++    HANDLE h;
++
++    do {
++      buf_len = l;
++      caml_stat_free(root);
++      root = caml_stat_alloc(buf_len * sizeof(WCHAR));
++      l = GetFullPathName(exe_name, buf_len, root, &basename);
++    } while (l >= buf_len);
++    /* It should be an Impossible Thing for exe_name (which will have been the
++       result of GetModuleFileName) to be unparsable by GetFullPathName */
++    if (l == 0) {
++      caml_stat_free(root);
++      return caml_stat_wcsdup(stdlib_default);
++    }
++
++    CAMLassert(basename != root && Is_separator(*(basename - 1)));
++
++    /* Make root the dirname portion */
++    *(basename - 1) = 0;
++
++    candidate =
++      caml_stat_wcsconcat(3, root, CAML_DIR_SEP, stdlib_default);
++    h =
++      CreateFile(candidate, 0,
++                 FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, NULL,
++                 OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, NULL);
++    if (h == INVALID_HANDLE_VALUE) {
++      caml_stat_free(candidate);
++      return caml_stat_wcsdup(stdlib_default);
++    }
++
++    resolved_candidate = NULL;
++    l = MAX_PATH + 1;
++    do {
++      buf_len = l;
++      caml_stat_free(resolved_candidate);
++      resolved_candidate = caml_stat_alloc(buf_len * sizeof(WCHAR));
++      l = GetFinalPathNameByHandle(h, resolved_candidate, buf_len,
++                                   FILE_NAME_NORMALIZED | VOLUME_NAME_DOS);
++    } while (l >= buf_len);
++
++    if (l > 0) {
++      /* GetFinalPathNameByHandle always returns \\?\ which needs stripping.
++         UNC paths are returned as \\?\UNC\ - in this case, reuse the \\ from
++         \\?\. */
++      CAMLassert(l > 4 && resolved_candidate[0] == '\\'
++                       && resolved_candidate[1] == '\\'
++                       && resolved_candidate[2] == '?'
++                       && resolved_candidate[3] == '\\');
++
++      caml_stat_free(candidate);
++
++      if (l >= 8 && resolved_candidate[4] == 'U'
++                 && resolved_candidate[5] == 'N'
++                 && resolved_candidate[6] == 'C'
++                 && resolved_candidate[7] == '\\') {
++        /* NT native UNC path - reuse the 'C' for the backslash */
++        resolved_candidate[6] = '\\';
++        candidate = caml_stat_wcsdup(resolved_candidate + 6);
++      } else {
++        /* Local device path */
++        candidate = caml_stat_wcsdup(resolved_candidate + 4);
++      }
++    }
++
++    /* It should be another Impossible Thing for l == 0 in the above. If that
++       did happen, candidate will _not_ have been freed, and we'll return the
++       path returned by GetFullPathName */
++    caml_stat_free(resolved_candidate);
++
++    if (dirname != NULL)
++      *dirname = caml_stat_wcsdup(root);
++    caml_stat_free(root);
++    return candidate;
++  } else {
++    return caml_stat_wcsdup(stdlib_default);
++  }
++}
+diff --git a/tools/Makefile b/tools/Makefile
+index 4ab658e89c16196fb8e10c10bae1f8c8a1237cad..88008766a746a1e1966fa7871bf997ffdfb1d767 100644
+--- a/tools/Makefile
++++ b/tools/Makefile
+@@ -41,7 +41,7 @@ INCLUDES = $(addprefix -I $(ROOTDIR)/,utils parsing typing bytecomp \
+                        file_formats lambda)
+ COMPFLAGS = -absname -w +a-4-9-41-42-44-45-48-70 -strict-sequence \
+ -warn-error +A -principal -safe-string -strict-formats -bin-annot $(INCLUDES)
+-LINKFLAGS = $(INCLUDES)
++LINKFLAGS = $(INCLUDES) $(OC_COMMON_LINKFLAGS)
+ VPATH := $(filter-out -I,$(INCLUDES))
+ 
+ programs_byte := \
+diff --git a/tools/ocamlmklib.ml b/tools/ocamlmklib.ml
+index 1cf8ef919f45a29c41f7d8b8a470d254793aac97..e341d001fdcd241ded902d0c073af197af5b4ab2 100644
+--- a/tools/ocamlmklib.ml
++++ b/tools/ocamlmklib.ml
+@@ -28,10 +28,8 @@ let mklib out files opts =
+   Printf.sprintf "link -lib -nologo %s-out:%s %s %s" machine out opts files
+   else Printf.sprintf "%s rcs %s %s %s" Config.ar out opts files
+ 
+-(* PR#4783: under Windows, don't use absolute paths because we do
+-   not know where the binary distribution will be installed. *)
+ let compiler_path name =
+-  if Sys.os_type = "Win32" then name else Filename.concat Config.bindir name
++  Filename.concat Config.bindir name
+ 
+ let bytecode_objs = ref []  (* .cmo,.cma,.ml,.mli files to pass to ocamlc *)
+ and native_objs = ref []    (* .cmx,.ml,.mli files to pass to ocamlopt *)
+diff --git a/utils/config.mli b/utils/config.mli
+index 3acc5d3f55128515b5fa19d4eef1b0b71db7b88b..671d6d0710858f2a7e53d47696915135a2e39ca3 100644
+--- a/utils/config.mli
++++ b/utils/config.mli
+@@ -24,15 +24,32 @@ val version: string
+ (** The current version number of the system *)
+ 
+ val bindir: string
+-(** The directory containing the binary programs *)
++(** The directory containing the binary programs. If the compiler was configured
++    with [--with-relative-libdir] then this will be the directory containing the
++    currently executing runtime. *)
+ 
+ val standard_library_default: string
+-(** The configured value for the directory containing the standard libraries
++(** The configured value for the directory containing the standard libraries.
++    May be a relative path if the compiler was configured with
++    [--with-relative-libdir].
++
++    @since 5.5 *)
++
++val standard_library_effective: string
++(** The standard library directory, computed taking {!standard_library_relative}
++    and {!standard_library_default} into account, but not taking CAMLLIB or
++    OCAMLLIB into account.
++
++    @since 5.5 *)
++
++val standard_library_relative: bool
++(** Whether {!standard_library_effective} is computed relative to the runtime
+ 
+     @since 5.5 *)
+ 
+ val standard_library: string
+-(** The effective directory containing the standard libraries *)
++(** The effective directory containing the standard libraries, taking CAMLLIB
++    and OCAMLLIB into account. *)
+ 
+ val ccomp_type: string
+ (** The "kind" of the C compiler, assembler and linker used: one of
+diff --git a/utils/config.mlp b/utils/config.mlp
+index a93a04f48abaed73cfbb2822e500967b126ce191..db0e71a44194b6363ebef08874943537c790befd 100644
+--- a/utils/config.mlp
++++ b/utils/config.mlp
+@@ -23,6 +23,12 @@ external standard_library_default : unit -> string = "%standard_library_default"
+ 
+ let standard_library_default = standard_library_default ()
+ 
++external stdlib_dirs : string -> string * string option
++   = "caml_sys_get_stdlib_dirs"
++
++let standard_library_effective, relative_root_dir =
++  stdlib_dirs standard_library_default
++
+ let standard_library =
+   try
+     Sys.getenv "OCAMLLIB"
+@@ -30,7 +36,11 @@ let standard_library =
+   try
+     Sys.getenv "CAMLLIB"
+   with Not_found ->
+-    standard_library_default
++    standard_library_effective
++
++let standard_library_relative = relative_root_dir <> None
++
++let bindir = Option.value ~default:bindir relative_root_dir
+ 
+ let ccomp_type = "%%CCOMPTYPE%%"
+ let c_compiler = "%%CC%%"
+@@ -167,9 +177,20 @@ let configuration_variables =
+   let p x v = (x, String v) in
+   let p_int x v = (x, Int v) in
+   let p_bool x v = (x, Bool v) in
++  let is_explicit_relative path =
++    path = Filename.current_dir_name
++    || path = Filename.parent_dir_name
++    || Filename.is_relative path && not (Filename.is_implicit path)
++  in
++  let standard_library_relative =
++    if is_explicit_relative standard_library_default then
++      standard_library_default
++    else
++      "" in
+ [
+   p "version" version;
+-  p "standard_library_default" standard_library_default;
++  p "standard_library_default" standard_library_effective;
++  p "standard_library_relative" standard_library_relative;
+   p "standard_library" standard_library;
+   p "ccomp_type" ccomp_type;
+   p "c_compiler" c_compiler;
+-- 
+2.53.0.windows.2
+

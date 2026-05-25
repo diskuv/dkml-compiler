@@ -1,0 +1,27 @@
+From cf54edbe2c11c4f865263a0d3b00823a5ae97a07 Mon Sep 17 00:00:00 2001
+From: David Allsopp <david.allsopp@metastack.com>
+Date: Fri, 9 Apr 2021 14:53:02 +0100
+Subject: [PATCH] Eliminate warning in stdlib/header.c
+
+Newer glibc headers add __attribute__((warn_unused_result)) to write.
+Switch to fputs instead for the error messages in the header program.
+
+(cherry picked from commit 6760d9efdfa938b1f12ae4bfffaa545b6be54565)
+(cherry picked from commit 13b4de4b82944fa312f8030acaaccf5bf1d39bfd)
+
+diff --git a/stdlib/header.c b/stdlib/header.c
+index 426b064e2fdb439b3cfd43af5770c089def2e235..edcc3b34a8bb9c3dd7be76e3a8b0a4d9f243e8a9 100644
+--- a/stdlib/header.c
++++ b/stdlib/header.c
+@@ -165,7 +165,7 @@ static char * read_runtime_path(int fd)
+ 
+ static void errwrite(char * msg)
+ {
+-  write(2, msg, strlen(msg));
++  fputs(msg, stderr);
+ }
+ 
+ #ifndef O_BINARY
+-- 
+2.53.0.windows.2
+

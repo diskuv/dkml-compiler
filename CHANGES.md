@@ -2,6 +2,14 @@
 
 ## Pending
 
+* Rebuild the OCaml 4.14 patch inventory as a linear `a01`-`a89` relocatable
+  series plus `b01`-`b10` legacy follow-up patches, with the legacy `bNN`
+  Markdown notes kept under their original suffixes like `b04-xdg.md`.
+* Verify the OCaml patch list after each `git am` run in
+  `r-c-ocaml-1-setup.sh`, failing the build if the expected patch subjects were
+  not actually applied.
+* Export the full `ocaml-common-4_14-*` patch series from `install-src.sh` and
+  `install-src.cmd` instead of maintaining a hand-edited per-file copy list.
 * Support vendor-supplied patches for flexdll 0.43 and unreleased 0.44. Patches are
   now relative to ocaml parent directory so all `git am` based patches are of form
   `flexdll/flexdll.c`, etc. to make robust to the lack of `flexdll/.git`.

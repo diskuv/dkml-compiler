@@ -1,0 +1,206 @@
+From 3c7bc7dcc56d318aa46966db467c73596de35de8 Mon Sep 17 00:00:00 2001
+From: David Allsopp <david.allsopp@metastack.com>
+Date: Thu, 20 Mar 2025 09:08:54 +0000
+Subject: [PATCH] Harden startup of -custom executables
+
+By default, ocamlrun first tries to resolve argv[0] to determine where
+the bytecode image is and then tries opening the executable image
+itself. This is obviously correct for ocamlrun, when being called using
+a shebang or executable header, but it's not correct for -custom
+executables where we _know_ that the bytecode image should be with the
+executable. To achieve this, a new mode is added to
+caml_byte_program_mode (and the existing ones renamed) such that
+caml_byte_program_mode is now STANDARD (for ocamlrun - the existing
+behaviour), APPENDED (for -custom executables - the new behaviour) and
+EMBEDDED (for -output-complete-exe/-output-obj - the original use of
+it).
+
+The mode is also set directly by the linker, rather than having a
+default in libcamlrun which is then overridden by the startup code for
+-output-complete-exe.
+
+In the new APPENDED mode, if caml_executable_name is implemented (i.e.
+it returns a string) then this file _must_ contain the bytecode image
+and no other mechanisms are used. On platforms where
+caml_executable_name is not implemented, APPENDED falls back to STANDARD
+for compatibility.
+
+Technically, this stops an argv[0] injection attack on setuid/setgid
+-custom bytecode executables, although setuid should be used with
+-output-complete-exe, if at all.
+
+(cherry picked from commit b65dc45cc465ef452af464c9f6966410a86513b7)
+
+diff --git a/Changes b/Changes
+index 82dcca86f0a416426bee37bd578f55867a143405..b58b5395cf77440c403710f28cc22cb8274e2fb0 100644
+--- a/Changes
++++ b/Changes
+@@ -26,6 +26,10 @@ OCaml 4.14 maintenance version
+   both Windows and Unix.
+   (David Allsopp, review by ???)
+ 
++- #14???: Executables linked with `ocamlc -custom` now always attempt to load
++  bytecode from the executable itself, rather than first trying `argv[0]`.
++  (David Allsopp, review by ???)
++
+ ### Code generation and optimizations:
+ 
+ ### Standard library:
+diff --git a/bytecomp/bytelink.ml b/bytecomp/bytelink.ml
+index 6ad664229c01f5098cd9ded77275c108165e1a19..c2c6f212b10eda98015d5dc0eb8be64b47200106 100644
+--- a/bytecomp/bytelink.ml
++++ b/bytecomp/bytelink.ml
+@@ -635,7 +635,9 @@ let link_bytecode_as_c tolink outfile with_main =
+ \n#include <caml/mlvalues.h>\
+ \n#include <caml/startup.h>\
+ \n#include <caml/sys.h>\
+-\n#include <caml/misc.h>\n";
++\n#include <caml/misc.h>\
++\n\
++\nenum caml_byte_program_mode caml_byte_program_mode = EMBEDDED;\n";
+        output_string outchan "\nstatic int caml_code[] = {\n";
+        Symtable.init();
+        clear_crc_interfaces ();
+@@ -668,7 +670,6 @@ let link_bytecode_as_c tolink outfile with_main =
+          output_string outchan "\
+ \nint main_os(int argc, char_os **argv)\
+ \n{\
+-\n  caml_byte_program_mode = COMPLETE_EXE;\
+ \n  caml_startup_code(caml_code, sizeof(caml_code),\
+ \n                    caml_data, sizeof(caml_data),\
+ \n                    caml_sections, sizeof(caml_sections),\
+@@ -814,10 +815,13 @@ let link objfiles output_name =
+          output_string poc "\
+          #ifdef __cplusplus\n\
+          extern \"C\" {\n\
+-         #endif";
++         #endif\n\
++         #define CAML_INTERNALS";
+          output_without_guarded_primitives poc
+            "\n#include <caml/mlvalues.h>";
+-         output_char poc '\n';
++         output_string poc "\n#include <caml/startup.h>\n\
++         \n\
++         enum caml_byte_program_mode caml_byte_program_mode = APPENDED;\n";
+          Symtable.output_primitive_table poc;
+          output_string poc "\
+          #ifdef __cplusplus\n\
+diff --git a/runtime/Makefile b/runtime/Makefile
+index 493359dba6efcbddf5af0431b71f2a82699f1d35..d81104d2bc0b3290a5831bed79f5836f510c7366 100644
+--- a/runtime/Makefile
++++ b/runtime/Makefile
+@@ -228,7 +228,10 @@ prims.c : primitives
+ 	 echo; \
+ 	 echo 'char * caml_names_of_builtin_cprim[] = {'; \
+ 	 sed -e 's/.*/  "&",/' $<; \
+-	 echo '  0 };') > $@
++	 echo '  0 };'; \
++	 echo; \
++	 echo 'enum caml_byte_program_mode {STANDARD, APPENDED, EMBEDDED};'; \
++   echo 'enum caml_byte_program_mode caml_byte_program_mode = STANDARD;') > $@
+ 
+ caml/opnames.h : caml/instruct.h
+ 	tr -d '\r' < $< | \
+diff --git a/runtime/backtrace_byt.c b/runtime/backtrace_byt.c
+index 61ca5603d4f46e02d2dfc08aa3f5b7b6f6fe516b..cae373a9d123d865b428796f06d510758203b12d 100644
+--- a/runtime/backtrace_byt.c
++++ b/runtime/backtrace_byt.c
+@@ -361,12 +361,12 @@ static void read_main_debug_info(struct debug_info *di)
+   CAMLassert(di->already_read == 0);
+   di->already_read = 1;
+ 
+-  /* At the moment, bytecode programs built with --output-complete-exe
++  /* At the moment, bytecode programs built with -output-complete-exe
+      do not contain any debug info.
+ 
+      See  https://github.com/ocaml/ocaml/issues/9344 for details.
+   */
+-  if (caml_cds_file == NULL && caml_byte_program_mode == COMPLETE_EXE)
++  if (caml_cds_file == NULL && caml_byte_program_mode == EMBEDDED)
+     CAMLreturn0;
+ 
+   if (caml_cds_file != NULL) {
+diff --git a/runtime/caml/startup.h b/runtime/caml/startup.h
+index f3e1fe6dd87e20f66740c02c2c7c0eca3cbc1293..fb85173df1137b1d7014e9ee5a642b81b35bc7b3 100644
+--- a/runtime/caml/startup.h
++++ b/runtime/caml/startup.h
+@@ -46,11 +46,11 @@ extern int32_t caml_seek_optional_section(int fd, struct exec_trailer *trail,
+ extern int32_t caml_seek_section(int fd, struct exec_trailer *trail,
+                                  char *name);
+ 
+-enum caml_byte_program_mode
+-  {
+-   STANDARD /* normal bytecode program requiring "ocamlrun" */,
+-   COMPLETE_EXE /* embeding the vm, i.e. compiled with --output-complete-exe */
+-  };
++enum caml_byte_program_mode {
++  STANDARD, /* Default mode for ocamlrun */
++  APPENDED, /* bytecode must be appended (i.e. -custom) */
++  EMBEDDED  /* bytecode embedded in C (e.g. -output-complete-exe/-output-obj) */
++};
+ 
+ extern enum caml_byte_program_mode caml_byte_program_mode;
+ 
+diff --git a/runtime/startup_byt.c b/runtime/startup_byt.c
+index 8cf8264129e77e3e3347299963817da39db5f7ff..c7bf857279a824dd221cb9d5f5db7eb7b1c5072d 100644
+--- a/runtime/startup_byt.c
++++ b/runtime/startup_byt.c
+@@ -114,8 +114,6 @@ static int read_trailer(int fd, struct exec_trailer *trail)
+       ? 0 : WRONG_MAGIC;
+ }
+ 
+-enum caml_byte_program_mode caml_byte_program_mode = STANDARD;
+-
+ int caml_attempt_open(char_os **name, struct exec_trailer *trail,
+                       int do_open_script)
+ {
+@@ -467,7 +465,7 @@ extern void caml_install_invalid_parameter_handler();
+ 
+ CAMLexport void caml_main(char_os **argv)
+ {
+-  int fd, pos;
++  int fd = -1, pos;
+   struct exec_trailer trail;
+   struct channel * chan;
+   value res;
+@@ -500,9 +498,13 @@ CAMLexport void caml_main(char_os **argv)
+   /* Determine position of bytecode file */
+   pos = 0;
+ 
+-  /* First, try argv[0] (when ocamlrun is called by a bytecode program) */
+-  exe_name = argv[0];
+-  fd = caml_attempt_open(&exe_name, &trail, 0);
++  proc_self_exe = caml_executable_name();
++
++  if (caml_byte_program_mode != APPENDED || proc_self_exe == NULL) {
++    /* First, try argv[0] (when ocamlrun is called by a bytecode program) */
++    exe_name = argv[0];
++    fd = caml_attempt_open(&exe_name, &trail, 0);
++  }
+ 
+   /* Little grasshopper wonders why we do that at all, since
+      "The current executable is ocamlrun itself, it's never a bytecode
+@@ -510,9 +512,17 @@ CAMLexport void caml_main(char_os **argv)
+      With -custom, we have an executable that is ocamlrun itself
+      concatenated with the bytecode.  So, if the attempt with argv[0]
+      failed, it is worth trying again with executable_name. */
+-  if (fd < 0 && (proc_self_exe = caml_executable_name()) != NULL) {
+-    exe_name = proc_self_exe;
+-    fd = caml_attempt_open(&exe_name, &trail, 0);
++  if (caml_byte_program_mode == APPENDED || fd < 0) {
++    if (proc_self_exe != NULL) {
++      exe_name = proc_self_exe;
++      fd = caml_attempt_open(&exe_name, &trail, 0);
++    } else {
++      caml_stat_free(proc_self_exe);
++    }
++    if (fd < 0 && caml_byte_program_mode == APPENDED)
++      error("unable to open file '%s'", caml_stat_strdup_of_os(exe_name));
++  } else {
++    caml_stat_free(proc_self_exe);
+   }
+ 
+   if (fd < 0) {
+-- 
+2.53.0.windows.2
+

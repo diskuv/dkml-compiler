@@ -1,0 +1,131 @@
+From 98cb9adf38b441c3852c2d264926bc019f89461a Mon Sep 17 00:00:00 2001
+From: David Allsopp <david.allsopp@metastack.com>
+Date: Fri, 9 Apr 2021 14:35:34 +0100
+Subject: [PATCH] Implement --with-target-bindir
+
+This option was present in configure since 4.08.0, but not actually
+implemented.
+
+(cherry picked from commit c54f87a82174c779aa9ea54b9317b544459bd19b)
+(cherry picked from commit 764a319677b982df3b8d54349f88550b99b80683)
+
+diff --git a/Changes b/Changes
+index 9b1caaba4b06a24c94bfbccc0e3db1d2d7a865df..59e3f7aa22f2ef3fbd17e871bfe1dfe5da9c038d 100644
+--- a/Changes
++++ b/Changes
+@@ -1,6 +1,29 @@
+ OCaml 4.14.3 (17 February 2026)
+ ------------------------------
+ 
++### Runtime system:
++
++### Code generation and optimizations:
++
++### Standard library:
++
++### Other libraries:
++
++### Tools:
++
++### Manual and documentation:
++
++### Compiler user-interface and warnings:
++
++### Internal/compiler-libs changes:
++
++### Build system:
++
++- #12751: --with-target-bindir configure option implemented. This option
++  refers to the location of the runtime binaries on the target system for a
++  cross-compiler and is embedded in executables produced by ocamlc. It does
++  not affect the bytecode executables installed as part of the build.
++  (David Allsopp, review by Damien Doligez, Xavier Leroy and Olivier Nicole)
+ ### Bug fixes:
+ 
+ - #12070, #12075, #13209: auto-detect whether `ar` support @FILE arguments at
+diff --git a/Makefile.build_config.in b/Makefile.build_config.in
+index 8f9b5c3863b3a0460fedc30ae548961c848540b0..f0ec9cc705e4c90a18feb1d63f198c9c0e8728f7 100644
+--- a/Makefile.build_config.in
++++ b/Makefile.build_config.in
+@@ -24,6 +24,10 @@ INSTALL ?= @INSTALL@ -p
+ INSTALL_DATA ?= @INSTALL_DATA@
+ INSTALL_PROG ?= @INSTALL_PROGRAM@
+ 
++# Location of ocamlrun on the target system (path embedded in bytecode
++# executables)
++TARGET_BINDIR = @target_bindir@
++
+ # Whether to install the native toplevel (ocamlnat)
+ INSTALL_OCAMLNAT = @install_ocamlnat@
+ 
+diff --git a/configure b/configure
+index a4cd544cff562320b300a743a1621ab905647acd..6b34090e9b6131650ae0830a8c59df362bd9cd38 100755
+GIT binary patch
+delta 174
+zcmZ2|Re9<)<qfg{yd{Z6>8U00Ntt;mnMIpr0&239N-|Ovic0fJGILWEfZ~ZonW@DJ
+z`FRQ;aftHC7xzeS-n7eL^7e<mjK@_hpu$j7Y*orLOESt5bGTA-ic`51&}7wBG@LyB
+oTs(s`)u$(>Fv_<dFJc5@CLm@8Viq7~1!6WJX5W6ih~r5)0IF$3`Tzg`
+
+delta 94
+zcmbPwO?mZI<qfg{o3#U~vm}!;^Ad|H6$*;-(~A;wixu+o6iO0{(o;(|KiXwDdAo=o
+q<1v-#hYA_xC%bGDX?HDV1Y#y2W(HywAZ7((HXvr-?pn-op&S4d1tequ
+
+diff --git a/configure.ac b/configure.ac
+index bd96ad1a7d7c93fc08e10bf8ac2ef3b7dca19d4e..fbdf1aaade97335c7ca557a23c4bf98d2c3b9577 100644
+--- a/configure.ac
++++ b/configure.ac
+@@ -172,6 +172,7 @@ AC_SUBST([naked_pointers])
+ AC_SUBST([naked_pointers_checker])
+ AC_SUBST([ar_supports_response_files])
+ AC_SUBST([QS])
++AC_SUBST([target_bindir])
+ 
+ ## Generated files
+ 
+@@ -352,7 +353,9 @@ AC_ARG_ENABLE([cmm-invariants],
+ 
+ AC_ARG_WITH([target-bindir],
+   [AS_HELP_STRING([--with-target-bindir],
+-    [location of binary programs on target system])])
++    [location of the runtime binaries on the target system])],
++  [target_bindir=$withval],
++  [target_bindir='$(BINDIR)'])
+ 
+ AC_ARG_ENABLE([reserved-header-bits],
+   [AS_HELP_STRING([--enable-reserved-header-bits=BITS],
+diff --git a/stdlib/Makefile b/stdlib/Makefile
+index f367956fbd519a20d9bba30191c037481ebc3e8f..c20ca0200ebbcf3ec302ef0e8c2873499f440279 100644
+--- a/stdlib/Makefile
++++ b/stdlib/Makefile
+@@ -17,10 +17,24 @@ ROOTDIR = ..
+ 
+ include $(ROOTDIR)/Makefile.common
+ 
+-TARGET_BINDIR ?= $(BINDIR)
+-
+-COMPILER=$(ROOTDIR)/ocamlc$(EXE)
+-CAMLC=$(OCAMLRUN) $(COMPILER)
++# There are three ways the Standard Library is compiled in bytecode:
++# 1. During coldstart
++#      - using ../boot/ocamlc which runs on ../boot/ocamlrun
++# 2. During coreall (via library),
++#      - using ../ocamlc which runs on ../boot/ocamlrun
++# 3. During coreboot (via library-cross),
++#      - using ../ocamlc which at that point runs on ../runtime/ocamlrun
++# If $(USE_BOOT_OCAMLC) is non-empty, we select case 1 and use $(BOOT_OCAMLC).
++# Otherwise, we use $(OCAMLRUN) ../ocamlc, with $(OCAMLRUN) being
++# ../boot/ocamlrun by default, but able to overridden by library-cross to
++# ../runtime/ocamlrun.
++USE_BOOT_OCAMLC ?=
++
++ifeq "$(USE_BOOT_OCAMLC)" ""
++CAMLC = $(OCAMLRUN) $(ROOTDIR)/ocamlc$(EXE)
++else
++CAMLC = $(BOOT_OCAMLC)
++endif
+ COMPFLAGS=-strict-sequence -absname -w +a-4-9-41-42-44-45-48-70 \
+           -g -warn-error +A -bin-annot -nostdlib -principal \
+           -safe-string -strict-formats
+-- 
+2.53.0.windows.2
+

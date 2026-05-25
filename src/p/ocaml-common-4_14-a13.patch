@@ -1,0 +1,201 @@
+From 81e859960c9b9a5b9facaa011520f08dc0494a31 Mon Sep 17 00:00:00 2001
+From: David Allsopp <david.allsopp@metastack.com>
+Date: Sun, 21 Aug 2022 14:22:54 +0100
+Subject: [PATCH] Explicitly compile the primitives object
+
+In bytecode, when compiling a custom runtime (when using any of -custom,
+-output-obj, -output-complete-obj or -output-complete-exe), the
+camlprim.c file is passed directly to the linker. When this was
+originally done, the cost was a single typedef for the value type, but
+now this process involves considerable code duplication both for the
+-fdebug-prefix-map implementation and for the full definition of the
+value type.
+
+The primitives file is now explicitly compiled, which means it gets
+treated in the same way as a C file passed to ocamlc and in particular
+can `#include <caml/mlvalues.h>` to remove the definitions otherwise
+duplicated with <caml/config.h>. Using `Ccomp.compile_file` also allows
+the duplicate machinery for `-fdebug-prefix-map` to be deleted from
+Bytelink.
+
+(cherry picked from commit 4741c63e60ba7f7ff911c0a5fc5e3ce88b521953)
+(cherry picked from commit 305a7e98425de659d8cfd9cf93e9b3d65274f26d)
+
+diff --git a/Changes b/Changes
+index 2451dabc3dc1aa52786f8a393ef635c0b9adaf69..3a004ee045a706dbae5154134908188d605d87ee 100644
+--- a/Changes
++++ b/Changes
+@@ -17,6 +17,10 @@ OCaml 4.14.3 (17 February 2026)
+ 
+ ### Internal/compiler-libs changes:
+ 
++- #12896: Simplify the compilation of custom bytecode runtimes by explicitly
++  compiling the primitives file before calling the linker.
++  (David Allsopp, review by Vincent Laviron)
++
+ ### Build system:
+ 
+ * #12751: --with-target-bindir configure option implemented. This option
+diff --git a/Makefile b/Makefile
+index 43fd95216c2a9bc32d98adc4ebb8d0ea92d295b7..1c12235e76f62a86327a2343f9e8fa72ad24f5c5 100644
+--- a/Makefile
++++ b/Makefile
+@@ -38,7 +38,7 @@ INCLUDES=-I utils -I parsing -I typing -I bytecomp -I file_formats \
+         -I lambda -I middle_end -I middle_end/closure \
+         -I middle_end/flambda -I middle_end/flambda/base_types \
+         -I asmcomp \
+-        -I driver -I toplevel
++        -I driver -I toplevel -I runtime
+ 
+ COMPFLAGS=-strict-sequence -principal -absname \
+           -w +a-4-9-40-41-42-44-45-48-66-70 \
+diff --git a/bytecomp/bytelink.ml b/bytecomp/bytelink.ml
+index 77a63a80d5a13fbb77911e2646f665c697be5040..04d5bdb4729ae259dec62f5d2b8a2be3dfcbba51 100644
+--- a/bytecomp/bytelink.ml
++++ b/bytecomp/bytelink.ml
+@@ -605,6 +605,13 @@ let guarded_primitives = [
+     "caml_set_oo_id", "caml__set_oo_id";
+   ]
+ 
++let output_without_guarded_primitives outchan s =
++  List.iter (fun (f, f') -> Printf.fprintf outchan "\n#define %s %s" f f')
++    guarded_primitives;
++  output_string outchan s;
++  List.iter (fun (f, _) -> Printf.fprintf outchan "\n#undef %s" f)
++    guarded_primitives
++
+ let link_bytecode_as_c tolink outfile with_main =
+   let outchan = open_out outfile in
+   Misc.try_finally
+@@ -619,15 +626,11 @@ let link_bytecode_as_c tolink outfile with_main =
+ \n#ifdef __cplusplus\
+ \nextern \"C\" {\
+ \n#endif";
+-       List.iter (fun (f, f') -> Printf.fprintf outchan "\n#define %s %s" f f')
+-         guarded_primitives;
+-       output_string outchan "\
++       output_without_guarded_primitives outchan "\
+ \n#include <caml/mlvalues.h>\
+ \n#include <caml/startup.h>\
+ \n#include <caml/sys.h>\
+ \n#include <caml/misc.h>\n";
+-       List.iter (fun (f, _) -> Printf.fprintf outchan "\n#undef %s" f)
+-         guarded_primitives;
+        output_string outchan "\nstatic int caml_code[] = {\n";
+        Symtable.init();
+        clear_crc_interfaces ();
+@@ -722,23 +725,21 @@ let build_custom_runtime prim_name exec_name =
+     if not !Clflags.with_runtime
+     then ""
+     else "-lcamlrun" ^ !Clflags.runtime_variant in
+-  let debug_prefix_map =
+-    if Config.c_has_debug_prefix_map && not !Clflags.keep_camlprimc_file then
+-      let flag =
+-        [Printf.sprintf "-fdebug-prefix-map=%s=camlprim.c" prim_name]
+-      in
+-        if Ccomp.linker_is_flexlink then
+-          "-link" :: flag
+-        else
+-          flag
++  let stable_name =
++    if not !Clflags.keep_camlprimc_file then
++      Some "camlprim.c"
+     else
+-      [] in
+-  let exitcode =
+-    (Clflags.std_include_flag "-I" ^ " " ^ Config.bytecomp_c_libraries)
++      None
+   in
+-  Ccomp.call_linker Ccomp.Exe exec_name
+-    (debug_prefix_map @ [prim_name] @ List.rev !Clflags.ccobjs @ [runtime_lib])
+-    exitcode = 0
++  let prims_obj = Filename.temp_file "camlprim" Config.ext_obj in
++  let result =
++    Ccomp.compile_file ~output:prims_obj ?stable_name prim_name = 0
++    && Ccomp.call_linker Ccomp.Exe exec_name
++        ([prims_obj] @ List.rev !Clflags.ccobjs @ [runtime_lib])
++        (Clflags.std_include_flag "-I" ^ " " ^ Config.bytecomp_c_libraries) = 0
++  in
++  remove_file prims_obj;
++  result
+ 
+ let append_bytecode bytecode_name exec_name =
+   let oc = open_out_gen [Open_wronly; Open_append; Open_binary] 0 exec_name in
+@@ -808,16 +809,10 @@ let link objfiles output_name =
+          output_string poc "\
+          #ifdef __cplusplus\n\
+          extern \"C\" {\n\
+-         #endif\n\
+-         #ifdef _WIN64\n\
+-         #ifdef __MINGW32__\n\
+-         typedef long long value;\n\
+-         #else\n\
+-         typedef __int64 value;\n\
+-         #endif\n\
+-         #else\n\
+-         typedef long value;\n\
+-         #endif\n";
++         #endif";
++         output_without_guarded_primitives poc
++           "\n#include <caml/mlvalues.h>";
++         output_char poc '\n';
+          Symtable.output_primitive_table poc;
+          output_string poc "\
+          #ifdef __cplusplus\n\
+diff --git a/debugger/Makefile b/debugger/Makefile
+index 10085381155e959eeb3384ee403c714e7325118d..82acbffa7db977414e217a7de6ed48fc7187ba1c 100644
+--- a/debugger/Makefile
++++ b/debugger/Makefile
+@@ -24,7 +24,7 @@ UNIXDIR=$(ROOTDIR)/otherlibs/$(UNIXLIB)
+ CAMLC=$(BEST_OCAMLC) -g -nostdlib -I $(ROOTDIR)/stdlib
+ COMPFLAGS=$(INCLUDES) -absname -w +a-4-9-41-42-44-45-48-70 -warn-error +A \
+           -safe-string -strict-sequence -strict-formats
+-LINKFLAGS=-linkall -I $(UNIXDIR) -I $(DYNLINKDIR)
++LINKFLAGS=-linkall -I $(UNIXDIR) -I $(DYNLINKDIR) -I $(ROOTDIR)/runtime
+ CAMLDEP=$(BEST_OCAMLDEP)
+ DEPFLAGS=-slash
+ DEPINCLUDES=$(INCLUDES)
+diff --git a/ocamldoc/Makefile b/ocamldoc/Makefile
+index e6d898a50e6e4bf6ae750d3fde76bb1f4e95b540..8c6a2f65c87b59ed0bf1b1eb5fc3dcde339a8313 100644
+--- a/ocamldoc/Makefile
++++ b/ocamldoc/Makefile
+@@ -69,7 +69,8 @@ INCLUDES_NODEP=\
+   -I $(ROOTDIR)/otherlibs/str \
+   -I $(ROOTDIR)/otherlibs/dynlink \
+   -I $(ROOTDIR)/otherlibs/dynlink/native \
+-  -I $(ROOTDIR)/otherlibs/$(UNIXLIB)
++  -I $(ROOTDIR)/otherlibs/$(UNIXLIB) \
++  -I $(ROOTDIR)/runtime
+ 
+ DEPINCLUDES=$(INCLUDES_DEP)
+ INCLUDES=$(INCLUDES_DEP) $(INCLUDES_NODEP)
+diff --git a/ocamltest/Makefile b/ocamltest/Makefile
+index f436b11eafc796283293413cd14f53505ab50c12..bb3716edfab8ab7e4fb6428a913dde09f1ac77b4 100644
+--- a/ocamltest/Makefile
++++ b/ocamltest/Makefile
+@@ -183,7 +183,7 @@ bytecode_modules := $(o_files) $(cmo_files)
+ native_modules := $(o_files) $(cmx_files)
+ 
+ directories := $(addprefix $(ROOTDIR)/,utils bytecomp parsing stdlib \
+-                                       compilerlibs file_formats)
++                                       compilerlibs file_formats runtime)
+ 
+ include_directories := $(addprefix -I , $(directories))
+ 
+diff --git a/tools/Makefile b/tools/Makefile
+index 9508b22427e6afa9134452d69bd29ad82259a714..4ab658e89c16196fb8e10c10bae1f8c8a1237cad 100644
+--- a/tools/Makefile
++++ b/tools/Makefile
+@@ -308,7 +308,8 @@ caml_tex := caml-tex$(EXE)
+ # $(ROOTDIR)/ocamlc not $(ROOTDIR)/boot/ocamlc since the boot
+ # compiler does not necessarily have the correct shared library
+ # configuration.
+-$(caml_tex): INCLUDES += $(addprefix -I $(ROOTDIR)/otherlibs/,str $(UNIXLIB))
++$(caml_tex): INCLUDES += $(addprefix -I $(ROOTDIR)/otherlibs/,str $(UNIXLIB)) \
++                         -I $(ROOTDIR)/runtime
+ $(caml_tex): $(caml_tex_files)
+ 	$(OCAMLRUN) $(ROOTDIR)/ocamlc$(EXE) -nostdlib -I $(ROOTDIR)/stdlib \
+ 	  $(LINKFLAGS) -linkall -o $@ -no-alias-deps $^
+-- 
+2.53.0.windows.2
+

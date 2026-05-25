@@ -1,0 +1,145 @@
+From 3ec3302f16d4be8bf6996d53cca8ec9895dd9aa8 Mon Sep 17 00:00:00 2001
+From: David Allsopp <david.allsopp@metastack.com>
+Date: Wed, 15 Jan 2025 14:20:26 +0000
+Subject: [PATCH] Add --with-stublibs configure option
+
+--with-stublibs is intended for use in opam and allows an additional
+directory to be added at the top of $(ocamlc -where)/ld.conf.
+
+(cherry picked from commit f36db142872f5ca0338d6a951fb26be36c611637)
+
+diff --git a/Changes b/Changes
+index f5e2df974457604f21f5dadc899debc1ab1dbced..347eaa7dacb385aeac16704aea7361db49296f05 100644
+--- a/Changes
++++ b/Changes
+@@ -51,6 +51,10 @@ OCaml 4.14 maintenance version
+   is dash, rather than bash, this now works correctly).
+   (David Allsopp and Samuel Hym, review by Antonin Décimo and Gabriel Scherer)
+ 
++- #14???: New configure option --with-stublibs allows an additional directory
++  to be added to the start of ld.conf.
++  (David Allsopp, review by ???)
++
+ ### Bug fixes:
+ 
+ - #12070, #12075, #13209: auto-detect whether `ar` support @FILE arguments at
+diff --git a/configure b/configure
+index 333c98c0ae8cd7b4f9643e7b59b1f10e7799ccaa..f58c128eba68de29645fefb844850f95f5a9607d 100755
+GIT binary patch
+delta 890
+zcmX^AOnKgW<qcJleC3%X8S%v>rAaxNNyS{#*OV|yZ=M>tDbW=srT_zpDJhvHnfZB%
+zISMJ6MXAXp`9+lqY57G8#i@x!$r+h>>0n+`Wl3sseoCqW$biX=JES>*CKn|ZWu_Ky
+zw%x70bNbOtMhOm>>C+!(GRh!$j9HAT2;QGMMycsxFIf51@{<#DbK(&$fV(&z=oDLZ
+zb*|K$;#98b8xOMyPw&0N%08X9o>5}D%rSPMdXNWoVb&?+rKYA7D<tMABo?KY=BDPA
+zC@CnZ_;~uc`uQs<m~y3Ma)G>y-#R4~keOwPIZ7b)V4HDkVJ!wZu|2+o5r~<9m>Gy!
+zfS47C*|x`*up5^ODl0e_r6!i7D&(Z-CFkd*aZSJ2!KxupRGL?knVYH)6;;~a|B_w3
+z%^kn%Vz|^*G*Xi@@_`=1t8)7OJPvtfh!S8FfddjvCqx*eP<H#ae2!uk5m4wTp}A}N
+z?qUvAaWp|C1#4?AU|>#WoFKg2zJz0TWj!{%N><LA3PrgJx@ih%1_1Szq!yPbR1oln
+zl7g**dWE_|O^refIP!4$y&jebKoO#(V28y*6s-`?>%(*bbr7iqn@V74Y`^)Iql^^*
+DLT5b_
+
+delta 92
+zcmbRDUithp<qcJl)AyD!N^f2qxhZk;iQS4j+bhc$ftU%1nSq!Eh*^P{ZF^-IyH@G;
+q_pjMi+P3d3;wWZe=2B3Y-VntoJ)Nh5kz@P(a*poG?V6uBN?8GYOC`4e
+
+diff --git a/configure.ac b/configure.ac
+index da2fc2c1fcb7c8255239148adc9a1e43e7571898..67f42105dc23727c1cb7ea6c21b0636a24f2eb0b 100644
+--- a/configure.ac
++++ b/configure.ac
+@@ -365,6 +365,18 @@ AC_ARG_WITH([target-sh],
+     [target_launch_method="$withval"])],
+   [target_launch_method=''])
+ 
++AC_ARG_WITH([stublibs],
++  [AS_HELP_STRING([--with-stublibs],
++    [additional directory for searching for bytecode stub libraries])],
++  [AS_IF([test x"$withval" = 'xno'],
++    [ocaml_additional_stublibs_dir=''],
++    [dnl A user wishing to add "yes" to ld.conf may do so manually - catch
++     dnl --with-stublibs as an error.
++    AS_IF([test x"$withval" = 'xyes'],
++     [AC_MSG_ERROR([--with-stublibs needs an argument])])
++    ocaml_additional_stublibs_dir="$withval"])],
++  [ocaml_additional_stublibs_dir=''])
++
+ AC_ARG_ENABLE([reserved-header-bits],
+   [AS_HELP_STRING([--enable-reserved-header-bits=BITS],
+   [reserve BITS (between 0 and 31) bits in block headers for profiling info])],
+@@ -2134,4 +2146,15 @@ AC_CONFIG_COMMANDS_PRE([
+   prefix="$saved_prefix"
+   exec_prefix="$saved_exec_prefix"])
+ 
++# Create ld.conf
++AC_CONFIG_COMMANDS([runtime/ld.conf],
++  [rm -f runtime/ld.conf
++  test x"$ocaml_additional_stublibs_dir" = 'x' || \
++    echo "$ocaml_additional_stublibs_dir" > runtime/ld.conf
++  echo "$ocaml_libdir/stublibs" >> runtime/ld.conf
++  echo "$ocaml_libdir" >> runtime/ld.conf],
++  [ocaml_additional_stublibs_dir=\
++'$(echo "$ocaml_additional_stublibs_dir" | sed -e "s/'/'\"'\"'/g")'
++  ocaml_libdir='$(echo "$ocaml_libdir" | sed -e "s/'/'\"'\"'/g")'])
++
+ AC_OUTPUT
+diff --git a/ocaml-variants.opam b/ocaml-variants.opam
+index f24327c157071791a6a4025eeb0176c932632b1d..da0d7469bbd78a68016c142c26969b539c89a119 100644
+--- a/ocaml-variants.opam
++++ b/ocaml-variants.opam
+@@ -65,6 +65,7 @@ build: [
+     "--host=i686-w64-mingw32"   {os-distribution = "cygwin" & system-mingw:installed & arch-x86_32:installed}
+     "--prefix=%{prefix}%"
+     "--docdir=%{doc}%/ocaml"
++    "--with-stublibs=%{stublibs}%"
+     "--with-flexdll=%{flexdll:share}%" {os = "win32" & flexdll:installed}
+     "-C"
+     "--with-afl" {ocaml-option-afl:installed}
+diff --git a/runtime/Makefile b/runtime/Makefile
+index 9b500d7c8c60a86af71757dbfa4cfde291f5ed8b..493359dba6efcbddf5af0431b71f2a82699f1d35 100644
+--- a/runtime/Makefile
++++ b/runtime/Makefile
+@@ -54,7 +54,7 @@ endif
+ # Targets to build and install
+ 
+ PROGRAMS := ocamlrun$(EXE)
+-BYTECODE_STATIC_LIBRARIES := ld.conf libcamlrun.$(A)
++BYTECODE_STATIC_LIBRARIES := libcamlrun.$(A)
+ BYTECODE_SHARED_LIBRARIES :=
+ NATIVE_STATIC_LIBRARIES := libasmrun.$(A)
+ NATIVE_SHARED_LIBRARIES :=
+@@ -160,7 +160,7 @@ INSTALL_INCDIR=$(INSTALL_LIBDIR)/caml
+ .PHONY: install
+ install:
+ 	$(INSTALL_PROG) $(PROGRAMS) "$(INSTALL_BINDIR)"
+-	$(INSTALL_DATA) $(BYTECODE_STATIC_LIBRARIES) "$(INSTALL_LIBDIR)"
++	$(INSTALL_DATA) ld.conf $(BYTECODE_STATIC_LIBRARIES) "$(INSTALL_LIBDIR)"
+ ifneq "$(BYTECODE_SHARED_LIBRARIES)" ""
+ 	$(INSTALL_PROG) $(BYTECODE_SHARED_LIBRARIES) "$(INSTALL_LIBDIR)"
+ endif
+@@ -176,7 +176,7 @@ endif
+ 
+ .PHONY: clean
+ clean:
+-	rm -f *.o *.obj *.a *.lib *.so *.dll ld.conf
++	rm -f *.o *.obj *.a *.lib *.so *.dll
+ 	rm -f ocamlrun ocamlrund ocamlruni ocamlruns sak
+ 	rm -f ocamlrun.exe ocamlrund.exe ocamlruni.exe ocamlruns.exe sak.exe
+ 	rm -f primitives primitives.new prims.c $(BUILT_HEADERS)
+@@ -185,14 +185,10 @@ clean:
+ 
+ .PHONY: distclean
+ distclean: clean
+-	rm -f $(CONFIGURED_HEADERS)
++	rm -f $(CONFIGURED_HEADERS) ld.conf
+ 
+ # Generated non-object files
+ 
+-ld.conf: $(ROOTDIR)/Makefile.config
+-	echo "$(STUBLIBDIR)" > $@
+-	echo "$(LIBDIR)" >> $@
+-
+ # If primitives contain duplicated lines (e.g. because the code is defined
+ # like
+ # #ifdef X
+-- 
+2.53.0.windows.2
+
