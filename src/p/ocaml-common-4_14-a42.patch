@@ -1,0 +1,30 @@
+From ebbf0ac4fb70ebae9ac39d3cd18f45aea3d54534 Mon Sep 17 00:00:00 2001
+From: David Allsopp <david.allsopp@metastack.com>
+Date: Wed, 12 Feb 2025 09:00:39 +0000
+Subject: [PATCH] Interpret . in runtime-launch-info
+
+The runtime-launch-info file includes the location of the binary
+directory. The compiler is extended so that . refers to the directory of
+the compiler binary.
+
+(cherry picked from commit fc02aeb76fc4d2737b0321bb442072f9786a8c00)
+
+diff --git a/bytecomp/bytelink.ml b/bytecomp/bytelink.ml
+index 04d5bdb4729ae259dec62f5d2b8a2be3dfcbba51..6ad664229c01f5098cd9ded77275c108165e1a19 100644
+--- a/bytecomp/bytelink.ml
++++ b/bytecomp/bytelink.ml
+@@ -355,6 +355,11 @@ let read_runtime_launch_info file =
+     let bindir_start = String.index buffer '\n' + 1 in
+     let bindir_end = String.index_from buffer bindir_start '\000' in
+     let bindir = String.sub buffer bindir_start (bindir_end - bindir_start) in
++    let bindir =
++      if bindir = Filename.current_dir_name then
++        Filename.dirname Sys.executable_name
++      else
++        bindir in
+     let executable_offset = bindir_end + 2 in
+     let launcher =
+       let kind = String.sub buffer 0 (bindir_start - 1) in
+-- 
+2.53.0.windows.2
+

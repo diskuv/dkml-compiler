@@ -1,0 +1,199 @@
+From 7039b319980563b5534c53c528c92d5317f60389 Mon Sep 17 00:00:00 2001
+From: David Allsopp <david.allsopp@metastack.com>
+Date: Sun, 27 Oct 2024 17:50:57 +0100
+Subject: [PATCH] Reduce tmpheader.exe to 4-5KiB on Windows
+
+stdlib/headernt.c was adapted in OCaml 3.00 to reduce its size by
+avoiding the use of the CRT and using Windows API functions directly
+(this is a well-studied trick on Windows, principally as a puzzle for
+producing tiny binaries).
+
+This got "regressed" slightly in OCaml 4.06, in the complex introduction
+of wide character support for Windows, as the mingw-w64 incantation
+required was unclear, so the entry point was changed to wmain, and the
+size of the header increased.
+
+By switching from wcslen (a CRT function) to lstrlen (a Win32 API
+function), headernt.c again only requires kernel32.dll.
+
+Additional flags are added for both ld (mingw-w64) and link (MSVC) to
+squeeze every last byte out of tmpheader.exe. The MSVC version of the
+header is once again no longer passed through strip, as this was found
+to be corrupting the executable (and had never been reducing its size
+anyway).
+
+(cherry picked from commit 1401ab9b174f3fc3e5a819dd4054899ba2553a7a)
+
+diff --git a/stdlib/Makefile b/stdlib/Makefile
+index 974d2d465741dec4b5bc6f8397ee2b27f97561ef..f4b31f75de8c5caea4dfeb51345f76331491e722 100644
+--- a/stdlib/Makefile
++++ b/stdlib/Makefile
+@@ -152,9 +152,41 @@ target_$(HEADER_NAME): target_runtime.info tmpheader.exe
+ $(HEADER_NAME): runtime.info tmpheader.exe
+ 	@cat $^ > $@
+ 
++# The mingw-w64 and MSVC versions of tmpheader.exe are linked with special flags
++# to reduce their size (considerably). In particular, the entry point is
++# overridden, which prevents the linking of crt0.
++ifeq "$(TOOLCHAIN)" "mingw"
++# mingw-w64: optimise headernt.o for space and remove all unused sections during
++# linking.
++headernt.o: OC_CFLAGS += -Os
++ifeq "$(SYSTEM)" "mingw"
++  ENTRYPOINT = _wmainCRTStartup
++else
++  ENTRYPOINT = wmainCRTStartup
++endif
++# Certainly for GCC, -nostdlib automatically adds -nostartfiles (clang's
++# documentation is not explicit on this point, but it would be unusual for clang
++# and GCC to differ). --gc-sections removes unreferenced code and data sections.
++tmpheader.exe: OC_LDFLAGS += \
++  -nostdlib -nostartfiles -Wl,--gc-sections -Wl,-e,$(ENTRYPOINT)
++HEADERLIBS = -lkernel32
++else ifeq "$(TOOLCHAIN)" "msvc"
++# MSVC: Optimise headernt.obj for space. cl doesn't have an equivalent of
++# -nostdlib, however it also doesn't have default libraries in the same way as
++# GCC - the equivalent of crt0.o is linked because it provides the entry point
++# symbol, rather than by being explicitly added to the linking command line.
++# /GS- disables compilation of runtime security checks and /NOCOFFGRPINFO is an
++# undocumented linker flag which removes the debug directory from the PE+ image.
++headernt.obj: OC_CFLAGS += /GS- /Os
++tmpheader.exe: OC_LDFLAGS += /NOCOFFGRPINFO /subsystem:console
++HEADERLIBS = kernel32.lib
++else
++HEADERLIBS =
++endif
++
+ .INTERMEDIATE: tmpheader.exe
+ tmpheader.exe: $(HEADERPROGRAM).$(O)
+-	$(call MKEXE_USING_COMPILER,$@,$^)
++	$(call MKEXE_USING_COMPILER,$@,$^ $(HEADERLIBS))
+ # FIXME This is wrong - mingw could invoke strip; MSVC equivalent?
+ ifneq "$(UNIX_OR_WIN32)" "win32"
+ 	strip $@
+diff --git a/stdlib/headernt.c b/stdlib/headernt.c
+index 998bb3e4dbdc331a1590938e0395e2adb7a7b78b..f80efd17d3e8d59413657dafcf0c3ce2af3964a6 100644
+--- a/stdlib/headernt.c
++++ b/stdlib/headernt.c
+@@ -22,34 +22,19 @@
+ #include "caml/mlvalues.h"
+ #include "caml/exec.h"
+ 
+-#ifndef __MINGW32__
+-#pragma comment(linker , "/subsystem:console")
+-#pragma comment(lib , "kernel32")
+-#ifdef _UCRT
+-#pragma comment(lib , "ucrt.lib")
+-#pragma comment(lib , "vcruntime.lib")
+-#endif
+-#endif
+-
+-static
+-#if _MSC_VER >= 1200
+-__forceinline
+-#else
+-__inline
+-#endif
+-unsigned long read_size(const char * const ptr)
++Caml_inline unsigned long read_size(const char * const ptr)
+ {
+   const unsigned char * const p = (const unsigned char * const) ptr;
+   return ((unsigned long) p[0] << 24) | ((unsigned long) p[1] << 16) |
+          ((unsigned long) p[2] << 8) | p[3];
+ }
+ 
+-static __inline char * read_runtime_path(HANDLE h)
++Caml_inline char * read_runtime_path(HANDLE h)
+ {
+   char buffer[TRAILER_SIZE];
+   static char runtime_path[MAX_PATH];
+   DWORD nread;
+-  int num_sections, path_size, i;
++  int num_sections, path_size;
+   long ofs;
+ 
+   if (SetFilePointer(h, -TRAILER_SIZE, NULL, FILE_END) == -1) return NULL;
+@@ -59,7 +44,7 @@ static __inline char * read_runtime_path(HANDLE h)
+   ofs = TRAILER_SIZE + num_sections * 8;
+   if (SetFilePointer(h, - ofs, NULL, FILE_END) == -1) return NULL;
+   path_size = 0;
+-  for (i = 0; i < num_sections; i++) {
++  for (int i = 0; i < num_sections; i++) {
+     if (! ReadFile(h, buffer, 8, &nread, NULL) || nread != 8) return NULL;
+     if (buffer[0] == 'R' && buffer[1] == 'N' &&
+         buffer[2] == 'T' && buffer[3] == 'M') {
+@@ -97,16 +82,16 @@ static void write_console(HANDLE hOut, WCHAR *wstr)
+ 
+   if (GetConsoleMode(hOut, &consoleMode) != 0) {
+     /* The output stream is a Console */
+-    WriteConsole(hOut, wstr, wcslen(wstr), &numwritten, NULL);
++    WriteConsole(hOut, wstr, lstrlen(wstr), &numwritten, NULL);
+   } else { /* The output stream is redirected */
+     len =
+-      WideCharToMultiByte(CP, 0, wstr, wcslen(wstr), str, sizeof(str),
++      WideCharToMultiByte(CP, 0, wstr, lstrlen(wstr), str, sizeof(str),
+                           NULL, NULL);
+     WriteFile(hOut, str, len, &numwritten, NULL);
+   }
+ }
+ 
+-static __inline void __declspec(noreturn) run_runtime(wchar_t * runtime,
++CAMLnoret Caml_inline void run_runtime(wchar_t * runtime,
+          wchar_t * const cmdline)
+ {
+   wchar_t path[MAX_PATH];
+@@ -121,9 +106,6 @@ static __inline void __declspec(noreturn) run_runtime(wchar_t * runtime,
+     write_console(errh, runtime);
+     write_console(errh, L"\r\n");
+     ExitProcess(2);
+-#if _MSC_VER >= 1200
+-    __assume(0); /* Not reached */
+-#endif
+   }
+   /* Need to ignore ctrl-C and ctrl-break, otherwise we'll die and take
+      the underlying OCaml program with us! */
+@@ -144,21 +126,15 @@ static __inline void __declspec(noreturn) run_runtime(wchar_t * runtime,
+     write_console(errh, runtime);
+     write_console(errh, L"\r\n");
+     ExitProcess(2);
+-#if _MSC_VER >= 1200
+-    __assume(0); /* Not reached */
+-#endif
+   }
+   CloseHandle(procinfo.hThread);
+   WaitForSingleObject(procinfo.hProcess , INFINITE);
+   GetExitCodeProcess(procinfo.hProcess , &retcode);
+   CloseHandle(procinfo.hProcess);
+   ExitProcess(retcode);
+-#if _MSC_VER >= 1200
+-    __assume(0); /* Not reached */
+-#endif
+ }
+ 
+-int wmain(void)
++_Noreturn void __cdecl wmainCRTStartup(void)
+ {
+   wchar_t truename[MAX_PATH];
+   wchar_t * cmdline = GetCommandLine();
+@@ -176,18 +152,9 @@ int wmain(void)
+     write_console(errh, truename);
+     write_console(errh, L" not found or is not a bytecode executable file\r\n");
+     ExitProcess(2);
+-#if _MSC_VER >= 1200
+-    __assume(0); /* Not reached */
+-#endif
+   }
+   CloseHandle(h);
+   MultiByteToWideChar(CP, 0, runtime_path, -1, wruntime_path,
+                       sizeof(wruntime_path)/sizeof(wchar_t));
+   run_runtime(wruntime_path , cmdline);
+-#if _MSC_VER >= 1200
+-    __assume(0); /* Not reached */
+-#endif
+-#ifdef __MINGW32__
+-    return 0;
+-#endif
+ }
+-- 
+2.53.0.windows.2
+

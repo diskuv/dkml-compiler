@@ -1,0 +1,24 @@
+From 56458fd67649cdaf5bc4362e4565124f1bba38db Mon Sep 17 00:00:00 2001
+From: Jonah Beckford <9566106-jonahbeckford@users.noreply.gitlab.com>
+Date: Mon, 25 May 2026 09:03:01 -0700
+Subject: [PATCH] b03
+
+
+diff --git a/Makefile.common b/Makefile.common
+index d28b9bced22e5ed3bd93468c3d02a297b709af46..d953ec4cbb0822ab52ed5b53474cbb714c9ee6a8 100644
+--- a/Makefile.common
++++ b/Makefile.common
+@@ -418,6 +418,10 @@ ifeq "$(FUNCTION_SECTIONS)" "true"
+ OPTCOMPFLAGS += -function-sections
+ endif
+ 
++ifeq "$(RUNTIMED)" "true"
++OPTCOMPFLAGS += -dstartup -S
++endif
++
+ # Escape special characters in the argument string.
+ # There are four characters that need escaping:
+ # - backslash and ampersand, which are special in the replacement text
+-- 
+2.53.0.windows.2
+

@@ -1,0 +1,37 @@
+From b801f7eb0996ce45752a6aac703946d1ec48fd4b Mon Sep 17 00:00:00 2001
+From: David Allsopp <david.allsopp@metastack.com>
+Date: Thu, 17 Jul 2025 14:56:12 +0100
+Subject: [PATCH] Use implicit names when installing ocamldoc
+
+The ocamldoc binaries were installed using a relative path. They're the
+only binaries installed that way - switch them to use an implicit path,
+as it's easier to make an implicit path subsequently relative if needed
+than vice versa.
+
+(cherry picked from commit 9e0ae925378088118ef45504bccb13f24b390bd6)
+
+diff --git a/ocamldoc/Makefile b/ocamldoc/Makefile
+index 30498e7c962f42e4351cfa54d793c57a0dc6fb3a..a3db466271c9efe68036ea77bc220c795b206713 100644
+--- a/ocamldoc/Makefile
++++ b/ocamldoc/Makefile
+@@ -241,7 +241,7 @@ DEPEND_PREREQS = $(LEXERS:.mll=.ml) \
+ install:
+ 	$(MKDIR) "$(INSTALL_BINDIR)"
+ 	$(MKDIR) "$(INSTALL_LIBDIR)/ocamldoc"
+-	$(INSTALL_PROG) $(OCAMLDOC) "$(INSTALL_BINDIR)"
++	$(INSTALL_PROG) ocamldoc$(EXE) "$(INSTALL_BINDIR)"
+ 	$(INSTALL_DATA) \
+ 	  ocamldoc.hva *.cmi $(OCAMLDOC_LIBCMA) \
+ 	  "$(INSTALL_LIBDIR)/ocamldoc"
+@@ -262,7 +262,7 @@ installopt:
+ installopt_really:
+ 	$(MKDIR) "$(INSTALL_BINDIR)"
+ 	$(MKDIR) "$(INSTALL_LIBDIR)/ocamldoc"
+-	$(INSTALL_PROG) $(OCAMLDOC_OPT) "$(INSTALL_BINDIR)"
++	$(INSTALL_PROG) ocamldoc.opt$(EXE) "$(INSTALL_BINDIR)"
+ 	$(INSTALL_DATA) \
+ 	  *.cmx $(OCAMLDOC_LIBA) $(OCAMLDOC_LIBCMXA) \
+ 	  "$(INSTALL_LIBDIR)/ocamldoc"
+-- 
+2.53.0.windows.2
+

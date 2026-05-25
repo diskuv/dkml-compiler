@@ -1,0 +1,126 @@
+From dad49aeb46f412a97909b99f60abf7a5d2cd5b65 Mon Sep 17 00:00:00 2001
+From: David Allsopp <david.allsopp@metastack.com>
+Date: Thu, 23 Mar 2023 13:20:01 +0000
+Subject: [PATCH] Compute $(STDLIB_MODULES) with GNU make functions
+
+(cherry picked from commit 2ad42c64af3001b2d7e3e0a52fc2ac08a3d3cce3)
+(cherry picked from commit d6017abc06c20a339a6336603a584babbe08d67f)
+
+diff --git a/Makefile.common b/Makefile.common
+index 43068151c85ccb5b1fa9eb963128c266532a6d47..5f02c3d0c36b472b9b6d01faa4e84873b0ea93da 100644
+--- a/Makefile.common
++++ b/Makefile.common
+@@ -165,13 +165,3 @@ OCAMLYACCFLAGS ?=
+ 	$(OCAMLYACC) $(OCAMLYACCFLAGS) $<
+ 
+ SAK = $(ROOTDIR)/runtime/sak$(EXE)
+-
+-# stdlib/StdlibModules cannot be include'd unless $(SAK) has been built. These
+-# two rules add that dependency. They have to be pattern rules since
+-# Makefile.common is included before default targets.
+-$(ROOTDIR)/%/sak$(EXE):
+-	$(MAKE) -C $(ROOTDIR)/$* sak$(EXE)
+-
+-ifneq "$(REQUIRES_CONFIGURATION)" ""
+-$(ROOTDIR)/%/StdlibModules: $(SAK) ;
+-endif
+diff --git a/runtime/sak.c b/runtime/sak.c
+index b7e5c721c22ae724d3c9f3fdf12a48574dcbb772..1bd2ec336593af5d0f8816b2254a72a64f538d6c 100644
+--- a/runtime/sak.c
++++ b/runtime/sak.c
+@@ -47,12 +47,6 @@
+ 
+      On Windows, `sak encode-C-literal "C:\OCaml🐫\lib"` returns
+      `L"C:\\OCaml\xd83d\xdc2b\\lib"`
+-   - add-stdlib-prefix. Used in stdlib/StdlibModules to convert the list of
+-     basenames given in STDLIB_MODULE_BASENAMES to the actual file basenames
+-     in STDLIB_MODULES.
+-
+-     For example, `sak add-stdlib-prefix stdlib camlinternalAtomic Sys` returns
+-     ` stdlib camlinternalAtomic stdlib__Sys`
+  */
+ 
+ void usage(void)
+@@ -62,7 +56,6 @@ void usage(void)
+     "Usage: sak command\n"
+     "Commands:\n"
+     " * encode-C-literal path - encodes path as a C string literal\n"
+-    " * add-stdlib-prefix name1 ... - prefix standard library module names\n"
+   );
+ }
+ 
+@@ -104,37 +97,10 @@ void encode_C_literal(char_os *path)
+   putchar('"');
+ }
+ 
+-/* Print the given array of module names to stdout. "stdlib" and names beginning
+-   "camlinternal" are printed unaltered. All other names are prefixed "stdlib__"
+-   with the original name capitalised (i.e. "foo" prints "stdlib__Foo"). */
+-void add_stdlib_prefix(int count, char_os **names)
+-{
+-  int i;
+-  char_os *name;
+-
+-  for (i = 0; i < count; i++) {
+-    name = *names++;
+-
+-    /* "stdlib" and camlinternal* do not get changed. All other names get
+-       capitalised and prefixed "stdlib__". */
+-    if (strcmp_os(T("stdlib"), name) == 0
+-     || strncmp_os(T("camlinternal"), name, 12) == 0) {
+-      printf_os(T(" %s"), name);
+-    } else {
+-      /* name is a null-terminated string, so an empty string simply has the
+-         null-terminator "capitalised". */
+-      *name = toupper_os(*name);
+-      printf_os(T(" stdlib__%s"), name);
+-    }
+-  }
+-}
+-
+ int main_os(int argc, char_os **argv)
+ {
+   if (argc == 3 && !strcmp_os(argv[1], T("encode-C-literal"))) {
+     encode_C_literal(argv[2]);
+-  } else if (argc > 1 && !strcmp_os(argv[1], T("add-stdlib-prefix"))) {
+-    add_stdlib_prefix(argc - 2, &argv[2]);
+   } else {
+     usage();
+     return 1;
+diff --git a/stdlib/StdlibModules b/stdlib/StdlibModules
+index fb846b09738210bdcec5d81f2e71e23b740b7511..30bbabf67159982dfb0b153188a18909162ea895 100644
+--- a/stdlib/StdlibModules
++++ b/stdlib/StdlibModules
+@@ -49,9 +49,23 @@ STDLIB_MODULE_BASENAMES = \
+ STDLIB_PREFIXED_MODULES = \
+   $(filter-out stdlib camlinternal%, $(STDLIB_MODULE_BASENAMES))
+ 
+-# The pattern FOO = $(eval FOO := $$(shell <cmd>)$(FOO) ensures that <cmd> is
+-# executed either once or not at all, giving us GNU make's equivalent of a
+-# string lazy_t.
+-STDLIB_MODULES = \
+-  $(eval STDLIB_MODULES := $$(shell \
+-          $(SAK) add-stdlib-prefix $(STDLIB_MODULE_BASENAMES)))$(STDLIB_MODULES)
++# $(STDLIB_MODULES) applies the PREFIX_MODULE macro to each item in
++# $(STDLIB_MODULE_BASENAMES). For the names which require prefixing, this is
++# done using CAPITALIZE. CAPITALIZE is a recursive macro taking the name to
++# transform and a list of transformations to apply to the beginning of the name,
++# thus $(call CAPITALIZE, string, ... r R s S t T ...) expands to String.
++CAPITALIZE = \
++  $(strip $(if $(firstword $(2)), \
++    $(call CAPITALIZE, $(patsubst $(word 1, $(2))%, $(word 2, $(2))%, $(1)), \
++      $(wordlist 3, $(words $(2)), $(2))), \
++    $(1)))
++
++PREFIX_MODULE = \
++  $(if $(filter stdlib camlinternal%, $(1)), \
++    $(1), \
++    stdlib__$(call CAPITALIZE, $(1), \
++                         a A b B c C d D e E f F g G h H i I j J k K l L m M \
++                         n N o O p P q Q r R s S t T u U v V w W x X y Y z Z))
++
++STDLIB_MODULES = $(strip \
++  $(foreach name, $(STDLIB_MODULE_BASENAMES), $(call PREFIX_MODULE, $(name))))
+-- 
+2.53.0.windows.2
+

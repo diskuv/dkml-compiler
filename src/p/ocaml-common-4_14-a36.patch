@@ -1,0 +1,173 @@
+From 79b265e6d8840f2e141012db531ebfcec9558c8e Mon Sep 17 00:00:00 2001
+From: David Allsopp <david.allsopp@metastack.com>
+Date: Sat, 10 Apr 2021 11:47:14 +0100
+Subject: [PATCH] Harden the parsing of ld.conf w.r.t. load and CRLF
+
+(cherry picked from commit 0234f950e49493dccad654e6050e106d6bcde25f)
+
+diff --git a/Changes b/Changes
+index 5501211876b92e5cb167bdc423fe76adb3f8a975..99cff86ac521a26954d17d0e082d9e16ce64037e 100644
+--- a/Changes
++++ b/Changes
+@@ -22,7 +22,8 @@ OCaml 4.14 maintenance version
+   put implicit paths in ld.conf. The interpretation of CAML_LD_LIBRARY_PATH is
+   unaltered. Additionally, ld.conf is loaded from all of $OCAMLLIB/ld.conf,
+   $CAMLLIB/ld.conf and standard_library_default/ld.conf rather than just the
+-  first one found.
++  first one found. ld.conf files with CRLF line endings are now consistently on
++  both Windows and Unix.
+   (David Allsopp, review by ???)
+ 
+ ### Code generation and optimizations:
+diff --git a/bytecomp/dll.ml b/bytecomp/dll.ml
+index 3e062c331f75f62ea6e40b0e04fd49b5f0662f5b..4902bb863c2f90ef30e129ee3125cc4793055818 100644
+--- a/bytecomp/dll.ml
++++ b/bytecomp/dll.ml
+@@ -144,6 +144,19 @@ let synchronize_primitive num symb =
+ 
+ (* Read the [ld.conf] file and return the corresponding list of directories *)
+ 
++let rtrim_cr s =
++  if s = "" then s
++  else
++    let len = String.length s in
++    let i = ref len in
++    while !i > 0 && s.[!i - 1] = '\r' do
++      decr i
++    done;
++    if !i <> len then
++      String.sub s 0 !i
++    else
++      s
++
+ let ld_conf_contents dir =
+   let is_separator =
+     if Sys.win32 then
+@@ -151,37 +164,34 @@ let ld_conf_contents dir =
+     else
+       Char.equal '/'
+   in
+-  let path = ref [] in
+-  begin try
+-    let ic = open_in (Filename.concat dir "ld.conf") in
+-    begin try
+-      while true do
+-        let line = input_line ic in
+-        let line =
+-          if line = "" then
+-            ""
+-          else
+-            let len = String.length line in
+-            if line.[0] = '.' then
+-              if len = 1 then
+-                dir
+-              else if is_separator line.[1] then
+-                dir ^ String.sub line 1 (len - 1)
+-              else if line.[1] = '.' && (len = 2 || is_separator line.[2]) then
+-                Filename.concat dir line
+-              else
+-                line
+-            else
+-              line
+-        in
+-        path := line :: !path
+-      done
+-    with End_of_file -> ()
+-    end;
+-    close_in ic
+-  with Sys_error _ -> ()
+-  end;
+-  List.rev !path
++  let translate line =
++    if line = "" then
++      ""
++    else
++      let len = String.length line in
++      if line.[0] = '.' then
++        if len = 1 then
++          dir
++        else if is_separator line.[1] then
++          dir ^ String.sub line 1 (len - 1)
++        else if line.[1] = '.' && (len = 2 || is_separator line.[2]) then
++          Filename.concat dir line
++        else
++          line
++      else
++        line
++  in
++  try
++    In_channel.with_open_bin (Filename.concat dir "ld.conf") @@ fun ic ->
++      let lines = String.split_on_char '\n' (In_channel.input_all ic) in
++      match List.rev lines with
++      | [] -> assert false (* String.split_on_char doesn't return [] *)
++      | [""] -> []
++      | last :: rev_rest ->
++          let f s = translate (rtrim_cr s) in
++          let last = translate last in
++          List.rev_map f rev_rest @ if last = "" then [] else [last]
++  with Sys_error _ -> []
+ 
+ let ld_conf_contents () =
+   let dirs = [
+diff --git a/runtime/dynlink.c b/runtime/dynlink.c
+index ae2cceba435c75178a0caaeba6dfa3addb93f418..0910b0bc6e601007bc66fd6bf5e2193c74fae436 100644
+--- a/runtime/dynlink.c
++++ b/runtime/dynlink.c
+@@ -38,6 +38,10 @@
+ 
+ #include "build_config.h"
+ 
++#ifndef O_BINARY
++#define O_BINARY 0
++#endif
++
+ #ifndef NATIVE_CODE
+ 
+ /* The table of primitives */
+@@ -111,8 +115,8 @@ CAMLexport char_os * caml_parse_ld_conf(void)
+     caml_secure_getenv(T("OCAMLLIB")),
+     caml_secure_getenv(T("CAMLLIB")),
+     OCAML_STDLIB_DIR};
+-  char_os * libroot, * ldconfname, * wconfig, * p, * q;
+-  char_os last, * entry, * result;
++  char_os * libroot, * ldconfname, * wconfig, * p, * q, * r;
++  char_os * entry, * result;
+   char * config;
+ #ifdef _WIN32
+   struct _stati64 st;
+@@ -139,7 +143,7 @@ CAMLexport char_os * caml_parse_ld_conf(void)
+         caml_stat_free(libroot);
+         continue;
+       }
+-      ldconf = open_os(ldconfname, O_RDONLY, 0);
++      ldconf = open_os(ldconfname, O_RDONLY | O_BINARY, 0);
+       if (ldconf == -1)
+         caml_fatal_error("cannot read loader config file %s",
+                              caml_stat_strdup_of_os(ldconfname));
+@@ -158,14 +162,19 @@ CAMLexport char_os * caml_parse_ld_conf(void)
+       p = wconfig;
+       while (*p != '\0') {
+         for (q = p; *q != '\0' && *q != '\n'; q++) /*nothing*/;
+-        last = *q;
++        r = q;
++        if (*q == '\n') {
++          r++;
++          /* Ignore any trailing CR characters, so that CR*LF is uniformly
++             treated as a single LF. */
++          while (q > p && *(q - 1) == '\r')
++            q--;
++        }
+         *q = '\0';
+         entry = make_relative_path_absolute(p, libroot);
+         length += strlen_os(entry) + 1;
+         caml_ext_table_add(&entries, entry);
+-        p = q;
+-        if (last == '\n')
+-          p++;
++        p = r;
+       }
+ 
+       caml_stat_free(wconfig);
+-- 
+2.53.0.windows.2
+

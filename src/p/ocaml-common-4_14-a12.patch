@@ -1,0 +1,59 @@
+From cdb391d48bc88b2a47c29055d621be516bfe6da9 Mon Sep 17 00:00:00 2001
+From: David Allsopp <david.allsopp@metastack.com>
+Date: Wed, 5 Jul 2023 14:58:15 +0100
+Subject: [PATCH] Partially enable shebang headers on Cygwin
+
+Historically, shebang headers were disabled on Cygwin partly because of
+issues in Cygwin itself and partly because it allowed executables
+produced by ocamlc to be started outside of a Cygwin shell (i.e. from
+Windows itself, either at the Command Prompt or from Explorer).
+
+The build has long since supported a separate set of headers to use when
+building the compiler vs for use by ocamlc after installation, so the
+compiler is now configured to default to shebang scripts for the tools
+themselves (ocamlc.byte, etc.) while still retaining the previous
+behaviour for executables produced by ocamlc. The user may override this
+by configuring --with-target-sh=sh
+
+(cherry picked from commit 6ddbd7e9f2dbd973e2117860093d78ac22d3fc65)
+(cherry picked from commit 2ef756f3b6537307e5b6779d1ee28760845509c0)
+
+diff --git a/configure b/configure
+index e8365020c3e3980731aec13b7d62f1b109d8d970..4d8b660e1f8891c59e2312ec1a3d68b7d25f0887 100755
+GIT binary patch
+delta 360
+zcmYk1ze>bF5XSLO?vAT0Yy^veD}s<G5Cp+Sd<orbCfS9}&a$&hOm!9kE5Yt+JG&qV
+zzK-BaSYBM@xPcD_X6E<J_wv1Z|5-f^2gBiTG#r0s599g*E|)OX3U2zQ(-t^7M?NsH
+z!cy3V3+R-V3Oa<y2sL>K3PDoqv_TI#Fq*o6GKNI@V>#i27RK~x-C!eRUx2XH-h^r5
+ztVIBPL>Yr94Khe!p+rEz+Vne|j}~fAEl>=sEBybpNRRBFlN7Cy$tbnt0ys}qln52=
+zc$PxS!s;Yt1eRXAz|+F!b<EDs0E~!Ms{0m$qUtJVm8a_s{myR}`Q(`|YrXlno1H$J
+PF`G1-H2*T=;_Z41?<so$
+
+delta 39
+scmZ4SSh@FsazhJa3sVbo3(FSPg!POy?SD3~0x=s9vv2>ifn$vW09or2AOHXW
+
+diff --git a/configure.ac b/configure.ac
+index 84434e7ef4937fe19b6cf6aee8d90c36db004ee7..66ada6a87d0d456f0709e7435a562d31f89d2fb8 100644
+--- a/configure.ac
++++ b/configure.ac
+@@ -594,7 +594,16 @@ shebangscripts=false
+ launch_method='exe'
+ AS_IF([test "x$interpval" = "xyes"],
+   [AS_CASE([$host],
+-    [*-cygwin|*-*-mingw32*|*-pc-windows], [],
++    [*-cygwin],
++      [# Cygwin supports shebangs, which we use for the compiler itself, but
++      # partially for legacy, and partially so that executables can be easily
++      # run from outside Cygwin, the executables ocamlc and ocamlopt produce do
++      # not use shebang scripts
++      shebangscripts=true
++      launch_method='sh'
++      AS_IF([test x"$target_launch_method" = 'x'],
++        [target_launch_method='exe'])],
++    [*-*-mingw32*|*-pc-windows], [],
+     [shebangscripts=true
+     launch_method='sh']
+   )]
+-- 
+2.53.0.windows.2
+

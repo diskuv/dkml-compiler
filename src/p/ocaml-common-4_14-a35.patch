@@ -1,0 +1,77 @@
+From f6e0a730f49ca9b6d37d7573c9dd638fcf39c72b Mon Sep 17 00:00:00 2001
+From: David Allsopp <david.allsopp@metastack.com>
+Date: Sat, 10 Apr 2021 15:13:19 +0100
+Subject: [PATCH] Remove caml_get_stdlib_location
+
+The function was only ever added to share the logic between dynlink.c
+and startup_byt.c - now that dynlink.c doesn't require it, move the
+function to startup_byt.c and make it internal again.
+
+(cherry picked from commit 98dbb3c5e1e90e35365897987a9e42de2299f2e4)
+
+diff --git a/runtime/caml/dynlink.h b/runtime/caml/dynlink.h
+index aaff29f7c75d77292a58f36e227d1239bcbe567a..19892948bd3980ac571f883f6d984aee4def232e 100644
+--- a/runtime/caml/dynlink.h
++++ b/runtime/caml/dynlink.h
+@@ -41,9 +41,6 @@ extern void caml_build_primitive_table_builtin(void);
+ /* Unload all the previously loaded shared libraries */
+ extern void caml_free_shared_libs(void);
+ 
+-/* Return the effective location of the standard library */
+-extern char_os * caml_get_stdlib_location(void);
+-
+ /* If found, parse $OCAMLLIB/ld.conf, $CAMLLIB/ld.conf and
+    OCAML_STDLIB_DIR/ld.conf in that order and add the lines read to
+    caml_shared_libs_path. */
+diff --git a/runtime/dynlink.c b/runtime/dynlink.c
+index 9b97812fdd7d1747553dc5d3fe26f369ea98fb8d..ae2cceba435c75178a0caaeba6dfa3addb93f418 100644
+--- a/runtime/dynlink.c
++++ b/runtime/dynlink.c
+@@ -77,15 +77,6 @@ static c_primitive lookup_primitive(char * name)
+ 
+ #define LD_CONF_NAME T("ld.conf")
+ 
+-CAMLexport char_os * caml_get_stdlib_location(void)
+-{
+-  char_os * stdlib;
+-  stdlib = caml_secure_getenv(T("OCAMLLIB"));
+-  if (stdlib == NULL) stdlib = caml_secure_getenv(T("CAMLLIB"));
+-  if (stdlib == NULL) stdlib = OCAML_STDLIB_DIR;
+-  return stdlib;
+-}
+-
+ /* Return a copy of [path], interpreting explicit-relative paths relative to
+    [root]. [root] must not end with a directory separator. The result of this
+    function can never be ".", ".." or a path beginning "./" or "../". Note that
+diff --git a/runtime/startup_byt.c b/runtime/startup_byt.c
+index 15b7aded01e7f9849deffbcf3c003bc3236b8087..829eeb6f3329e6c33468ac82811c7fd13ccf94b9 100644
+--- a/runtime/startup_byt.c
++++ b/runtime/startup_byt.c
+@@ -369,6 +369,15 @@ static int parse_command_line(char_os **argv)
+   return i;
+ }
+ 
++static const char_os * get_stdlib_location(void)
++{
++  const char_os * stdlib;
++  stdlib = caml_secure_getenv(T("OCAMLLIB"));
++  if (stdlib == NULL) stdlib = caml_secure_getenv(T("CAMLLIB"));
++  if (stdlib == NULL) stdlib = OCAML_STDLIB_DIR;
++  return stdlib;
++}
++
+ /* Print the configuration of the runtime to stdout; memory allocated is not
+    freed, since the runtime will terminate after calling this. */
+ static void do_print_config(void)
+@@ -381,7 +390,7 @@ static void do_print_config(void)
+   printf("standard_library_default: %s\n",
+          caml_stat_strdup_of_os(OCAML_STDLIB_DIR));
+   printf("standard_library: %s\n",
+-         caml_stat_strdup_of_os(caml_get_stdlib_location()));
++         caml_stat_strdup_of_os(get_stdlib_location()));
+   printf("int_size: %d\n", 8 * (int)sizeof(value));
+   printf("word_size: %d\n", 8 * (int)sizeof(value) - 1);
+   printf("os_type: %s\n", OCAML_OS_TYPE);
+-- 
+2.53.0.windows.2
+

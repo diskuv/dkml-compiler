@@ -1,0 +1,160 @@
+From 30d9847493a8f105b76be172a9b8e76b88fca545 Mon Sep 17 00:00:00 2001
+From: David Allsopp <david.allsopp@metastack.com>
+Date: Sat, 8 Feb 2025 10:13:18 +0000
+Subject: [PATCH] Fix the detection of Cygwin-like build environments
+
+Both Cygwin and MSYS2 are now consistently detected on MSYS2. In
+particular, this means that ./configure --prefix $PWD/install and
+similar will cause the prefix to be correctly translated to a Windows
+path, as already happens on Cygwin.
+
+(cherry picked from commit 2c9b00528eb82f56b45c29525271c81ee0b0c16b)
+
+diff --git a/Changes b/Changes
+index 333b89535487d37dd26e940e142b2f890ff9ef63..216168d0db3cf41bb6284d5d2a631c99cb390c65 100644
+--- a/Changes
++++ b/Changes
+@@ -72,6 +72,12 @@ OCaml 4.14 maintenance version
+   --disable-shared.
+   (David Allsopp, review by ???)
+ 
++- #14???: Normalise `--prefix` when compiling on MSYS2 in the same way as is
++  already done on Cygwin. In particular, backslashes are converted to slashes
++  and MSYS2-style paths (e.g. resulting from `--prefix $PWD/install`) are
++  converted to Windows-style paths.
++  (David Allsopp, review by ???)
++
+ ### Bug fixes:
+ 
+ - #12070, #12075, #13209: auto-detect whether `ar` support @FILE arguments at
+diff --git a/configure b/configure
+index d4d986d73a5366dc263da55ccdf516adef7236fe..4797b48532d307d29679f524df551fc7f789f35a 100755
+GIT binary patch
+delta 2224
+zcmbtW&ub(_6eentb@U)2>(OVj;LI>TBne?nh@inAE9@d9xbDT-nwskABGp}OS9LlA
+zi@mpa@g@w2_dR%YA@~<~_29{y7iTYue}Vc{RZnKJ;>nOEOijP9zW2TFy_aA9-2CzH
+z&4-UyzPev+(hWWtmogm;3#mo}k)9sdybvTKvauk4O45*JCo&yVrWnVUDY0}yI2n<S
+z=+Gl{l{^uRO#+0>b()COQnQRDk11gj#Bf!N1o2!O)8#tJq>>dN2T`t*K@HLZz&lD&
+z#;g^2YJfJPQrei>)Z|ew5bCnxtj~2C$#KsVLj)o0R$60_v_`0?;}b~0y6l#_I~1-I
+zxgnO%X;hbo0BFYA*n_j1yMx`GZpOPon0=(4kA*#GJCv@++umwHfDzpY@|3YiDKFC0
+zDde&NnBxqYf;3J*rb;$3)LtO>8k<$%ef#L%(bj+Q^>kC6CrpuJxJaZ!L0%sYkxzsH
+z9y?`Hv7r*kKi9=Lrjd*yk-K`lx2TPwrc5hhWMqQ(bF$hCc3Zj%>B!P2(iBVq@yHe<
+zsp(j2W#~{RiOc<C<e6EsPeuret<B6{zh9PRFEJCd)zkU7KhoUvm+WBrE#yqMtkWZd
+z4P@nMYATE%pT!%7HiBjwH0GR|&V=IgLY^|^5`f!k>p<$1S$XO#7b036XUrf8XF#mW
+zgUj08cGvN0yZes;S=*w5FRo~U)R429AS*kMhcH)a-+>9O(+XIFz+ph(=ej0^(771V
+zZ~~s*pW{LpXdP%FPeVn@5<y+lqOy|k`p^M+U)1KJW~5OM(A?hY4yC0*u;5_1w@in`
+zDST&RU*q5b=QDu8r!FkGbEyEqwTr8EtDVJNb<q4Sz$`@?S2-LV$GAcXHo`;*eu;FE
+zFWPk|lrB3kyK<!pNy{XIpf+Y+w9AnKG+QlC6^*GvD3TQkB4OCNuJA-*F)XZvcujOA
+zhC__(E$_96vor`O&N9I*qzA8|AkczIol%WIQLW^NJ-qk9-CK7KFz(DGQ8GQL%w8zq
+z9Bz){$Z293n1{sgXzLmZIWSdA?&V#Y7ruHhR2hm&jB}AWMlKh4)7w6l<5*1q@1~`y
+zE_GoRX)^fI1m6_SMN0*MrpU#4!th*X*53jcj6Z|^KyN_f2%YaHw;vNRGn8t$K)@v+
+z4H90QdcgT%cFj%4?X6y8`sQr?`t;kMS6_Uq?vw|<XTtaG#fROUc8m5JgdbGm%Ho*z
+z2Wzjs_VnpN#1wjQf4?CN<BjRBzpq`N{`A87%jb{pui$wG&$D=*yLfzm^@opcJ{{k=
+z;j=+!Z#HqQTTY!T?bv?c&!#JXti5va&3CKk``BuC-AMKYax)puI`m}w^`woIICJ&)
+zn+a}#?_vSZ&b4)0%jXCiI3&0%NJ-*M@WK@p9j-Y`6z}^#I<r0cke#~gDupBW&itBA
+zjU`fpx;iHW+b+=D)&PrOM!Ji|s!PnsTysp1o*!8}7W||JLKEr~1y6<hp5+tQFrXQB
+z>!)G4rsJM}-K}zgy>Ye?2I2<2e&9YhT{p1aT;yKEze>(M|N4*M@}24NZ1vsg*R$0x
+xo{wY$zj)63PgXDbPu9Nt>+LXf|5pL04}V)<pMEx5fB*c^Z2jWV?ArG){R8&N|H}XX
+
+delta 248
+zcmX^9U-{Mt<%TVcy$REm6WB!C4bmBbm<foPftY2xK|1Scujwyev+Hhm-^AK(J^kB1
+zR$*2x-EuRN=@a*`%T8B&&+0He<2`H5bcG#kqSJn}a<#vI&$|8nd$zWJ^_gi3C8@<F
+z3KdE!rFoeZ@%csZ<(YZLMoJ2{3Q84FW(=1C9H^;5G$^TL<QJF3m!;;V<QM5eIQhj&
+z3W`8|DoLf8IVo^C2oEG_tx%GYnx|j|G%q=^I8{M~6)ZQM<0Y%i^yBZ?ecJ`!vu_uC
+I&#_Ga0O6uok^lez
+
+diff --git a/configure.ac b/configure.ac
+index cc70a8217a616e71ae401e7bd85faf9209adbf96..cf53a78d0da504b059866fa97d42d61a52ca8e30 100644
+--- a/configure.ac
++++ b/configure.ac
+@@ -206,6 +206,38 @@ AC_CANONICAL_BUILD
+ AC_CANONICAL_HOST
+ AC_CANONICAL_TARGET
+ 
++# $cygwin_build_env=true if the build is taking place in any kind of Cygwin-like
++# environment (which may include cross-compiling _from_ Cygwin)
++# All patterns end with * (cf. build-aux/config.sub)
++#
++# In Cygwin itself, the mingw-w64 compilers are cross-compilers
++# (host=x86_64-pc-cygwin; target=*-w64-mingw32) and $build when running from
++# within Cygwin is always *-pc-cygwin.
++#
++# In MSYS2, the mingw-w64 compiler are normal host compilers, which MSYS2 makes
++# available through different Environments (in a similar to the Microsoft Visual
++# Studio Tools Command Prompts; see https://www.msys2.org/docs/environments/).
++# It is possible to use MSYS2's "Cygwin" gcc (the equivalent of compiling native
++# Cygwin), in which case $build is *-*-msys*.
++# The mingw-w64 Environments manually set $build to *-w64-mingw32, but the
++# _native_ value inferred by config.guess (which uses uname -s) will be
++# *-pc-mingw32 (for the 32-bit _target_ environments, even though MSYS2 is a
++# 64-bit build environment) and *-pc-mingw64 (for the 64-bit _target_
++# environments).
++#
++# This leads to the four patterns below, all of which imply that the build is
++# taking place on a system where Cygwin's utilities (cygpath, etc.) can be
++# expected to be found and semantics (CYGWIN=winsymlinks:native, etc.) expected
++# to apply.
++#
++# Note that although build=x86_64-pc-mingw64 will be accepted here, it is highly
++# likely that that's a misconfigured environment, and the script will
++# subsequently fail if host has not been altered to x86_64-w64-mingw32.
++AS_CASE([$build],
++  [*-*-cygwin*|*-*-msys*|*-*-mingw32*|*-*-mingw64*],
++    [cygwin_build_env=true],
++  [cygwin_build_env=false])
++
+ AS_CASE([$host],
+   [*-pc-windows],
+     [CC=cl
+@@ -572,8 +604,8 @@ ocamlsrcdir=${ocamlsrcdir%X}
+ 
+ # Libraries to build depending on the host
+ 
+-AS_CASE([$host],
+-  [*-*-mingw32|*-pc-windows],
++AS_CASE([$cygwin_build_env,$host],
++  [true,*-w64-mingw32*|true,*-pc-windows],
+     [unix_or_win32="win32"
+     OCAML_CHECK_LN_ON_WINDOWS
+     default_separator='\'
+@@ -849,12 +881,17 @@ AS_IF([test x"$supports_shared_libraries" != 'xfalse'], [
+     OCAML_TEST_FLEXLINK([$flexlink], [$flexdll_chain],
+                         [$internal_cppflags], [$host])
+ 
+-    AS_CASE([$host],
+-      [*-w64-mingw32|*-pc-windows],
+-      [flexlink_where="$(cmd /c "$flexlink" -where 2>/dev/null)"
+-      AS_IF([test -z "$flexlink_where"],
+-        [AC_MSG_ERROR([$flexlink is not executable from a native Win32 process])
+-      ])])
++    # When building on Cygwin/MSYS2, flexlink may be a shell script which
++    # then cannot be executed by ocamlc/ocamlopt. Having located flexlink,
++    # ensure it can be executed from a native Windows process. The check
++    # is only necessary when cross-compiling.
++    AS_IF([test x"$build" != x"$host"],[
++      AS_IF([$cygwin_build_env],
++        [flexlink_where="$(cmd /c "$flexlink" -where 2>/dev/null)"
++        AS_IF([test -z "$flexlink_where"],
++          [AC_MSG_ERROR(m4_normalize([$flexlink is not executable from a
++          native Win32 process]))])])
++    ])
+   ])
+ 
+   OCAML_TEST_FLEXDLL_H([$flexdir])
+@@ -2102,10 +2139,9 @@ AS_IF([test x"$prefix" = "xNONE"],
+     [x86_64-w64-mingw32], [prefix='C:/ocamlmgw64'],
+     [i686-pc-windows], [prefix='C:/ocamlms'],
+     [x86_64-pc-windows], [prefix='C:/ocamlms64'])],
+-  [AS_IF([test x"$unix_or_win32" = "xwin32" \
+-          && test "$host_vendor-$host_os" != "$build_vendor-$build_os" ],
+-    [AS_CASE([$build],
+-      [*-pc-cygwin], [prefix="$(LC_ALL=C.UTF-8 cygpath -m "$prefix")"])])])
++  [AS_CASE([$cygwin_build_env,$host],
++    [true,*-w64-mingw32*|true,*-pc-windows],
++      [prefix="$(LC_ALL=C.UTF-8 cygpath -m "$prefix")"])])
+ 
+ # Define a few macros that were defined in config/m-nt.h
+ # but whose value is not guessed properly by configure
+-- 
+2.53.0.windows.2
+

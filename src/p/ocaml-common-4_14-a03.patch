@@ -1,0 +1,146 @@
+From 234bdc9a2e4239cc08d60d928347ca83f0cc67c7 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?S=C3=A9bastien=20Hinderer?= <seb@tarides.com>
+Date: Mon, 17 Oct 2022 09:41:40 +0200
+Subject: [PATCH] Compute LN during configure rather than during build
+
+On Windows, this changes the value of LN used by the root Makefile.
+Indeed, before this commit the root Makefile was using cp, whereas it
+now uses "cp -pf". This is better because the LN command is used
+to copy/symlink files in theinstallationdirectory, so it is important that
+the permissions are preserved by the operation, which a simple cp
+wouldn't do, falling back to the permission inherited from the
+parent directory.
+
+(cherry picked from commit 775917d3847d1e7615599ef58dae81851fb8e197)
+(cherry picked from commit c299bcb4c6ad06712072c973728697203bb55751)
+
+diff --git a/Makefile b/Makefile
+index 185f0a7633a028b0a91583e7c8ee1a0de85c4f7d..62049f8488dd44a98f65338094ade1843e227d02 100644
+--- a/Makefile
++++ b/Makefile
+@@ -29,12 +29,6 @@ else
+ defaultentry: world
+ endif
+ 
+-ifeq "$(UNIX_OR_WIN32)" "win32"
+-LN = cp
+-else
+-LN = ln -sf
+-endif
+-
+ include stdlib/StdlibModules
+ 
+ CAMLC=$(BOOT_OCAMLC) -g -nostdlib -I boot -use-prims runtime/primitives
+diff --git a/Makefile.build_config.in b/Makefile.build_config.in
+index 4d6705d252620f7d9214da55677818c23fe575ee..8f9b5c3863b3a0460fedc30ae548961c848540b0 100644
+--- a/Makefile.build_config.in
++++ b/Makefile.build_config.in
+@@ -51,3 +51,6 @@ BOOTSTRAPPING_FLEXDLL=@bootstrapping_flexdll@
+ PACKAGE_TARNAME = @PACKAGE_TARNAME@
+ datarootdir = @datarootdir@
+ DOCDIR=@docdir@
++
++# Platform-dependent command to create symbolic links
++LN = @ln@
+diff --git a/configure b/configure
+index 5934064ef31aa2b18e1f94c3217bfdd7f4bc7f8d..a4cd544cff562320b300a743a1621ab905647acd 100755
+GIT binary patch
+delta 1026
+zcmah|zi$&U6jp$gC^HhUz*CyGiPYScBJr!r5VZm%T3SR<Gk{XZ=ex7;*(ckVG-^=B
+zO8f))2il1R#E_khfswxeiJ1wBjpu7A>C}^+?9+SxzVCg0{`qbG!}s}**V<Jf%bDc+
+zg7@;Zt8{n3<=xe?q9hSU(}3&G^)~%8eZN)sT9~|fUbt~9&sk=yf41vVB|{#0iAX2o
+z?ZUmo(RKmj62@hWE7Q?-@ppUN>KP?6%OE8-2CKlv43|`}J`-S6rYQrYWYj7>ESKk@
+z1%^q>C8lXiG@+JhsCDYV4UiyU0T7#`Fd2Xf^X(Y`NRluFA(%rZIR?!V)n~yna0!$c
+zBu4?~>mlTlo0u6Ga1==-s37=H?jc^Sji;(L&-3bljT@^oY5^CX8nBvh!DR%mk>a0Z
+z<JIxpxFw82ZtK+ZBvslHiSiX>C}l6zT-tCCG@655+8DX_7>(5)^cW?s1`~+WV=?J-
+zbjx*oTHz37z|fwAOM(`=rZb81tX4vho?tNMxk1j6a~I)?2$u$WguXR`xbBx>5OW%%
+z2|_@?oGF%xA#&%QIr9)lN!UeNH8A+|k}-&_P0b_U7u;CmMKbf0j(nnN%=>KY$2Ji@
+z$*gko;;*jUdDvLF?<Xc&!Ee=bX#@(D>mDzLp)7%S%=S}3uq&>lSDu~CX0?_{!z`?C
+z?6lfX*MJ7lXh5ZUGP)I5T!a%_VZn4<VrO@wQist9LWDjKbucsZ3!Qfpc~m@jCS-Go
+zrqD>kr83|*Q`4+eYn$uc*5+n&-Fwx3+;{+V80Dkg7@WwMsjk!~KaPq|@X0logoK94
+z0Z(6Fv*I=tSX(PIL+Iqw*4)j*&T$cAZrVA%TKaO)t9ucaZeLXMD=J-|CQ)fP{tLy=
+BXy^a{
+
+delta 122
+zcmZ2|Rr%Rj<qaYsqNRD66*-wnTp&6=zbL*uGtby)vqebq&+T)48ILngmkeOkY`@^o
+z2*gZ4%nZaV+b{UDehZmiw4Akky44C+M=_`=wn`v|l7h80S88!$a{Gc6tU%1ReZdNL
+Mg+tp_vpL%80R%iT8UO$Q
+
+diff --git a/configure.ac b/configure.ac
+index 66bb1a92c994c4abe6b13599214fcd05cde00c3d..bd96ad1a7d7c93fc08e10bf8ac2ef3b7dca19d4e 100644
+--- a/configure.ac
++++ b/configure.ac
+@@ -95,8 +95,10 @@ AC_SUBST([arch64])
+ AC_SUBST([model])
+ AC_SUBST([system])
+ AC_SUBST([systhread_support])
++AC_SUBST([ocamlsrcdir])
+ AC_SUBST([unix_or_win32])
+ AC_SUBST([unixlib])
++AC_SUBST([ln])
+ AC_SUBST([outputexe])
+ AC_SUBST([outputobj])
+ AC_SUBST([syslib])
+@@ -179,6 +181,7 @@ AC_CONFIG_FILES([stdlib/sys.ml])
+ AC_CONFIG_FILES([manual/src/version.tex])
+ AC_CONFIG_FILES([manual/src/html_processing/src/common.ml])
+ AC_CONFIG_FILES([tools/eventlog_metadata])
++AC_CONFIG_FILES([ocamltest/ocamltest_config.mlp])
+ AC_CONFIG_HEADERS([runtime/caml/m.h])
+ AC_CONFIG_HEADERS([runtime/caml/s.h])
+ AC_CONFIG_HEADERS([runtime/caml/version.h])
+@@ -529,15 +532,34 @@ AS_CASE([$lt_cv_ar_at_file],
+   [no], [ar_supports_response_files=false],
+   [ar_supports_response_files=true])
+ 
++# Absolute path to the toplevel source directory
++
++# A sentinel character (X) is added at the end of the directory name
++# and then removed, in case the directory name finishes with an odd character.
++# (The $(...) construct strips trailing \n characters.)
++# Also, it is important to use `printf` rather than `echo` because the
++# behaviour of `echo` is indeterminate and uncontrollable if the
++# absolute path contains backslashes, which will definitely be the case
++# on Windows
++# See https://lists.gnu.org/archive/html/autoconf/2019-07/msg00002.html
++# for the detailed explanation.
++
++ocamlsrcdir=$(unset CDPATH; cd -- "$srcdir" && printf %sX "$PWD") || fail
++ocamlsrcdir=${ocamlsrcdir%X}
++
+ # Libraries to build depending on the host
+ 
+ AS_CASE([$host],
+   [*-*-mingw32|*-pc-windows],
+     [unix_or_win32="win32"
++    ln='cp -pf'
++    ocamlsrcdir="$(LC_ALL=C.UTF-8 cygpath -w -- "$ocamlsrcdir")"
+     unixlib="win32unix"
+     ],
+   [unix_or_win32="unix"
++  ln='ln -sf'
+   unixlib="unix"])
++
+ AS_CASE([$host],
+   [*-*-cygwin*|*-*-mingw32|*-pc-windows],
+     [exeext=".exe"],
+diff --git a/tools/Makefile b/tools/Makefile
+index 094f213e04c9797d2c4d67fbd6c644983b8293c3..9508b22427e6afa9134452d69bd29ad82259a714 100644
+--- a/tools/Makefile
++++ b/tools/Makefile
+@@ -142,12 +142,6 @@ ocamlmktop.opt$(EXE): $(call byte2native, $(OCAMLMKTOP))
+ 
+ LIBRARY3=config.cmo build_path_prefix_map.cmo misc.cmo warnings.cmo location.cmo
+ 
+-ifeq ($(UNIX_OR_WIN32),unix)
+-LN := ln -sf
+-else
+-LN := cp -pf
+-endif
+-
+ install::
+ ifeq "$(INSTALL_BYTECODE_PROGRAMS)" "true"
+ 	for i in $(install_files); \
+-- 
+2.53.0.windows.2
+

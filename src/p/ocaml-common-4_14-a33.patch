@@ -1,0 +1,86 @@
+From be185128085529e070b38fc3d89d674f58db46cb Mon Sep 17 00:00:00 2001
+From: David Allsopp <david.allsopp@metastack.com>
+Date: Sat, 10 Apr 2021 15:04:07 +0100
+Subject: [PATCH] Generate ld.conf using relative paths
+
+(cherry picked from commit 480279ecd68023a12b75c43706d0160f83f69c07)
+
+diff --git a/Changes b/Changes
+index 3267ba7e2e47261ca913594eefdc9752fc22ef4b..1ca240dd056cb48c687d2cee3382619dc93b0aa1 100644
+--- a/Changes
++++ b/Changes
+@@ -17,8 +17,10 @@ OCaml 4.14 maintenance version
+ 
+ * #14???: Explicit relative paths in ld.conf (".", "..", "./<path...>",
+   "../<path...>") are interpreted as being relative to the directory ld.conf
+-  was loaded from. The brave may continue to put implicit paths in ld.conf. The
+-  interpretation of CAML_LD_LIBRARY_PATH is unaltered.
++  was loaded from, and the default ld.conf now uses relative paths, rather than
++  embedding the absolute path to the Standard Library. The brave may continue to
++  put implicit paths in ld.conf. The interpretation of CAML_LD_LIBRARY_PATH is
++  unaltered.
+   (David Allsopp, review by ???)
+ 
+ ### Code generation and optimizations:
+diff --git a/configure b/configure
+index f58c128eba68de29645fefb844850f95f5a9607d..6960b8cf96bc91071028adcd5dc5432b3430faca 100755
+GIT binary patch
+delta 169
+zcmbRDUir&=<%Sl<7N!>F7M3lnPHRO|QqvMkb4uciQwtJ{5=-)nY}I4br`xV&ohpJw
+zO27TwT2>%t+kS2>`|Bf`3JO>hsbGkyb4_P7;IQ8QrHJEhov5BlHHM1X>GwZ!s50tp
+K7yQK0%L)L6tV22g
+
+delta 89
+zcmezJUU}Yo<%Sl<7N!>F7M3lnPHU&ftYw|h&a#dbh}pKYtYd$EWcou*4(sjy#T<9*
+i_*C+f6LWLob25`sGK=)5JAUF&<wX(Op8koWmlXhF{v&$;
+
+diff --git a/configure.ac b/configure.ac
+index 67f42105dc23727c1cb7ea6c21b0636a24f2eb0b..e8aa3b50e150889f5f5e1598d7123f57dfe8d4b1 100644
+--- a/configure.ac
++++ b/configure.ac
+@@ -576,11 +576,13 @@ AS_CASE([$host],
+   [*-*-mingw32|*-pc-windows],
+     [unix_or_win32="win32"
+     OCAML_CHECK_LN_ON_WINDOWS
++    default_separator='\'
+     ocamlsrcdir="$(LC_ALL=C.UTF-8 cygpath -w -- "$ocamlsrcdir")"
+     unixlib="win32unix"
+     ],
+   [unix_or_win32="unix"
+   ln='ln -sf'
++  default_separator='/'
+   unixlib="unix"])
+ 
+ AS_CASE([$host],
+@@ -2151,10 +2153,11 @@ AC_CONFIG_COMMANDS([runtime/ld.conf],
+   [rm -f runtime/ld.conf
+   test x"$ocaml_additional_stublibs_dir" = 'x' || \
+     echo "$ocaml_additional_stublibs_dir" > runtime/ld.conf
+-  echo "$ocaml_libdir/stublibs" >> runtime/ld.conf
+-  echo "$ocaml_libdir" >> runtime/ld.conf],
++  echo ".${default_separator}stublibs" >> runtime/ld.conf
++  echo "." >> runtime/ld.conf],
+   [ocaml_additional_stublibs_dir=\
+ '$(echo "$ocaml_additional_stublibs_dir" | sed -e "s/'/'\"'\"'/g")'
+-  ocaml_libdir='$(echo "$ocaml_libdir" | sed -e "s/'/'\"'\"'/g")'])
++  ocaml_libdir='$(echo "$ocaml_libdir" | sed -e "s/'/'\"'\"'/g")'
++  default_separator='$default_separator'])
+ 
+ AC_OUTPUT
+diff --git a/ocaml-variants.opam b/ocaml-variants.opam
+index da0d7469bbd78a68016c142c26969b539c89a119..0ed93f0bc13e8655eef4828d54d9f500f5e27a5c 100644
+--- a/ocaml-variants.opam
++++ b/ocaml-variants.opam
+@@ -65,7 +65,8 @@ build: [
+     "--host=i686-w64-mingw32"   {os-distribution = "cygwin" & system-mingw:installed & arch-x86_32:installed}
+     "--prefix=%{prefix}%"
+     "--docdir=%{doc}%/ocaml"
+-    "--with-stublibs=%{stublibs}%"
++    "--with-stublibs=../stublibs" {os != "win32"}
++    "--with-stublibs=..\\stublibs" {os = "win32"}
+     "--with-flexdll=%{flexdll:share}%" {os = "win32" & flexdll:installed}
+     "-C"
+     "--with-afl" {ocaml-option-afl:installed}
+-- 
+2.53.0.windows.2
+

@@ -1,0 +1,247 @@
+From 55f3755d7a580e4c25dc92173823af8f41ddd4f2 Mon Sep 17 00:00:00 2001
+From: David Allsopp <david.allsopp@metastack.com>
+Date: Wed, 11 Aug 2021 17:16:24 +0100
+Subject: [PATCH] Add caml_stat_char_array_{to,of}_os
+
+Allows conversion of arbitrary char/wchar_t sequences by allowing the
+number of characters copied to be specified. The output length of the
+encoding can also be returned by these functions.
+
+Deviations from original:
+  - Runtime changes made compatible with -Wdeclaration-after-statement
+
+(cherry picked from commit 657d79eb2d4d6c3502cf49067d24980c25d2b442)
+(cherry picked from commit 2db0656f1a24f3e13e23581547d77cb483462e08)
+
+diff --git a/Changes b/Changes
+index e24c1b2fdc77a33f497814a53a365381c21c66f1..e5e4c00c595064fbca6049996b7a17930c9f6593 100644
+--- a/Changes
++++ b/Changes
+@@ -3,16 +3,18 @@ OCaml 4.14 maintenance version
+ 
+ ### Runtime system:
+ 
++* #11449, #13497: Add caml_stat_char_array_{to,of}_os functions allowing
++  conversion of string data which may contain NUL characters. Correct
++  implementation of caml_stat_strdup_to_utf16 to raise Out_of_memory instead of
++  returning of NULL (the behaviour of caml_stat_strdup_to_os was inconsistent
++  between Unix/Windows).
++  (David Allsopp, review by Nick Barnes, Antonin Décimo and Miod Vallat)
++
+ - #13492: Parse the CAML_LD_LIBRARY_PATH environment variable for the
+   shared_libs_path item in `ocamlrun -config` in addition to displaying the
+   entries found in ld.conf.
+   (David Allsopp, review by Stephen Dolan)
+ 
+-* #13497: Correct implementation of caml_stat_strdup_to_utf16 to raise
+-  Out_of_memory instead of returning of NULL (the behaviour of
+-  caml_stat_strdup_to_os was inconsistent between Unix/Windows).
+-  (David Allsopp, review by Nick Barnes, Antonin Décimo and Miod Vallat)
+-
+ ### Code generation and optimizations:
+ 
+ ### Standard library:
+diff --git a/runtime/caml/memory.h b/runtime/caml/memory.h
+index d9e58bc2d097b5dcdc43203f982f6e0db129d8fb..58552eb7cd2406eb83bb1d8b9fdb2afaf579cb4f 100644
+--- a/runtime/caml/memory.h
++++ b/runtime/caml/memory.h
+@@ -168,6 +168,15 @@ CAMLextern wchar_t* caml_stat_wcsdup(const wchar_t *s);
+ */
+ CAMLextern caml_stat_string caml_stat_strdup_noexc(const char *s);
+ 
++/* [caml_stat_memdup(s, size, &out_size)] returns a copy of the first [size]
++   bytes of [s] (which may include NUL characters). If [out_size] is not [NULL],
++   then [size] is stored in [*out_size]. This function is the "dummy" Unix
++   implementation of the Windows-only functions
++   caml_stat_char_array_{to,from}_utf16.
++*/
++CAMLextern caml_stat_string caml_stat_memdup(const char *s, asize_t size,
++                                             asize_t *out_size);
++
+ /* [caml_stat_strconcat(nargs, strings)] concatenates NULL-terminated [strings]
+    (an array of [char*] of size [nargs]) into a new string, dropping all NULLs,
+    except for the very last one. It throws an OCaml exception in case the
+diff --git a/runtime/caml/misc.h b/runtime/caml/misc.h
+index 2e6c544065b428a0bc170fc8ae9c089b278faafb..b38bcd2489d6ad8386e7a34b00a21b248063aede 100644
+--- a/runtime/caml/misc.h
++++ b/runtime/caml/misc.h
+@@ -349,6 +349,8 @@ extern double caml_log1p(double);
+ 
+ #define caml_stat_strdup_to_os caml_stat_strdup_to_utf16
+ #define caml_stat_strdup_of_os caml_stat_strdup_of_utf16
++#define caml_stat_char_array_to_os caml_stat_char_array_to_utf16
++#define caml_stat_char_array_of_os caml_stat_char_array_of_utf16
+ #define caml_copy_string_of_os caml_copy_string_of_utf16
+ 
+ #else /* _WIN32 */
+@@ -389,6 +391,8 @@ extern double caml_log1p(double);
+ 
+ #define caml_stat_strdup_to_os caml_stat_strdup
+ #define caml_stat_strdup_of_os caml_stat_strdup
++#define caml_stat_char_array_to_os caml_stat_memdup
++#define caml_stat_char_array_of_os caml_stat_memdup
+ #define caml_copy_string_of_os caml_copy_string
+ 
+ #endif /* _WIN32 */
+diff --git a/runtime/caml/osdeps.h b/runtime/caml/osdeps.h
+index 21e1166359153b0d45d0be92858e5a0e082764dd..f43bf6f73dc3fb5ac694e17776c5ded6f0bd629a 100644
+--- a/runtime/caml/osdeps.h
++++ b/runtime/caml/osdeps.h
+@@ -142,7 +142,7 @@ CAMLextern clock_t caml_win32_clock(void);
+ 
+ #ifdef _WIN32
+ 
+-/* [caml_stat_strdup_to_utf16(s)] returns a NULL-terminated copy of [s],
++/* [caml_stat_strdup_to_utf16(s)] returns a NUL-terminated copy of [s],
+    re-encoded in UTF-16.  The encoding of [s] is assumed to be UTF-8 if
+    [caml_windows_unicode_runtime_enabled] is non-zero **and** [s] is valid
+    UTF-8, or the current Windows code page otherwise.
+@@ -150,21 +150,60 @@ CAMLextern clock_t caml_win32_clock(void);
+    The returned string is allocated with [caml_stat_alloc], so it should be
+    freed using [caml_stat_free].
+ 
+-   If allocation fails, this raises Out_of_memory.
++   If allocation fails, this raises Out_of_memory. This function may also raise
++   [Sys_error] if [s] is not valid UTF-8.
+ */
+ CAMLextern wchar_t* caml_stat_strdup_to_utf16(const char *s);
+ 
+-/* [caml_stat_strdup_of_utf16(s)] returns a NULL-terminated copy of [s],
++/* [caml_stat_strdup_of_utf16(s)] returns a NUL-terminated copy of [s],
+    re-encoded in UTF-8 if [caml_windows_unicode_runtime_enabled] is non-zero or
+    the current Windows code page otherwise.
+ 
+    The returned string is allocated with [caml_stat_alloc], so it should be
+    freed using [caml_stat_free].
+ 
+-   If allocation fails, this raises Out_of_memory.
++   If allocation fails, this raises Out_of_memory. This function may also raise
++   [Sys_error] if [s] is not valid UTF-16.
+ */
+ CAMLextern char* caml_stat_strdup_of_utf16(const wchar_t *s);
+ 
++/* [caml_stat_char_array_to_utf16(s, size, &out_size)] returns a copy of the
++   first [size] bytes of [s] re-encoded in UTF-16. [s] does not have to be NUL-
++   terminated and may contain embedded NUL characters. The encoding of [s] is
++   assumed to be UTF-8 if [caml_windows_unicode_runtime_enabled] is non-zero
++   **and** [s] is valid UTF-8, or the current Windows code page otherwise. If
++   [out_size] is not [NULL], then the number of UTF-16 code units in the result
++   is recorded in [*out_size].
++
++   [size] must be greater than zero.
++
++   The returned buffer is allocated with [caml_stat_alloc], so it should be
++   freed using [caml_stat_free].
++
++   If allocation fails, this raises Out_of_memory. This function may also raise
++   [Sys_error] if [s] is not valid UTF-8.
++*/
++CAMLextern wchar_t *caml_stat_char_array_to_utf16(const char *s, size_t size,
++                                                  size_t *out_size);
++
++/* [caml_stat_char_array_of_utf16(s, size, &out_size)] returns a copy of the
++   first [size] UTF-16 code units of [s] re-encoded in UTF-8 if
++   [caml_windows_unicode_runtime_enabled] is non-zero or the current Windows
++   code page otherwise. [s] does not have to be NUL-terminated and may contain
++   embedded NUL characters. If [out_size] is not [NULL], then the size of the
++   result in bytes recorded in [*out_size].
++
++   [size] must be greater than zero.
++
++   The returned buffer is allocated with [caml_stat_alloc], so it should be
++   freed using [caml_stat_free].
++
++   If allocation fails, this raises Out_of_memory. This function may also raise
++   [Sys_error] if [s] is not valid UTF-16.
++*/
++CAMLextern char *caml_stat_char_array_of_utf16(const wchar_t *s, size_t size,
++                                               size_t *out_size);
++
+ /* [caml_copy_string_of_utf16(s)] returns an OCaml string containing a copy of
+    [s] re-encoded in UTF-8 if [caml_windows_unicode_runtime_enabled] is non-zero
+    or in the current code page otherwise.
+diff --git a/runtime/memory.c b/runtime/memory.c
+index 66d1c50ccb2d6ae2618e40dacc9de54e9ed9ea68..e85883de8035a7c99087199dc20280285dcc92a7 100644
+--- a/runtime/memory.c
++++ b/runtime/memory.c
+@@ -904,6 +904,18 @@ CAMLexport caml_stat_string caml_stat_strdup(const char *s)
+   return result;
+ }
+ 
++CAMLexport caml_stat_string caml_stat_memdup(const char *s, asize_t size,
++                                             asize_t *out_size)
++{
++  caml_stat_block result;
++  CAMLassert(size > 0);
++  result = caml_stat_alloc(size);
++  memcpy(result, s, size);
++  if (out_size != NULL)
++    *out_size = size;
++  return result;
++}
++
+ #ifdef _WIN32
+ 
+ CAMLexport wchar_t * caml_stat_wcsdup(const wchar_t *s)
+diff --git a/runtime/win32.c b/runtime/win32.c
+index 13549852f9baaadc9952358c8624d288d488bc9f..a11ddb5d6f81c7d58f57061c97476257e6822db4 100644
+--- a/runtime/win32.c
++++ b/runtime/win32.c
+@@ -930,30 +930,47 @@ CAMLexport value caml_copy_string_of_utf16(const wchar_t *s)
+   return v;
+ }
+ 
+-CAMLexport wchar_t* caml_stat_strdup_to_utf16(const char *s)
++CAMLexport wchar_t *caml_stat_char_array_to_utf16(const char *s, size_t size,
++                                                  size_t *out_size)
+ {
+   wchar_t * ws;
+   int retcode;
+ 
+-  retcode = win_multi_byte_to_wide_char(s, -1, NULL, 0);
+-  ws = caml_stat_alloc(retcode * sizeof(*ws));
+-  win_multi_byte_to_wide_char(s, -1, ws, retcode);
++  retcode = win_multi_byte_to_wide_char(s, size, NULL, 0);
++  ws = caml_stat_alloc(retcode * sizeof(wchar_t));
++  win_multi_byte_to_wide_char(s, size, ws, retcode);
++  if (out_size != NULL)
++    *out_size = retcode;
+ 
+   return ws;
+ }
+ 
+-CAMLexport caml_stat_string caml_stat_strdup_of_utf16(const wchar_t *s)
++CAMLexport wchar_t *caml_stat_strdup_to_utf16(const char *s)
++{
++  return caml_stat_char_array_to_utf16(s, -1, NULL);
++}
++
++CAMLexport caml_stat_string caml_stat_char_array_of_utf16(const wchar_t *s,
++                                                          size_t size,
++                                                          size_t *out_size)
+ {
+   caml_stat_string out;
+   int retcode;
+ 
+-  retcode = win_wide_char_to_multi_byte(s, -1, NULL, 0);
++  retcode = win_wide_char_to_multi_byte(s, size, NULL, 0);
+   out = caml_stat_alloc(retcode);
+-  win_wide_char_to_multi_byte(s, -1, out, retcode);
++  win_wide_char_to_multi_byte(s, size, out, retcode);
++  if (out_size != NULL)
++    *out_size = retcode;
+ 
+   return out;
+ }
+ 
++CAMLexport caml_stat_string caml_stat_strdup_of_utf16(const wchar_t *s)
++{
++  return caml_stat_char_array_of_utf16(s, -1, NULL);
++}
++
+ void caml_probe_win32_version(void)
+ {
+   /* Determine the version of Windows we're running, and cache it */
+-- 
+2.53.0.windows.2
+

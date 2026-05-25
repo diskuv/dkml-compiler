@@ -566,11 +566,23 @@ set_patches() {
     esac
 
     PATCHES=()
+    should_apply_patch() {
+        case "$(basename "$1")" in
+            ocaml-common-4_14-b06-linearclosures.patch)
+                if [ "$set_patches_CATEGORY" = "ocaml" ] && [ "$set_patches_VER" = "4.14.3" ]; then
+                    return 1
+                fi
+                ;;
+        esac
+        return 0
+    }
     for set_patches_STEM in "${VERSION_STEMS[@]}"; do
         # Find, sort and accumulate common patches that belong to the stem.
         find "vendor/dkml-compiler/src/p" -type f -name "$set_patches_CATEGORY-common-$set_patches_STEM-*.patch" | LC_ALL=C sort > "$WORK/p"
         while IFS= read -r line; do
-            PATCHES+=("$DKMLDIR/$line")
+            if should_apply_patch "$line"; then
+                PATCHES+=("$DKMLDIR/$line")
+            fi
             ALL_PATCH_FILES+=("$line")
         done < "$WORK/p"
         #   Markdown
@@ -581,7 +593,9 @@ set_patches() {
         # Find, sort and accumulate host/cross patches that belong to the stem.
         find "vendor/dkml-compiler/src/p" -type f -name "$set_patches_CATEGORY-$set_patches_HOSTCROSS-$set_patches_STEM-*.patch" | LC_ALL=C sort > "$WORK/p"
         while IFS= read -r line; do
-            PATCHES+=("$DKMLDIR/$line")
+            if should_apply_patch "$line"; then
+                PATCHES+=("$DKMLDIR/$line")
+            fi
             ALL_PATCH_FILES+=("$line")
         done < "$WORK/p"
         #   Markdown
@@ -630,6 +644,54 @@ apply_patch() {
     log_trace git -C "$apply_patch_SRCDIR_MIXED" am --ignore-date --committer-date-is-author-date < "$WORK/current-patch"
 }
 
+verify_applied_patches() {
+    verify_applied_patches_SRCDIR=$1
+    shift
+    verify_applied_patches_CATEGORY=$1
+    shift
+    verify_applied_patches_HOSTCROSS=$1
+    shift
+
+    set +u # Fix bash bug with empty arrays
+    verify_applied_patches_COUNT=${#PATCHES[@]}
+    set -u
+    if [ "$verify_applied_patches_COUNT" -eq 0 ]; then
+        return 0
+    fi
+
+    verify_applied_patches_EXPECTED="$WORK/expected-patch-subjects"
+    verify_applied_patches_ACTUAL="$WORK/actual-patch-subjects"
+    verify_applied_patches_SRCDIR_MIXED="$verify_applied_patches_SRCDIR"
+    if [ -x /usr/bin/cygpath ]; then
+        verify_applied_patches_SRCDIR_MIXED=$(/usr/bin/cygpath -aw "$verify_applied_patches_SRCDIR_MIXED")
+    fi
+    : > "$verify_applied_patches_EXPECTED"
+    : > "$verify_applied_patches_ACTUAL"
+
+    for patchfile in "${PATCHES[@]}"; do
+        patchbase=$(basename "$patchfile")
+        printf "Diskuv %s %s patch %s\n" \
+            "$verify_applied_patches_CATEGORY" \
+            "$verify_applied_patches_HOSTCROSS" \
+            "$patchbase" >> "$verify_applied_patches_EXPECTED"
+    done
+
+    git -C "$verify_applied_patches_SRCDIR_MIXED" \
+        log --reverse -n "$verify_applied_patches_COUNT" --format=%s HEAD \
+        > "$verify_applied_patches_ACTUAL"
+
+    if ! cmp -s "$verify_applied_patches_EXPECTED" "$verify_applied_patches_ACTUAL"; then
+        echo "FATAL: Applied patch subjects did not match the expected patch list for $verify_applied_patches_CATEGORY $verify_applied_patches_HOSTCROSS" >&2
+        echo "Expected subjects:" >&2
+        cat "$verify_applied_patches_EXPECTED" >&2
+        echo "Actual subjects:" >&2
+        cat "$verify_applied_patches_ACTUAL" >&2
+        exit 1
+    fi
+
+    echo "verified_patches($verify_applied_patches_CATEGORY $verify_applied_patches_HOSTCROSS) = ${PATCHES[*]}" >&2
+}
+
 apply_patches() {
     apply_patches_SRCDIR=$1
     shift
@@ -646,6 +708,7 @@ apply_patches() {
     for patchfile in "${PATCHES[@]}"; do
         apply_patch "$patchfile" "$apply_patches_SRCDIR" "$apply_patches_CATEGORY" "$apply_patches_HOSTCROSS"
     done
+    verify_applied_patches "$apply_patches_SRCDIR" "$apply_patches_CATEGORY" "$apply_patches_HOSTCROSS"
     set -u
 }
 

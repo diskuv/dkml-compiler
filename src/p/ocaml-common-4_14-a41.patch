@@ -1,0 +1,212 @@
+From adb3fbb4ff3f0d0ab3b4a15b2772ececf4dd015a Mon Sep 17 00:00:00 2001
+From: David Allsopp <david.allsopp@metastack.com>
+Date: Sat, 8 Feb 2025 16:48:35 +0000
+Subject: [PATCH] Preserve backslashes in --prefix
+
+Previously, the --prefix argument was always normalised with cygpath -m
+which meant that regardless of the argument, the paths used in the
+compiler would always use slashes.
+
+This behaviour is preserved if a slash is detected in the argument, i.e.
+the caller explicitly uses mixed notation (e.g. `--prefix=C:/Prefix` or
+`--prefix $PWD/install`). In particular, it means that a Cygwin-style
+path will be correctly converted to a Windows-style path.
+
+If the path uses backslashes, then it is still converted to use forward
+slashes for the installation commands, but the backslashes are otherwise
+preserved and used within the build itself.
+
+(cherry picked from commit 46b44c93d5891803b16f241b4b4bf0cab16414ab)
+
+diff --git a/Changes b/Changes
+index 216168d0db3cf41bb6284d5d2a631c99cb390c65..82dcca86f0a416426bee37bd578f55867a143405 100644
+--- a/Changes
++++ b/Changes
+@@ -72,10 +72,11 @@ OCaml 4.14 maintenance version
+   --disable-shared.
+   (David Allsopp, review by ???)
+ 
+-- #14???: Normalise `--prefix` when compiling on MSYS2 in the same way as is
+-  already done on Cygwin. In particular, backslashes are converted to slashes
+-  and MSYS2-style paths (e.g. resulting from `--prefix $PWD/install`) are
+-  converted to Windows-style paths.
++- #14???: When targeting native Windows on Cygwin or MSYS2, preserve
++  backslashes in the supplied `--prefix` (in particular, backslashes instead of
++  slashes will then be displayed by `ocamlopt -config-var standard_library`).
++  If the supplied prefix contains a slash, then it is normalised, as
++  previously.
+   (David Allsopp, review by ???)
+ 
+ ### Bug fixes:
+diff --git a/Makefile.build_config.in b/Makefile.build_config.in
+index f19f2625860adc2a9cd324c75eaa0d627aa54a91..e654375de7da6f2abf5680ab6336974a48d2c3ae 100644
+--- a/Makefile.build_config.in
++++ b/Makefile.build_config.in
+@@ -54,6 +54,7 @@ DOCDIR=@docdir@
+ 
+ ### Where to look for the standard library on target
+ TARGET_LIBDIR=@TARGET_LIBDIR@
++OCAML_BINDIR = @ocaml_bindir@
+ 
+ # Platform-dependent command to create symbolic links
+ LN = @ln@
+diff --git a/configure b/configure
+index 4797b48532d307d29679f524df551fc7f789f35a..05b6e8fa3570a776d45f31de9a2aa166ba9c883d 100755
+GIT binary patch
+delta 2567
+zcma)8O=~1o6h)nU(D<<$L|4~N4@o554YSgW0Zk@oz)8X+;~)(5ysm!T{YcfTrrxV`
+zS`CG(*}KWozaY4X;16&w2>yfF>B@y0_1t%>I+e^UTohEjk9*HM=iK}1mw#7&|E~4J
+z`QbZhq>{MTH+EpMhI~viJv3)Oesh@o^X&QlD|lYT^BSI8coy(1UOwMndiH%WG>ygz
+z?Wb9yV&gQmWa|c*Az2-1=TtV^pw!Z1BuJ;OL&syCX;OGTq*Ij{)sM9!pHg2VRFqn0
+z23RrJ#8<ltNXibVrO$NKlMEq_D<qK0eTt34T0DGuWvsCy@?(vOIM)sliQGg-W@z+)
+zhG|Caw!{kw+HKBIjbxgadUL8{K0-$O2m8BxFa&grm8clTYUF6jC$g!h5f)oME$58V
+zBw^UGv0C72^3${il1Z3m#(Qk?X^8khoq+pTclbPJ6kzc(W2x8AO+4r^>_qtv9at)?
+zVtf_38#m9I<j#Xva=G!$Gt)d#F3{cUr+(a{>k(*@rK}nhVdy)v(bU-PgQG8x?gn_}
+znM6i9Eds4U%slo6u)q~-c&alGhLNt+9clg8QSMj~7b^!2L&P=H0XsXJ-C>%pV+4|m
+z7e(^e^x?~jK4%gWt4wl0-$Ixcb+0QMg16hXSnak13tA5JPyw=|Ovl0@u+|MmU`J<D
+zn7R`}J+iSm(R06S1WOg*>B>)tAgbjMOw9F?^vqU>2p#f7NUBT38(EtFqf8;v2*P8w
+z<qe0`RMF5gpRkc$@R+04+V<Z5{k@0l%z8lATKjx&yBZONU0E~6I<I1;t$@`lOThN=
+zjFCXWdK=lOK5JZ*3q+3)oC~I>&n8H(;qg+@bSPM=u5!~F1-wBnh3%EEd7mO>+4cY`
+zJ~S5E9PFUcg?P?qu%V+hKbx2cN0~7#xi_)vih`YywmO5I2c0Bd54BbrIn)?<1|+A8
+z>{PU5_<a?fl+Kn}>p3h>h2w<E6TPdhQ_^+($-_@~k9#74_`Vzx4J!L{BM8<&^2nsQ
+zD@fZ@lchG%)`z2Ab=0*)tE&HjC4per@KKt9Wa@`XMU#PD*QuWe24_@OM%9o?sa`JL
+z7YJN$lb!Mck=0wxQm<w?EP7*DUaDbH7sK+>Y+U4jEPY!v&|pKm)o5bPv)0#jSKYbO
+zegC{k?``o+eWH1f8Mm~F?JM)^1FG_MfKw~!K5(g>-&)4g)S%*`*@)XzpqmQFZ&It!
+zHBpiQ3`g{1a0tubE)y-Dc1q81)mOq&>+tdYZdoW#X>B?-(HKeMn0=|{(WJqK<`_y3
+zkzr>yb6yvTqgZ`qV9sk@lU?n#8W4(u8Dda%>&+YL_LU#IM-jZ!edN};B~R1rq*Ly#
+zQ&&?!$GBUu<ch(ms=9YQSzDZrGGNwG7Nz0CRkgvUnqy=MjLpLxlw)O8D%|h5Myjp^
+zr-q*b^wtU_-?^m;#92++qE$Ge_Cs*q#nfs|d^uU^#MSF-pYYlS4#{V{w(!cb{BI-t
+z*3y^8eOY=;bwj8ZL6p9~2?E1UWXE+Vviyx&oea$d{j_-d;^TWuuV23X=h6qa-<lVV
+pz`xkNwfx&+`Tp+0a<h8>XkppBDdQ3s<wZX)e0KTQ!t$?w{|D%=ak2ma
+
+delta 97
+zcmcaHN#*!|<qfp~o2Lil{A*|RX9Qv<AZ7+)79eH?Vz%w9{_L&u*;8|hQ@IorrVDOj
+w4Vtd@m0f>&(K=RXrnJoMl|R^RM5mwQ<v2ZkJ|BnD^y7RSncL0yIh1|@0IO#q(EtDd
+
+diff --git a/configure.ac b/configure.ac
+index cf53a78d0da504b059866fa97d42d61a52ca8e30..c52caa68d42f309abc932d986467630e719e8cc0 100644
+--- a/configure.ac
++++ b/configure.ac
+@@ -167,6 +167,8 @@ AC_SUBST([flexlink_flags])
+ AC_SUBST([PACKLD])
+ AC_SUBST([stdlib_manpages])
+ AC_SUBST([compute_deps])
++AC_SUBST([ocaml_prefix])
++AC_SUBST([ocaml_bindir])
+ AC_SUBST([naked_pointers])
+ AC_SUBST([naked_pointers_checker])
+ AC_SUBST([ar_supports_response_files])
+@@ -2138,10 +2140,50 @@ AS_IF([test x"$prefix" = "xNONE"],
+     [i686-w64-mingw32], [prefix='C:/ocamlmgw'],
+     [x86_64-w64-mingw32], [prefix='C:/ocamlmgw64'],
+     [i686-pc-windows], [prefix='C:/ocamlms'],
+-    [x86_64-pc-windows], [prefix='C:/ocamlms64'])],
+-  [AS_CASE([$cygwin_build_env,$host],
+-    [true,*-w64-mingw32*|true,*-pc-windows],
+-      [prefix="$(LC_ALL=C.UTF-8 cygpath -m "$prefix")"])])
++    [x86_64-pc-windows], [prefix='C:/ocamlms64'])])
++
++# Normalise $prefix, if necessary, on Windows. There are 9 variables to be
++# considered:
++# - $prefix and $exec_prefix. These are autoconf variables containing the values
++#   specified for --prefix and --exec-prefix respectively, or NONE if these
++#   flags were not given on the command line. These two variables are written to
++#   Makefile.config and are in _build_ format. On native Windows, the values
++#   must be suitable to pass to _both_ native Windows processes and Cygwin/MSYS2
++#   commands. The values are ultimately converted to Windows paths using slashes
++#   (i.e. C:/foo)
++# - $bindir and $libdir. These similarly contain the values specified for
++#   --bindir and --libdir, or defaults relative to $exec_prefix otherwise.
++#   Unlike --prefix, values specified to configure for --bindir and --libdir are
++#   assumed to be suitable for both native Windows processes and Cygwin/MSYS2.
++#   These two variables ultimately end up in Makefile.config as $(BINDIR) and
++#   $(LIBDIR) and are used for installation commands only.
++# - $ocaml_prefix, $ocaml_bindir and $ocaml_libdir are the _expanded_ values of
++#   $prefix, $bindir and $libdir so that the values can be inserted into OCaml
++#   strings (typically in utils/config.generated.ml). On Windows, these preserve
++#   the backslashes present in the value passed to --prefix.
++# - $TARGET_BINDIR and $TARGET_LIBDIR. These are both precious environment
++#   variables (meaning their value is recorded by configure) but they default to
++#   $ocaml_bindir and $ocaml_libdir respectively.
++ocaml_bindir="$bindir"
++ocaml_libdir="$libdir"
++ocaml_prefix="$prefix"
++AS_CASE([$cygwin_build_env,$host],
++  [true,*-w64-mingw32*|true,*-pc-windows],
++    [prefix="$(LC_ALL=C.UTF-8 cygpath -m "$prefix")"
++    AS_IF([test "x${ocaml_prefix%%/*}" != "x$ocaml_prefix"],
++      # $prefix contained a slash - normalise it with cygpath. The rationale for
++      # this allows both `./configure --prefix $PWD/install` (which will be a
++      # Cygwin path) and also systems lazily using slashes instead of
++      # backslashes (i.e. C:/Backslashes/Scare/Us) to work.
++      [ocaml_prefix="$prefix"],
++      # $prefix was using backslashes - preserve these in the build, but
++      # continue to use slashes for the Makefile variables.
++      [AS_IF([test "x$bindir" = 'x${exec_prefix}/bin'],
++        [ocaml_bindir='${exec_prefix}\bin'],
++        [ocaml_bindir="$bindir"])
++      AS_IF([test "x$libdir" = 'x${exec_prefix}/lib/ocaml'],
++        [ocaml_libdir='${exec_prefix}\lib\ocaml'],
++        [ocaml_libdir="$libdir"])])])
+ 
+ # Define a few macros that were defined in config/m-nt.h
+ # but whose value is not guessed properly by configure
+@@ -2172,13 +2214,14 @@ unset ac_cv_header_flexdll_h
+ AC_CONFIG_COMMANDS_PRE([
+   saved_exec_prefix="$exec_prefix"
+   saved_prefix="$prefix"
++  prefix="$ocaml_prefix"
+   AS_IF([test "x$prefix" = "xNONE"],[prefix="$ac_default_prefix"])
+   AS_IF([test "x$exec_prefix" = "xNONE"],[exec_prefix="$prefix"])
+   eval "exec_prefix=\"$exec_prefix\""
+-  eval "ocaml_bindir=\"$bindir\""
+-  eval "ocaml_libdir=\"$libdir\""
++  eval "ocaml_bindir=\"$ocaml_bindir\""
++  eval "ocaml_libdir=\"$ocaml_libdir\""
+   AS_IF([test x"$TARGET_BINDIR" = 'x'],[TARGET_BINDIR="$ocaml_bindir"])
+-  TARGET_LIBDIR="$libdir"
++  TARGET_LIBDIR="$ocaml_libdir"
+   AS_IF([test x"$target_launch_method" = 'x'],
+     [target_launch_method="$launch_method"])
+   prefix="$saved_prefix"
+diff --git a/tools/ci/appveyor/appveyor_build.sh b/tools/ci/appveyor/appveyor_build.sh
+index e2a3a673bfbb3d8bba9e9e7d9b6e4e4494d2c34d..9ebc06b93ef545c182dec35ffb9915a0e0de2326 100755
+--- a/tools/ci/appveyor/appveyor_build.sh
++++ b/tools/ci/appveyor/appveyor_build.sh
+@@ -107,7 +107,6 @@ function set_configuration {
+ 
+ APPVEYOR_BUILD_FOLDER=$(echo "$APPVEYOR_BUILD_FOLDER" | cygpath -f -)
+ FLEXDLLROOT="$PROGRAMFILES/flexdll"
+-OCAMLROOT=$(echo "$OCAMLROOT" | cygpath -f - -m)
+ 
+ if [[ $BOOTSTRAP_FLEXDLL = 'false' ]] ; then
+   case "$PORT" in
+diff --git a/utils/Makefile b/utils/Makefile
+index 9adebdc9740db5d15dfd97ec91cce8c075b4e2b4..e728707be6db8b46536ee31320855b70509e1b19 100644
+--- a/utils/Makefile
++++ b/utils/Makefile
+@@ -58,7 +58,7 @@ config.ml: config.mlp $(ROOTDIR)/Makefile.config Makefile
+ 	    $(call SUBST_STRING,FLEXLINK_FLAGS) \
+ 	    $(call SUBST_QUOTE,FLEXDLL_DIR) \
+ 	    $(call SUBST,HOST) \
+-	    $(call SUBST_STRING,BINDIR) \
++	    $(call SUBST_STRING,OCAML_BINDIR) \
+ 	    $(call SUBST_STRING,LIBDIR) \
+ 	    $(call SUBST_STRING,MKDLL) \
+ 	    $(call SUBST_STRING,MKEXE) \
+diff --git a/utils/config.mlp b/utils/config.mlp
+index a643c8555b90f322ba405c4defa05213e94bb283..15518287cec4f9a02d5f76a989c819036d2765ae 100644
+--- a/utils/config.mlp
++++ b/utils/config.mlp
+@@ -17,7 +17,7 @@
+ (* The main OCaml version string has moved to ../build-aux/ocaml_version.m4 *)
+ let version = Sys.ocaml_version
+ 
+-let bindir = "%%BINDIR%%"
++let bindir = "%%OCAML_BINDIR%%"
+ 
+ let standard_library_default = "%%LIBDIR%%"
+ 
+-- 
+2.53.0.windows.2
+

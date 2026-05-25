@@ -1,0 +1,136 @@
+From e5d832c64c01b92e669c7814b82f61b305918aba Mon Sep 17 00:00:00 2001
+From: David Allsopp <david.allsopp@metastack.com>
+Date: Wed, 23 Jul 2025 09:02:50 +0100
+Subject: [PATCH] Sprinkle some meta-programming on the install target
+
+(cherry picked from commit ff66feaed2a064eae2ece0dbc6ab48ae3a5a51d3)
+
+diff --git a/Makefile b/Makefile
+index ea1ba2bff78e353fe9e4b581929f515fba26f04c..074287cb4fb5991a5e774c4ad8a3a04885ab67a1 100644
+--- a/Makefile
++++ b/Makefile
+@@ -376,6 +376,21 @@ DOC_FILES=\
+   README.win32.adoc \
+   LICENSE
+ 
++# COMPILER_ARTEFACT_DIRS adds the common compiler-libs directories as prefixes
++# to a sequence of patterns in the first argument, e.g.
++# $(call COMPILER_ARTEFACT_DIRS, *.cmi) expands to utils/*.cmi, parsing/*.cmi,
++# and so forth. Multiple wildcard patterns may be supplied. An optional second
++# argument includes additional directories beyond the common ones (e.g. asmcomp,
++# etc.)
++COMPILER_ARTEFACT_DIRS = \
++  $(foreach dir, \
++      utils parsing typing bytecomp file_formats lambda driver toplevel \
++      $(if $(filter-out undefined, $(origin 2)), $(2)), \
++    $(addprefix $(dir)/, $(1)))
++NATIVE_ARTEFACT_DIRS = \
++  asmcomp toplevel/native \
++  middle_end middle_end/closure middle_end/flambda middle_end/flambda/base_types
++
+ # Installation
+ 
+ .PHONY: install
+@@ -399,26 +414,12 @@ ifeq "$(INSTALL_BYTECODE_PROGRAMS)" "true"
+ endif
+ 	$(INSTALL_PROG) yacc/ocamlyacc$(EXE) "$(INSTALL_BINDIR)"
+ 	$(INSTALL_DATA) \
+-	   utils/*.cmi \
+-	   parsing/*.cmi \
+-	   typing/*.cmi \
+-	   bytecomp/*.cmi \
+-	   file_formats/*.cmi \
+-	   lambda/*.cmi \
+-	   driver/*.cmi \
+-	   toplevel/*.cmi \
+-	   "$(INSTALL_COMPLIBDIR)"
++	  $(call COMPILER_ARTEFACT_DIRS, *.cmi) \
++	  "$(INSTALL_COMPLIBDIR)"
+ ifeq "$(INSTALL_SOURCE_ARTIFACTS)" "true"
+ 	$(INSTALL_DATA) \
+-	   utils/*.cmt utils/*.cmti utils/*.mli \
+-	   parsing/*.cmt parsing/*.cmti parsing/*.mli \
+-	   typing/*.cmt typing/*.cmti typing/*.mli \
+-	   file_formats/*.cmt file_formats/*.cmti file_formats/*.mli \
+-	   lambda/*.cmt lambda/*.cmti lambda/*.mli \
+-	   bytecomp/*.cmt bytecomp/*.cmti bytecomp/*.mli \
+-	   driver/*.cmt driver/*.cmti driver/*.mli \
+-	   toplevel/*.cmt toplevel/*.cmti toplevel/*.mli \
+-	   "$(INSTALL_COMPLIBDIR)"
++	  $(call COMPILER_ARTEFACT_DIRS, *.cmt *.cmti *.mli) \
++	  "$(INSTALL_COMPLIBDIR)"
+ 	$(INSTALL_DATA) \
+ 	   toplevel/byte/*.cmt \
+ 	   "$(INSTALL_COMPLIBDIR)"
+@@ -509,25 +510,19 @@ endif
+ 	    "$(INSTALL_COMPLIBDIR)"
+ ifeq "$(INSTALL_SOURCE_ARTIFACTS)" "true"
+ 	$(INSTALL_DATA) \
+-	    middle_end/*.cmt middle_end/*.cmti \
+-	    middle_end/*.mli \
++	    $(addprefix middle_end/, *.cmt *.cmti *.mli) \
+ 	    "$(INSTALL_COMPLIBDIR)"
+ 	$(INSTALL_DATA) \
+-	    middle_end/closure/*.cmt middle_end/closure/*.cmti \
+-	    middle_end/closure/*.mli \
++	    $(addprefix middle_end/closure/, *.cmt *.cmti *.mli) \
+ 	    "$(INSTALL_COMPLIBDIR)"
+ 	$(INSTALL_DATA) \
+-	    middle_end/flambda/*.cmt middle_end/flambda/*.cmti \
+-	    middle_end/flambda/*.mli \
++	    $(addprefix middle_end/flambda/, *.cmt *.cmti *.mli) \
+ 	    "$(INSTALL_COMPLIBDIR)"
+ 	$(INSTALL_DATA) \
+-	    middle_end/flambda/base_types/*.cmt \
+-            middle_end/flambda/base_types/*.cmti \
+-	    middle_end/flambda/base_types/*.mli \
++	    $(addprefix middle_end/flambda/base_types/, *.cmt *.cmti *.mli) \
+ 	    "$(INSTALL_COMPLIBDIR)"
+ 	$(INSTALL_DATA) \
+-	    asmcomp/*.cmt asmcomp/*.cmti \
+-	    asmcomp/*.mli \
++	    $(addprefix asmcomp/, *.cmt *.cmti *.mli) \
+ 	    "$(INSTALL_COMPLIBDIR)"
+ endif
+ 	$(INSTALL_DATA) \
+@@ -570,16 +565,9 @@ ifeq "$(BOOTSTRAPPING_FLEXDLL)" "true"
+ 	  $(LN) flexlink.opt$(EXE) flexlink$(EXE)
+ endif
+ 	$(INSTALL_DATA) \
+-	   utils/*.cmx parsing/*.cmx typing/*.cmx bytecomp/*.cmx \
+-	   toplevel/*.cmx toplevel/native/*.cmx \
+-	   toplevel/native/tophooks.cmi \
+-	   file_formats/*.cmx \
+-	   lambda/*.cmx \
+-	   driver/*.cmx asmcomp/*.cmx middle_end/*.cmx \
+-           middle_end/closure/*.cmx \
+-           middle_end/flambda/*.cmx \
+-           middle_end/flambda/base_types/*.cmx \
+-          "$(INSTALL_COMPLIBDIR)"
++	  $(call COMPILER_ARTEFACT_DIRS, *.cmx, $(NATIVE_ARTEFACT_DIRS)) \
++	  toplevel/native/tophooks.cmi \
++    "$(INSTALL_COMPLIBDIR)"
+ 	$(INSTALL_DATA) \
+ 	   compilerlibs/*.cmxa compilerlibs/*.$(A) \
+ 	   "$(INSTALL_COMPLIBDIR)"
+@@ -597,14 +585,9 @@ endif
+ install-compiler-sources:
+ ifeq "$(INSTALL_SOURCE_ARTIFACTS)" "true"
+ 	$(INSTALL_DATA) \
+-	   utils/*.ml parsing/*.ml typing/*.ml bytecomp/*.ml driver/*.ml \
+-           file_formats/*.ml \
+-           lambda/*.ml \
+-	   toplevel/*.ml toplevel/byte/*.ml \
+-	   middle_end/*.ml middle_end/closure/*.ml \
+-     middle_end/flambda/*.ml middle_end/flambda/base_types/*.ml \
+-	   asmcomp/*.ml \
+-	   "$(INSTALL_COMPLIBDIR)"
++	  $(call COMPILER_ARTEFACT_DIRS, *.ml, $(NATIVE_ARTEFACT_DIRS)) \
++	  toplevel/byte/*.ml \
++	  "$(INSTALL_COMPLIBDIR)"
+ endif
+ 
+ # Run all tests
+-- 
+2.53.0.windows.2
+

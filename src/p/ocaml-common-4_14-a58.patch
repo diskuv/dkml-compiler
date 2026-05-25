@@ -1,0 +1,188 @@
+From 6a54f81bdd9a3ceae8695fb6c4939952699aab7e Mon Sep 17 00:00:00 2001
+From: David Allsopp <david.allsopp@metastack.com>
+Date: Thu, 22 May 2025 09:18:16 +0100
+Subject: [PATCH] Add -launch-method to ocamlc
+
+When linking a normal bytecode executable, allows an explicit selection
+of either the executable or shebang header, regardless of the value in
+runtime-launch-info.
+
+(cherry picked from commit 0c461d1d96d1be32b5aec7f79cc19cff982e8064)
+
+diff --git a/.depend b/.depend
+index 61b9c5d047534576460308cb9bf982085096999b..c77eff8d887339db1b81aa7728e6bd039321fee8 100644
+--- a/.depend
++++ b/.depend
+@@ -44,7 +44,8 @@ utils/clflags.cmx : \
+     utils/clflags.cmi
+ utils/clflags.cmi : \
+     utils/profile.cmi \
+-    utils/misc.cmi
++    utils/misc.cmi \
++    utils/config.cmi
+ utils/config.cmo : \
+     utils/config.cmi
+ utils/config.cmx : \
+diff --git a/Changes b/Changes
+index b1c849d1a538413cf0f6fd972e3a33c820e95f2d..c2fb04ac4874d70d8fe09286493eafcfd234bae6 100644
+--- a/Changes
++++ b/Changes
+@@ -54,6 +54,12 @@ OCaml 4.14 maintenance version
+   value of the Standard Library location used by the runtime to be overridden.
+   (Antonin Décimo, review by David Allsopp)
+ 
++- #14???: New option -launch-method for ocamlc allows the method used by a
++  tendered bytecode executable to locate the interpreter to be given explicitly.
++  In particular, it makes it easier to specify the use of the executable
++  launcher on Unix.
++  (David Allsopp, review by ???)
++
+ ### Internal/compiler-libs changes:
+ 
+ - #12896: Simplify the compilation of custom bytecode runtimes by explicitly
+diff --git a/bytecomp/bytelink.ml b/bytecomp/bytelink.ml
+index b82465bbe92d646e4a198bbaf5c0564582cc2763..56a1c8fb32f496438c4be737480871744e0a434a 100644
+--- a/bytecomp/bytelink.ml
++++ b/bytecomp/bytelink.ml
+@@ -406,6 +406,16 @@ let write_header outchan =
+     try read_runtime_launch_info (Load_path.find header)
+     with Not_found -> raise (Error (File_not_found header))
+   in
++  let runtime_info =
++    match !Clflags.launch_method with
++    | Some Executable ->
++        {runtime_info with launcher = Executable}
++    | Some (Shebang sh) ->
++        {runtime_info with launcher =
++          Shebang_bin_sh (Option.value ~default:"sh" sh)}
++    | None ->
++        runtime_info
++  in
+   let runtime =
+     if String.length !Clflags.use_runtime > 0 then
+       make_absolute !Clflags.use_runtime
+diff --git a/driver/main_args.ml b/driver/main_args.ml
+index f18a1ad73c91f82ebf253a6e0b8b2f65c70fdf1f..6c2f572a5ef5220cf3ea95abe8f68f4f643fbe80 100644
+--- a/driver/main_args.ml
++++ b/driver/main_args.ml
+@@ -591,6 +591,14 @@ let mk_unsafe_string f =
+     "-unsafe-string", Arg.Unit f, " Make strings mutable (default)"
+ ;;
+ 
++let mk_launch_method f =
++  "-launch-method", Arg.String f,
++  "<method>  Specify the mechanism for the bytecode launcher:\n\
++  \          exe - use the executable launcher in runtime-launch-info\n\
++  \          sh - use a #!, using sh if the interpreter path cannot be used\n\
++  \          /path/interpreter - use #!, or the given sh-compatible \
++  \            interpreter if the interpreter path cannot be used"
++
+ let mk_use_runtime f =
+   "-use-runtime", Arg.String f,
+   "<file>  Generate bytecode for the given runtime system"
+@@ -1051,6 +1059,7 @@ module type Bytecomp_options = sig
+   val _make_runtime : unit -> unit
+   val _vmthread : unit -> unit
+   val _use_runtime : string -> unit
++  val _launch_method : string -> unit
+   val _output_complete_exe : unit -> unit
+ 
+   val _dinstr : unit -> unit
+@@ -1239,6 +1248,7 @@ struct
+     mk_unsafe_string F._unsafe_string;
+     mk_use_runtime F._use_runtime;
+     mk_use_runtime_2 F._use_runtime;
++    mk_launch_method F._launch_method;
+     mk_v F._v;
+     mk_verbose F._verbose;
+     mk_version F._version;
+@@ -2030,6 +2040,16 @@ third-party libraries such as Lwt, but with a different API."
+     let _output_obj () = output_c_object := true; custom_runtime := true
+     let _use_prims s = use_prims := s
+     let _use_runtime s = use_runtime := s
++    let _launch_method = function
++    | "exe" ->
++        launch_method := Some Config.Executable
++    | "sh" ->
++        launch_method := Some (Config.Shebang None)
++    | s when s <> "" && s.[0] = '/' ->
++        launch_method := Some (Config.Shebang (Some s))
++    | _ ->
++        Compenv.fatal
++          "-launch-method: expect sh, exe or an absolute path for <method>"
+     let _v () = Compenv.print_version_and_library "compiler"
+     let _vmthread () = Compenv.fatal vmthread_removed_message
+   end
+diff --git a/driver/main_args.mli b/driver/main_args.mli
+index 69f357fdbdb5b558441460c308d98c63656df09f..152f2adab9e2a1f684ae3ec8dd66e77277c55db9 100644
+--- a/driver/main_args.mli
++++ b/driver/main_args.mli
+@@ -155,6 +155,7 @@ module type Bytecomp_options = sig
+   val _make_runtime : unit -> unit
+   val _vmthread : unit -> unit
+   val _use_runtime : string -> unit
++  val _launch_method : string -> unit
+   val _output_complete_exe : unit -> unit
+ 
+   val _dinstr : unit -> unit
+diff --git a/utils/clflags.ml b/utils/clflags.ml
+index ee1ff3a4e4f5896f77a19030fa62b87e49791cfb..51b8eefa81e38f8f1b626b9f656e9f0cfb7d646d 100644
+--- a/utils/clflags.ml
++++ b/utils/clflags.ml
+@@ -80,6 +80,7 @@ and noinit = ref false                  (* -noinit *)
+ and open_modules = ref []               (* -open *)
+ and use_prims = ref ""                  (* -use-prims ... *)
+ and use_runtime = ref ""                (* -use-runtime ... *)
++and launch_method = ref None            (* -launch-method ... *)
+ and plugin = ref false                  (* -plugin ... *)
+ and principal = ref false               (* -principal *)
+ and real_paths = ref true               (* -short-paths *)
+diff --git a/utils/clflags.mli b/utils/clflags.mli
+index d12ccd287bf05b261b5c27edc17b7fecae9a31c2..026dac6c05473eff55e5ccd4b3f7ace31e61d0eb 100644
+--- a/utils/clflags.mli
++++ b/utils/clflags.mli
+@@ -109,6 +109,7 @@ val noinit : bool ref
+ val noversion : bool ref
+ val use_prims : string ref
+ val use_runtime : string ref
++val launch_method : Config.launch_method option ref
+ val plugin : bool ref
+ val principal : bool ref
+ val real_paths : bool ref
+diff --git a/utils/config.mli b/utils/config.mli
+index bebdf5bf4e631a54c79dcf6af278ad2d4495d54e..65866f083085f0f7f7e7f4839100110daeb32a53 100644
+--- a/utils/config.mli
++++ b/utils/config.mli
+@@ -290,6 +290,16 @@ val afl_instrument : bool
+ val ar_supports_response_files: bool
+ (** Whether ar supports @FILE arguments. *)
+ 
++(** Launch mechanisms for bytecode executables
++
++    @since 5.5 *)
++type launch_method =
++| Executable               (** Use executable launcher stub *)
++| Shebang of string option (** Use shebang-style launcher, either directly to
++                               the runtime, or via sh. The parameter if
++                               specified is the full path to sh, otherwise the
++                               linker searches for it. *)
++
+ (** Access to configuration values *)
+ val print_config : out_channel -> unit
+ 
+diff --git a/utils/config.mlp b/utils/config.mlp
+index f5dc932d796685aaeaa42bd24c791d8b708052e3..5d300c3704366f7ee27362b2b24d4874159dd89e 100644
+--- a/utils/config.mlp
++++ b/utils/config.mlp
+@@ -124,6 +124,8 @@ and cmxs_magic_number = "Caml1999D031"
+ and cmt_magic_number = "Caml1999T031"
+ and linear_magic_number = "Caml1999L031"
+ 
++type launch_method = Executable | Shebang of string option
++
+ let interface_suffix = ref ".mli"
+ 
+ let max_tag = 245
+-- 
+2.53.0.windows.2
+

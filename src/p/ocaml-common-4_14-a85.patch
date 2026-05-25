@@ -1,0 +1,233 @@
+From 673a915d9ea6226539a1eb26fbc8a82e1a6ab2f5 Mon Sep 17 00:00:00 2001
+From: David Allsopp <david.allsopp@metastack.com>
+Date: Thu, 17 Jul 2025 16:12:07 +0100
+Subject: [PATCH] Generate an opam .install file and support script
+
+make INSTALL_MODE=opam install generates $OPAM_PACKAGE_NAME.install and
+$OPAM_PACKAGE_NAME-fixup.sh ($OPAM_PACKAGE_NAME defaults to
+ocaml-compiler). Nothing is installed by this mode. The fixup.sh script
+is intentionally not made executable (it should be invoked explicitly
+with sh) and creates symbolic links, if required, and also manually
+copies the files to the doc dir, as the .install file format doesn't
+allow the correct location to be specified.
+
+(cherry picked from commit 3c66f2ed307648bee04607bffdeaaa33568fa266)
+
+diff --git a/Makefile.common b/Makefile.common
+index 69f8e4ab4c9fb952f208ab954b5db34187e02cf4..8198d6899200692c24cd516277b7e127d1c9f698 100644
+--- a/Makefile.common
++++ b/Makefile.common
+@@ -218,6 +218,124 @@ INSTALL_DESPATCH_list_ITEMS = \
+ INSTALL_DESPATCH_list_BEGIN = @
+ INSTALL_DESPATCH_list_END = @
+ 
++OPAM_PACKAGE_NAME ?= ocaml-compiler
++
++# Generate $(OPAM_PACKAGE_NAME).install and $(OPAM_PACKAGE_NAME)-fixup.sh
++#   (INSTALL_MODE=opam)
++# opam's .install format isn't quite rich enough at present to express the
++# installation of the compiler. In particular, we can't install the doc files to
++# doc/ocaml using a .install and we can't create symlinks. The things which
++# can't be handled by the .install file are dealt with by the fixup script
++# instead.
++
++INVOKE = $(strip $(1)) $(call QUOTE_SINGLE,$(strip $(2)))
++ADD_LINE = $(call INVOKE, echo, $(2)) >> $(1)
++
++# RECORD_SYMLINK_TO_INSTALL
++#   $1 = file to install, implicitly relative to $(ROOTDIR)
++#   $2 = section
++#   $3 = subdirectory within $2 (may be empty)
++#   $4 = name to install $1 (must be specified)
++#   $5 = single name of symlink
++# If symlinks are supported, $1 is ignored and the three pieces of information
++# are recorded in create-symlinks: the directory, implicitly relative to the
++# prefix, in which the symlink is to be created, the source file and name of the
++# symlink.
++# These can then be munged to a cd + ln combination in the fixup script.
++# If symlinks are not supported, $1 is instead used to create an additional copy
++# of the file, using the .install file.
++ifeq "$(firstword $(LN))" "ln"
++RECORD_SYMLINK_TO_INSTALL = \
++  $(call ADD_LINE, $(ROOTDIR)/create-symlinks, \
++    $(patsubst lib%,lib,$(2))$(addprefix /,$(3)) $(4) $(5))
++else
++# Symlinks aren't available, so copy the file again using the target name
++RECORD_SYMLINK_TO_INSTALL = \
++  $(call RECORD_opam_ITEM_TO_INSTALL,$(1),$(2),$(3),$(5))
++endif
++
++# Process the arguments to pass to RECORD_opam_ITEM_TO_INSTALL:
++# - Items installed to the stublibs section need to be remapped to the stublibs
++#   subdirectory of libexec (since we install to lib/ocaml/stublibs rather than
++#   opam's default lib/stublibs)
++# - Source files must be given implicitly relative to $(ROOTDIR), so prefix with
++#   $(SUBDIR_NAME) if necessary
++# - Items installed to the lib/libexec sections will in fact be installed to
++#   lib_root/libexec_root, so remap the installation directory to ocaml (i.e. to
++#   install to lib/ocaml rather than lib)
++# - If no target basename has been explictly given, use the source's basename
++RECORD_ITEM_TO_INSTALL = \
++  $(if $(filter stublibs,$(2)),\
++    $(call RECORD_ITEM_TO_INSTALL,$\
++      $(1),libexec,stublibs$(addprefix /,$(3)),$(4),$(5)),\
++    $(call RECORD_opam_ITEM_TO_INSTALL,$\
++      $(addsuffix /,$(SUBDIR_NAME))$(1),$\
++      $(2),$\
++      $(if $(filter doc lib%,$(2)),ocaml$(addprefix /,$(3)),$(3)),$\
++      $(if $(4),$(4),$(notdir $(1))),$\
++      $(5)))
++
++# All files must be explicitly installed, so evaluate the wildcards and call
++# INSTALL_DESPATCH_opam_ITEM for each file.
++INSTALL_EVALUATE_GLOBS = \
++  $(foreach file, $(wildcard $(1)), \
++    $(call INSTALL_DESPATCH_$(INSTALL_MODE)_ITEM,$(file),$(2),$(3));) \
++  true
++
++# RECORD_FILE_TO_INSTALL
++#   $1 = file to install, implicitly relative to $(ROOTDIR)
++#   $2 = bin/lib/libexec/man
++#   $3 = subdirectory within $2 (may be empty, but otherwise must end with "/")
++#   $4 = name to install $1 (must be specified)
++# Writes an opam .install line to the section file for $(2). Each line consists
++# of a double-quoted implicit filename relative to $(ROOTDIR) and optionally a
++# second double-quoted implicit filename relative to the $(2) for the name to
++# install the file under.
++#   e.g. "lex/ocamllex" {"ocamllex.byte"} or "expunge" {"ocaml/expunge"}
++RECORD_FILE_TO_INSTALL = \
++  $(call ADD_LINE, $(ROOTDIR)/opam-$(2), \
++    "$(1)" $(if $(3)$(filter-out $(notdir $(1)),$(4)), {"$(3)$(4)"}))
++
++# RECORD_FILE_TO_CLONE
++#   $1 = file to install, implicitly relative to $(ROOTDIR)
++#   $2 = subdirectory (may be empty, but otherwise must end with "/")
++#   $3 = name to install $1 (must be specified)
++# The compiler is installed as the ocaml package in opam, but the actual files
++# are installed from other packages (typically ocaml-compiler). For the the lib
++# directory, the lib_root and libexec_root sections allow files to be installed
++# to lib/ocaml, but there's no equivalent mechanism for the doc directory. These
++# files are recorded to be copied manually in the fixup script.
++RECORD_FILE_TO_CLONE = \
++  $(call ADD_LINE, $(ROOTDIR)/clone-$(subst /,@,$(2)), $(1) $(3))
++
++# RECORD_opam_ITEM_TO_INSTALL despatches the processed arguments of
++# INSTALL_DESPATCH_opam_ITEM to the appropriate RECORD_ macro.
++RECORD_opam_ITEM_TO_INSTALL = \
++  $(if $(filter doc,$(2)),\
++    $(call RECORD_FILE_TO_CLONE,$(1),doc/$(3),$(4)), \
++    $(call RECORD_FILE_TO_INSTALL,$(1),$(2),$(addsuffix /,$(3)),$(4))) \
++  $(foreach link, $(5), && \
++    $(call RECORD_SYMLINK_TO_INSTALL,$(1),$(2),$(3),$(4),$(link)))
++
++INSTALL_DESPATCH_opam_ITEM = $(RECORD_ITEM_TO_INSTALL)
++
++INSTALL_DESPATCH_opam_ITEMS = $(INSTALL_EVALUATE_GLOBS)
++
++INSTALL_opam_PREFIX = @
++
++INSTALL_DESPATCH_opam_RM = @
++
++# INSTALL_MKDIR is ignored (opam creates them when executing the .install file)
++INSTALL_DESPATCH_opam_MKDIR =
++
++INSTALL_DESPATCH_opam_BEGIN = \
++  rm -f opam-bin clone-* opam-lib opam-libexec opam-man create-symlinks
++
++# Munge opam-bin, opam-lib, opam-libexec and opam-man into a .install file and
++# then munge clone-* and create-symlinks into the fixup script.
++INSTALL_DESPATCH_opam_END = \
++  tools/opam/generate-install.sh $(OPAM_PACKAGE_NAME) $(UNIX_OR_WIN32) '$(LN)'
++
+ FLEXDLL_SUBMODULE_PRESENT := $(wildcard $(ROOTDIR)/flexdll/Makefile)
+ 
+ # Variables used to represent the OCaml runtime system
+diff --git a/tools/opam/generate-install.sh b/tools/opam/generate-install.sh
+new file mode 100755
+index 0000000000000000000000000000000000000000..ef6560c63b8cd70a6fc9efff97d86fe4a0c00c7d
+--- /dev/null
++++ b/tools/opam/generate-install.sh
+@@ -0,0 +1,80 @@
++#!/bin/sh -e
++#**************************************************************************
++#*                                                                        *
++#*                                 OCaml                                  *
++#*                                                                        *
++#*            David Allsopp, University of Cambridge & Tarides            *
++#*                                                                        *
++#*   Copyright 2025 David Allsopp Ltd.                                    *
++#*                                                                        *
++#*   All rights reserved.  This file is distributed under the terms of    *
++#*   the GNU Lesser General Public License version 2.1, with the          *
++#*   special exception on linking described in the file LICENSE.          *
++#*                                                                        *
++#**************************************************************************
++
++# This script is called from the root of the repository at the end of
++# `make INSTALL_MODE=opam install` and is responsible for converting the various
++# files generated by the opam installation backend into a .install file and a
++# -fixup.sh script.
++# Parameters are the following Makefile variables:
++#   $1 = $(OPAM_PACKAGE_NAME)
++#   $2 = $(UNIX_OR_WIN32)
++#   $3 = $(LN)
++
++# The opam packaging for the compiler installs config.cache and config.status
++# (when building with opam, it is required to have configure with -C).
++# config.cache is installed in order to speed-up the legacy `make reconfigure`
++# and config.status is installed in order to allow the source-tree to be
++# re-configured the autoconf way.
++cat > opam-share <<"EOF"
++"config.cache" {"ocaml/config.cache"}
++"config.status" {"ocaml/config.status"}
++EOF
++
++# Generate the .install file
++for section in bin lib_root libexec_root man share_root; do
++  file="opam-${section%_root}"
++  if [ -e "$file" ]; then
++    echo "$section: ["
++    sed -e 's/^/  /' "$file"
++    echo ']'
++    rm -f "$file"
++  fi
++done > "$1.install"
++
++{
++  echo '#!/bin/sh'
++  echo 'set -e'
++  for fileset in clone-*; do
++    # There isn't a portable way to test that a glob doesn't match, hence the
++    # redundant-appearing `test -f` (if there are no matches, some shells will
++    # not execute the loop at all - which is what we want. Some shells will
++    # instead run the loop once with `fileset='clone-*'`)
++    if [ -f "$fileset" ]; then
++      dir="$(echo "${fileset#clone-}" | sed -e 's|@|/|g')"
++      echo 'mkdir -p "$1/'"$dir"'"'
++      sed -e 's|\(.*\) \(.*\)|cp \1 "$1/'"$dir"'/\2"|' "$fileset"
++    fi
++  done
++  rm -f clone-*
++  if [ -f create-symlinks ]; then
++    echo 'cd "$1"'
++    # opam runs this script _before_ processing the .install file, which means
++    # that only the root switch directories will exist (in particular, lib/ocaml
++    # will not yet have been created). This incantation creates any required
++    # subdirectories. On Windows, create-symlinks will only have been used if
++    # symbolic links are available, and we never symlink directories. We use
++    # mklink, as that allows symlinks to files which don't exist yet to be
++    # created on Windows (where `CYGWIN=winsymlinks:nativestrict ln -s` can't)
++    cut -f 1 -d ' ' create-symlinks | sort -u | sed -ne "s|.*/.*|mkdir -p '&'|p"
++    if [ "$2" = 'win32' ]; then
++      sed -e 's|\(.*\) \(.*\) \(.*\)|mklink \1/\3 \2|' \
++          -e 's|/|\\|g' \
++          -e 's|.*|cmd /c "&"|' create-symlinks
++    else
++      sed -e 's|\(.*\) \(.*\) \(.*\)|'"$3"' \2 \1/\3|' create-symlinks
++    fi
++    rm create-symlinks
++  fi
++} > "$1-fixup.sh"
+-- 
+2.53.0.windows.2
+

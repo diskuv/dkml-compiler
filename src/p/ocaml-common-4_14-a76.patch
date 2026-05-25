@@ -1,0 +1,62 @@
+From d20d0273661fa211a1ffb7cd7fc3b2c28abec7e1 Mon Sep 17 00:00:00 2001
+From: David Allsopp <david.allsopp@metastack.com>
+Date: Wed, 16 Jul 2025 22:26:53 +0100
+Subject: [PATCH] Eliminate local for loops in install
+
+Continue to use for when invoking recursive make calls, but use
+$(foreach ..) to generate command sequences so that macros can be used
+in them.
+
+(cherry picked from commit 395b517f8f4b9f695459f9cd734c25c0173ef23e)
+
+diff --git a/tools/Makefile b/tools/Makefile
+index 5ff2dd99f2a3f15ab466e89f225b1551905a92e5..644536ea08b81e74407742f5f09051ac4d17d637 100644
+--- a/tools/Makefile
++++ b/tools/Makefile
+@@ -143,27 +143,26 @@ ocamlmktop.opt$(EXE): $(call byte2native, $(OCAMLMKTOP))
+ 
+ LIBRARY3=config.cmo build_path_prefix_map.cmo misc.cmo warnings.cmo location.cmo
+ 
++define INSTALL_ONE_TOOL
+ install::
+ ifeq "$(INSTALL_BYTECODE_PROGRAMS)" "true"
+-	for i in $(install_files); \
+-	do \
+-	  $(INSTALL_PROG) "$$i$(EXE)" "$(INSTALL_BINDIR)/$$i.byte$(EXE)"; \
+-	  if test -f "$$i".opt$(EXE); then \
+-	    $(INSTALL_PROG) "$$i.opt$(EXE)" "$(INSTALL_BINDIR)" && \
+-	    (cd "$(INSTALL_BINDIR)" && $(LN) "$$i.opt$(EXE)" "$$i$(EXE)"); \
+-	  else \
+-	    (cd "$(INSTALL_BINDIR)" && $(LN) "$$i.byte$(EXE)" "$$i$(EXE)"); \
+-	  fi; \
+-	done
++	$(INSTALL_PROG) "$(1)$(EXE)" "$(INSTALL_BINDIR)/$(1).byte$(EXE)"; \
++	if test -f "$(1)".opt$(EXE); then \
++	  $(INSTALL_PROG) "$(1).opt$(EXE)" "$(INSTALL_BINDIR)" && \
++	  (cd "$(INSTALL_BINDIR)" && $(LN) "$(1).opt$(EXE)" "$(1)$(EXE)"); \
++	else \
++	  (cd "$(INSTALL_BINDIR)" && $(LN) "$(1).byte$(EXE)" "$(1)$(EXE)"); \
++	fi
+ else
+-	for i in $(install_files); \
+-	do \
+-	  if test -f "$$i".opt$(EXE); then \
+-	    $(INSTALL_PROG) "$$i.opt$(EXE)" "$(INSTALL_BINDIR)"; \
+-	    (cd "$(INSTALL_BINDIR)" && $(LN) "$$i.opt$(EXE)" "$$i$(EXE)"); \
+-	  fi; \
+-	done
++	if test -f "$(1)".opt$(EXE); then \
++	  $(INSTALL_PROG) "$(1).opt$(EXE)" "$(INSTALL_BINDIR)"; \
++	  (cd "$(INSTALL_BINDIR)" && $(LN) "$(1).opt$(EXE)" "$(1)$(EXE)"); \
++	fi
+ endif
++endef
++
++$(foreach tool, $(install_files), \
++  $(eval $(call INSTALL_ONE_TOOL,$(tool))))
+ 
+ # The preprocessor for asm generators
+ 
+-- 
+2.53.0.windows.2
+

@@ -1,0 +1,249 @@
+From 01ddd53ad116aba34b3db9e1cc07881d0b4abd45 Mon Sep 17 00:00:00 2001
+From: David Allsopp <david.allsopp@metastack.com>
+Date: Wed, 17 Aug 2022 09:08:03 +0100
+Subject: [PATCH] Remove last vestiges of camlheader post-bootstrap
+
+(cherry picked from commit c9fcee3da2c988b0060c24c63eb75d91feaa4451)
+(cherry picked from commit 62921f3939c17f16078789d4abc0856cf82b1984)
+
+diff --git a/.gitignore b/.gitignore
+index 4090b155cab70f94f7bcc49578d11247bb5c2a36..a3737edc9b9944003bc367d94e6f444749596238 100644
+--- a/.gitignore
++++ b/.gitignore
+@@ -205,7 +205,6 @@ _build
+ /runtime/domain_state32.inc
+ /runtime/domain_state64.inc
+ 
+-/stdlib/bootheader
+ /stdlib/camlheader
+ /stdlib/target_camlheader*
+ /stdlib/camlheader_ur
+diff --git a/Makefile b/Makefile
+index 42a11a0ba91e92ba0f55e773b8f9d432e92a0c05..43fd95216c2a9bc32d98adc4ebb8d0ea92d295b7 100644
+--- a/Makefile
++++ b/Makefile
+@@ -71,7 +71,7 @@ TOPLEVELINIT=toplevel/toploop.cmo
+ # capitalized module names.
+ PERVASIVES=$(STDLIB_MODULES) outcometree topdirs toploop
+ 
+-LIBFILES=stdlib.cma std_exit.cmo *.cmi
++LIBFILES=stdlib.cma std_exit.cmo *.cmi $(HEADER_NAME)
+ 
+ COMPLIBDIR=$(LIBDIR)/compiler-libs
+ 
+@@ -172,8 +172,8 @@ else
+ 	$(MAKE) -C runtime $(BOOT_FLEXLINK_CMD) all
+ endif # ifeq "$(BOOTSTRAPPING_FLEXDLL)" "false"
+ 	cp runtime/ocamlrun$(EXE) boot/ocamlrun$(EXE)
+-	cd boot; rm -f $(LIBFILES) $(HEADER_NAME)
+-	cd stdlib; cp $(LIBFILES) ../boot; cp bootheader ../boot/$(HEADER_NAME)
++	cd boot; rm -f $(LIBFILES)
++	cd stdlib; cp $(LIBFILES) ../boot
+ 	cd boot; $(LN) ../runtime/libcamlrun.$(A) .
+ 
+ # Recompile the core system using the bootstrap compiler
+diff --git a/Makefile.config.in b/Makefile.config.in
+index 86fee8b4f5e299db51d4ae9ecc5704940a58c3ea..51fb2ceb7dd39dee9ebad1d325582a347617bf64 100644
+--- a/Makefile.config.in
++++ b/Makefile.config.in
+@@ -262,7 +262,7 @@ FLEXLINK=$(FLEXLINK_CMD) $(FLEXLINK_FLAGS)
+ 
+ SHEBANGSCRIPTS=@shebangscripts@
+ HASHBANGSCRIPTS=$(SHEBANGSCRIPTS)
+-LONG_SHEBANG=@long_shebang@
++LONG_SHEBANG=false
+ 
+ ## Variables renamed in OCaml 4.13
+ 
+diff --git a/bytecomp/bytelink.ml b/bytecomp/bytelink.ml
+index 62c24a73759f2fa8d9560e9b6d31f775c2d233cd..77a63a80d5a13fbb77911e2646f665c697be5040 100644
+--- a/bytecomp/bytelink.ml
++++ b/bytecomp/bytelink.ml
+@@ -370,14 +370,7 @@ let read_runtime_launch_info file =
+     else
+       {bindir; launcher; buffer; executable_offset}
+   with Not_found ->
+-    if String.starts_with ~prefix:"#!" buffer then
+-      let runtime = String.sub buffer 2 (String.index buffer '\n' - 2) in
+-      {bindir = Filename.dirname runtime; launcher = Shebang_bin_sh "sh";
+-       buffer; executable_offset = 0}
+-    else if String.starts_with ~prefix:"MZ" buffer then
+-      {bindir = ""; launcher = Executable; buffer; executable_offset = 0}
+-    else
+-      raise (Error (Camlheader ("corrupt header", file)))
++    raise (Error (Camlheader ("corrupt header", file)))
+ 
+ let find_bin_sh () =
+   let output_file = Filename.temp_file "caml_bin_sh" "" in
+diff --git a/configure b/configure
+index 12521522e21680e2b0197fbb39ddef78b22d65a4..e8365020c3e3980731aec13b7d62f1b109d8d970 100755
+GIT binary patch
+delta 64
+zcmdn+Sh@Fs@&>!$=}qp8qMH+f5BzFZ^kW2KCLm@8VwUZSeyp5{({0zYE^ANS$O^=4
+NK+L{9bt8wj0{|@@7z_Xa
+
+delta 415
+zcmZ9Ize>YU6vpvStOQ(&PA;Fh9V;3^5KBczmpXJUgxlmKy^!40+?x^*>DbA+kKovX
+zL$~5P_yUR#Avk%PI<y@=IEVZDzH`rc`DD{?Hoa*d#Hoxt)uS$#kv;zUu#Vo^?f2hN
+zwY6omZM0*wJFB)Vn^#xqX2@ej<Kv0-%Fxef;88)oXR1&XO{ccfIW{nU{Hfdz0UGca
+z4i$Ya0}8yZkb%gW9jCUeI?e(%*jm<R{E}g~Qz}mg2`@yFC-~n3LczVbg5TqrY9J=1
+zz)tEoONTyB;w+bSaEY|9MJjn*&SP*(9x4yb|IK><-6M3)jh_#MjNrPLCBl78nJQf(
+vgeIlo)SlSJO3w~XBfT&+7C{o%#&NiIK%M1ehhj9JSVntBmDzl<|8V;Ut{jf#
+
+diff --git a/configure.ac b/configure.ac
+index d7f0a80f59dad0c07b2c784c85300846965b1788..84434e7ef4937fe19b6cf6aee8d90c36db004ee7 100644
+--- a/configure.ac
++++ b/configure.ac
+@@ -118,7 +118,6 @@ AC_SUBST([ocamlc_cflags])
+ AC_SUBST([ocamlc_cppflags])
+ AC_SUBST([flexdir])
+ AC_SUBST([bootstrapping_flexdll])
+-AC_SUBST([long_shebang])
+ AC_SUBST([shebangscripts])
+ AC_SUBST([AR])
+ AC_SUBST([mklib])
+@@ -593,19 +592,11 @@ AC_SYS_INTERPRETER
+ 
+ shebangscripts=false
+ launch_method='exe'
+-long_shebang=false
+ AS_IF([test "x$interpval" = "xyes"],
+   [AS_CASE([$host],
+     [*-cygwin|*-*-mingw32*|*-pc-windows], [],
+     [shebangscripts=true
+-    launch_method='sh'
+-    prev_exec_prefix="$exec_prefix"
+-    AS_IF([test "x$exec_prefix" = "xNONE"],[exec_prefix="$prefix"])
+-    eval "expanded_bindir=\"$bindir\""
+-    exec_prefix="$prev_exec_prefix"
+-    # Assume maximum shebang is 128 chars; less #!, /ocamlrun, an optional
+-    # 1 char suffix and the \0 leaving 115 characters
+-    AS_IF([test "${#expanded_bindir}" -gt 115],[long_shebang=true])]
++    launch_method='sh']
+   )]
+ )
+ 
+diff --git a/stdlib/Makefile b/stdlib/Makefile
+index eaf5f938315ea2ec561d46ddef3930206d468412..974d2d465741dec4b5bc6f8397ee2b27f97561ef 100644
+--- a/stdlib/Makefile
++++ b/stdlib/Makefile
+@@ -55,8 +55,7 @@ NOSTDLIB= camlinternalFormatBasics.cmo camlinternalAtomic.cmo stdlib.cmo
+ OTHERS=$(filter-out $(NOSTDLIB),$(OBJS))
+ 
+ .PHONY: all
+-all: stdlib.cma std_exit.cmo bootheader $(HEADER_NAME) target_$(HEADER_NAME) \
+-     camlheader_ur
++all: stdlib.cma std_exit.cmo $(HEADER_NAME) target_$(HEADER_NAME) camlheader_ur
+ 
+ ifeq "$(RUNTIMED)" "true"
+ all: target_camlheaderd
+@@ -123,20 +122,11 @@ installopt-default::
+ 
+ ifeq "$(UNIX_OR_WIN32)" "unix"
+ HEADERPROGRAM = header
+-HEADER_PATH = $(BINDIR)/
+ else # Windows
+ HEADERPROGRAM = headernt
+-HEADER_PATH =
+ endif
+ 
+ ifeq "$(SHEBANGSCRIPTS)" "true"
+-bootheader: $(ROOTDIR)/Makefile.config Makefile
+-ifeq "$(LONG_SHEBANG)" "true"
+-	echo '#!/bin/sh' > $@
+-	echo 'exec "$(BINDIR)/ocamlrun" "$$0" "$$@"' >> $@
+-else
+-	echo '#!$(BINDIR)/ocamlrun' > $@
+-endif
+ 
+ camlheader_ur: Makefile
+ 	echo '#!' | tr -d '\012' > $@
+@@ -146,13 +136,6 @@ target_camlheader%: Makefile
+ 
+ else # Hashbang scripts not supported
+ 
+-bootheader: $(HEADERPROGRAM).c $(ROOTDIR)/Makefile.config Makefile
+-
+-# $@.exe is deleted to ensure no Cygwin .exe mangling takes place
+-bootheader: tmpheader.exe
+-	rm -f $@.exe
+-	cp $< $@
+-
+ camlheader_ur: tmpheader.exe
+ 	rm -f $@.exe
+ 	cp $< $@
+@@ -177,9 +160,6 @@ ifneq "$(UNIX_OR_WIN32)" "win32"
+ 	strip $@
+ endif
+ 
+-$(HEADERPROGRAM)%$(O): \
+-  OC_CPPFLAGS += -DRUNTIME_NAME='"$(HEADER_PATH)ocamlrun$(subst .,,$*)"'
+-
+ stdlib.cma: $(OBJS)
+ 	$(CAMLC) -a -o $@ $^
+ 
+@@ -192,7 +172,7 @@ distclean: clean
+ 
+ .PHONY: clean
+ clean::
+-	rm -f bootheader $(HEADER_NAME) target_$(HEADER_NAME)* camlheader_ur
++	rm -f $(HEADER_NAME) target_$(HEADER_NAME)* camlheader_ur
+ 
+ export AWK
+ 
+diff --git a/stdlib/header.c b/stdlib/header.c
+index edcc3b34a8bb9c3dd7be76e3a8b0a4d9f243e8a9..e2572a024aa4731779f23bbbccc1d06340e89234 100644
+--- a/stdlib/header.c
++++ b/stdlib/header.c
+@@ -30,8 +30,6 @@
+ #include "caml/mlvalues.h"
+ #include "caml/exec.h"
+ 
+-char * default_runtime_path = RUNTIME_NAME;
+-
+ #ifndef MAXPATHLEN
+ #define MAXPATHLEN 1024
+ #endif
+@@ -155,11 +153,10 @@ static char * read_runtime_path(int fd)
+     } else if (path_size > 0)
+       ofs += read_size(buffer + 4);
+   }
+-  if (path_size == 0) return default_runtime_path;
++  if (path_size == 0) return NULL;
+   if (path_size >= MAXPATHLEN) return NULL;
+   lseek(fd, -ofs, SEEK_END);
+   if (read(fd, runtime_path, path_size) != path_size) return NULL;
+-  runtime_path[path_size - 1] = 0;
+   return runtime_path;
+ }
+ 
+diff --git a/stdlib/headernt.c b/stdlib/headernt.c
+index 7f37149640b3381eea886a9a62fe07b503f8ead8..998bb3e4dbdc331a1590938e0395e2adb7a7b78b 100644
+--- a/stdlib/headernt.c
++++ b/stdlib/headernt.c
+@@ -31,8 +31,6 @@
+ #endif
+ #endif
+ 
+-char * default_runtime_name = RUNTIME_NAME;
+-
+ static
+ #if _MSC_VER >= 1200
+ __forceinline
+@@ -70,12 +68,11 @@ static __inline char * read_runtime_path(HANDLE h)
+     } else if (path_size > 0)
+       ofs += read_size(buffer + 4);
+   }
+-  if (path_size == 0) return default_runtime_name;
++  if (path_size == 0) return NULL;
+   if (path_size >= MAX_PATH) return NULL;
+   if (SetFilePointer(h, -ofs, NULL, FILE_END) == -1) return NULL;
+   if (! ReadFile(h, runtime_path, path_size, &nread, NULL)) return NULL;
+   if (nread != path_size) return NULL;
+-  runtime_path[path_size - 1] = 0;
+   return runtime_path;
+ }
+ 
+-- 
+2.53.0.windows.2
+

@@ -1,0 +1,41 @@
+From 277babbcd9d6a3e6cce51a6611c6eb350748d8ea Mon Sep 17 00:00:00 2001
+From: David Allsopp <david.allsopp@metastack.com>
+Date: Sat, 8 Feb 2025 16:40:16 +0000
+Subject: [PATCH] Move TARGET_LIBDIR to Makefile.build_config
+
+This value is internal to the build and shouldn't be installed with
+Makefile.config
+
+(cherry picked from commit 3929ca86d8af26c9c885438c67a84909ac7062dd)
+(cherry picked from commit 843c73867ea50e4782acae7b0d791d47dfb629c0)
+
+diff --git a/Makefile.build_config.in b/Makefile.build_config.in
+index 8f9b5c3863b3a0460fedc30ae548961c848540b0..f19f2625860adc2a9cd324c75eaa0d627aa54a91 100644
+--- a/Makefile.build_config.in
++++ b/Makefile.build_config.in
+@@ -52,5 +52,8 @@ PACKAGE_TARNAME = @PACKAGE_TARNAME@
+ datarootdir = @datarootdir@
+ DOCDIR=@docdir@
+ 
++### Where to look for the standard library on target
++TARGET_LIBDIR=@TARGET_LIBDIR@
++
+ # Platform-dependent command to create symbolic links
+ LN = @ln@
+diff --git a/Makefile.config.in b/Makefile.config.in
+index 5348f45d68a459b658b42e4ca89f398d96a5b85c..8df4d7c089b9027f151837e12a2d97959861a876 100644
+--- a/Makefile.config.in
++++ b/Makefile.config.in
+@@ -49,9 +49,6 @@ datarootdir=@datarootdir@
+ ### Where to install the standard library on host
+ LIBDIR=@libdir@
+ 
+-### Where to look for the standard library on target
+-TARGET_LIBDIR=@TARGET_LIBDIR@
+-
+ ### Where to install the stub code for the standard library
+ STUBLIBDIR=@libdir@/stublibs
+ 
+-- 
+2.53.0.windows.2
+

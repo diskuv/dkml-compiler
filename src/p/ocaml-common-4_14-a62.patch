@@ -1,0 +1,668 @@
+From 1348987b936f0b967c206e957188ec3b0ab614cf Mon Sep 17 00:00:00 2001
+From: David Allsopp <david.allsopp@metastack.com>
+Date: Sun, 11 Apr 2021 11:45:38 +0100
+Subject: [PATCH] Determine Runtime ID values in configure
+
+(cherry picked from commit 8b106833871a85b7174e50d25d0db6f12910a96e)
+
+diff --git a/Changes b/Changes
+index 415fd6d2e73733fd17ec59c287a4417639c3d5cb..0c735b825127026b35653fca4dfc0b29500a4b57 100644
+--- a/Changes
++++ b/Changes
+@@ -34,6 +34,11 @@ OCaml 4.14 maintenance version
+   trying `argv[0]`.
+   (David Allsopp, review by ???)
+ 
++- #14???: Introduce Runtime IDs for use in filename mangling to allow different
++  configurations and different versions of the runtime system to coexist
++  harmoniously on a single system.
++  (David Allsopp, review by ???)
++
+ ### Code generation and optimizations:
+ 
+ ### Standard library:
+diff --git a/Makefile.build_config.in b/Makefile.build_config.in
+index 6bc7976111fa7a28dd3571f6224fcfd956ab9621..e077be4f0a937d8019b46ade04fa16536df86e71 100644
+--- a/Makefile.build_config.in
++++ b/Makefile.build_config.in
+@@ -73,5 +73,9 @@ TARGET_LIBDIR_IS_RELATIVE=@target_libdir_is_relative@
+ OCAML_BINDIR = @ocaml_bindir@
+ TARGET_BINDIR = @TARGET_BINDIR@
+ 
++# Zinc Runtime ID is needed for installation only
++ZINC_RUNTIME_ID_HI = @zinc_runtime_id_hi@
++ZINC_RUNTIME_ID = @zinc_runtime_id_lo@$(ZINC_RUNTIME_ID_HI)
++
+ # Platform-dependent command to create symbolic links
+ LN = @ln@
+diff --git a/Makefile.config.in b/Makefile.config.in
+index 8df4d7c089b9027f151837e12a2d97959861a876..2ce527f50e9151b51e7d2ef02ee413e3ed4b3eea 100644
+--- a/Makefile.config.in
++++ b/Makefile.config.in
+@@ -258,6 +258,10 @@ FLEXLINK_FLAGS=@flexlink_flags@
+ FLEXLINK_CMD=flexlink
+ FLEXLINK=$(FLEXLINK_CMD) $(FLEXLINK_FLAGS)
+ 
++# Runtime ID values
++BYTECODE_RUNTIME_ID=@bytecode_runtime_id@
++NATIVE_RUNTIME_ID=@native_runtime_id@
++
+ # Deprecated variables
+ 
+ SHEBANGSCRIPTS=@shebangscripts@
+diff --git a/build-aux/ocaml_version.m4 b/build-aux/ocaml_version.m4
+index 0e3f955516f75cd96a92f708528393fc8bf475a6..f8639332f1cfbb3b5eb292707fc14a58acf466eb 100644
+--- a/build-aux/ocaml_version.m4
++++ b/build-aux/ocaml_version.m4
+@@ -29,10 +29,12 @@ m4_define([OCAML__DEVELOPMENT_VERSION], [true])
+ 
+ # The three following components (major, minor and patch level) MUST be
+ # integers. They MUST NOT be left-padded with zeros and all of them,
+-# including the patchlevel, are mandatory.
++# including the patchlevel, are mandatory. OCAML__RELEASE_NUMBER must be
++# incremented with each minor release, and likewise must be an unpadded integer.
+ 
+ m4_define([OCAML__VERSION_MAJOR], [4])
+ m4_define([OCAML__VERSION_MINOR], [14])
++m4_define([OCAML__RELEASE_NUMBER], [15])
+ m4_define([OCAML__VERSION_PATCHLEVEL], [3])
+ # Note that the OCAML__VERSION_EXTRA string defined below is always empty
+ # for officially-released versions of OCaml.
+diff --git a/configure b/configure
+index cb1bbdd545dda40086ef1935c96d4510dd8554f6..2b48905e3996594da62882bf8a22fb71faca8266 100755
+GIT binary patch
+delta 2330
+zcmb7G&2QX96xTx1MwU1rp(;qN^y)0Ex5UkQKa!MaC7O~0qG>|f9FQVev-UV1@QxSH
+zctfF;4<K>j%t~+o@du!w9MThi0~hZ62MCD+<-{9%XFrlnm0B80e)GP6@55jHR{rbv
+z^6`z`4>^&nPu(Qtl69%ee53PNQZM$WXkReyP4KuOGtQEt_~iO-Wxf)7q#L<j-}OAV
+zPq`l_#?HOF+xOkQt@~SdA8xr1_O~~;_D(kU|9!qV>!$6rjMMd<QoZ!uZfS1t$!=+N
+zQBomA$|PNpaU6;K?S+I5e*CCZJ^g97v@|z3epp(3ecA{(t#3{qmGHcR=T$s&c;@k3
+zIX!uF^`B=CsH91kaSAe2C!rMfid4V{?+dU55{9{1*(UrjV*K!S*RL7|iFzUFP}#23
+zoO+|#T3uVeGx+7bg=<;Gz-I|InG{g7n_&605AQ$}A3+m3iW&!y(1;R2QITeC*{fiM
+z>@bA-3%J(oJ76hQjR__}lRibKK1&&w8I?}ktf9rSML+K)a9}~Xm&5_%LF^teUxsjS
+z3tc&=!duX&SIt5$7ef&*jKM7H@Jx6DUMj)%w7PO`1-a3JQ$=YVfK#&_2dwN|3{&n=
+zS$9>5wGRyQ64quozXI#Z_bKb()WPDh9YiFP_>PIRNs^GqRf7dkMzVBss+&_c6y6-(
+zH2{Xu)Lm832xi5gk)V?oxwmFhC3M8BXyznSA>FJPLB@)NfYSgg=nWl62zFO5Mto=@
+zW|=P<v2Cu;uyfWU&3o3LK$*_4@W8>clY;Onc!cv<LWhE&5>#zRuyYT46k50IhK7C^
+z{$&su8&xrD7{-~&6u2*^NM-Y!qEV2SFUh)#LK)68txO})0t++Wa0)O;;)Sct^B^=X
+zssVlBAiN`Vv0H`2>FMQ4Z$eq5y<VKi!Lv87-pGde7)qM;2~-Q3IiYF|YnOaVeOnhu
+z;b%^JLD4kYQ&p+;s%qID*Cujl$TY_|h;^_C7p!V{IE<hyNpeW#a`}ki;64&=%9&aP
+zgX90Myir@OJ-KD~JbQS#T&v~{G-@F<G+Dfj!JmK3U(fPE2o6rIZYoJ9qPCC;PEnn;
+zAWl5$3KHNeznFnb+jLeZ6PV{tm#$9n>|v74oLz;Ct`d#aOI2+{OV8MZZL?o93wk!*
+zthhDN!k42?QSI||^j*00)SR_{QQwHq8H*Hybo|{w>7r}KyE^kP6fRh&#j#=bdp^N-
+zR12|BqLd0ih=2)qxU!b@?s9qB?a%}W_d&%nHtGZ8s42x+^RZa*VjeKuno$pDQpg1A
+z0zbx`d!%M?vCv5><3s$yD@@ojsF6j97lQgLK~;s0G@(O|n^oiV=hqgVe|zz-!QVeD
+fEWLfvj{`?{OxW1KHUTgP_y=+A^w;kf_P+ifFM0$E
+
+delta 83
+zcmaEVL8W=0$_Ckh&6xpetedxoe*d}sgg>JJ<MclPjAql<1~PJPuL)$7Vrf4g$_T_v
+hK+FupAU-P)vu!^g%Kl`>_Dy0OUwXE)FX6~&0RZ(%Bl-XU
+
+diff --git a/configure.ac b/configure.ac
+index 9093d7ec959df05a76bda904a334716c1e0b4c7d..4a3779bf88ad80ac832708232076e19ab25486a9 100644
+--- a/configure.ac
++++ b/configure.ac
+@@ -83,6 +83,8 @@ AC_SUBST([OCAML_VERSION_MINOR], [OCAML__VERSION_MINOR])
+ AC_SUBST([OCAML_VERSION_PATCHLEVEL], [OCAML__VERSION_PATCHLEVEL])
+ AC_SUBST([OCAML_VERSION_EXTRA], [OCAML__VERSION_EXTRA])
+ AC_SUBST([OCAML_VERSION_SHORT], [OCAML__VERSION_SHORT])
++AC_SUBST([OCAML_RELEASE_NUMBER], [OCAML__RELEASE_NUMBER])
++AC_SUBST([ocaml_cv_cc_vendor])
+ AC_SUBST([CC])
+ # Note: This is present for the flexdll bootstrap where it exposed as the old
+ # TOOLPREF variable. It would be better if flexdll where updated to require
+@@ -187,9 +189,14 @@ AC_SUBST([target_libdir_is_relative])
+ AC_SUBST([srcdir_abs])
+ AC_SUBST([srcdir_abs_real])
+ AC_SUBST([build_map_flags])
++AC_SUBST([zinc_runtime_id_lo])
++AC_SUBST([zinc_runtime_id_hi])
++AC_SUBST([bytecode_runtime_id])
++AC_SUBST([native_runtime_id])
+ 
+ ## Generated files
+ 
++AC_CONFIG_FILES([testsuite/tools/toolchain.ml])
+ AC_CONFIG_FILES([Makefile.build_config])
+ AC_CONFIG_FILES([Makefile.config])
+ AC_CONFIG_FILES([stdlib/sys.ml])
+@@ -210,6 +217,7 @@ m4_if([OCAML__VERSION_EXTRA],[], [],
+   AC_DEFINE([OCAML_VERSION_EXTRA], ["][OCAML__VERSION_EXTRA]["])])
+ AC_DEFINE([OCAML_VERSION], [OCAML__VERSION_NUMBER])
+ AC_DEFINE([OCAML_VERSION_STRING], ["][OCAML__VERSION]["])
++AC_DEFINE([OCAML_RELEASE_NUMBER], [OCAML__RELEASE_NUMBER])
+ 
+ # Works out how many "o"s are needed in quoted strings
+ AC_CONFIG_COMMANDS_PRE(OCAML_QUOTED_STRING_ID)
+@@ -2271,6 +2279,81 @@ AS_CASE([$host],
+ AS_IF([test x"$enable_stdlib_manpages" != "xno"],
+   [stdlib_manpages=true],[stdlib_manpages=false])
+ 
++# Determine the three Runtime IDs (see runtime/Mangling.md)
++m4_define([ALPHABET], [0123456789abcdefghijklmnopqrstuv])
++alphabet='ALPHABET'
++
++m4_cond(OCAML__DEVELOPMENT_VERSION, [true],
++  [m4_define([ID_VERSION], m4_eval((OCAML__RELEASE_NUMBER << 1) + 1))],
++  [m4_define([ID_VERSION], m4_eval((OCAML__RELEASE_NUMBER << 1)))])
++
++# Bits 0-4 (dev + low 4 bits of release)
++m4_define([QUINTET0],
++  [m4_substr(ALPHABET, m4_eval(ID_VERSION & 31), [1])])
++
++# Bits 5-6 (high 2 bits of release)
++m4_define([QUINTET1_ZINC],
++  [m4_substr(ALPHABET, m4_eval(ID_VERSION >> 5), [1])])
++
++# Bits 7-9 (low 3 bits of reserved)
++quintet1="QUINTET1_ZINC + $(expr \( $profinfo_width \* 4 \) % 32)"
++quintet1="$(echo "$alphabet" | cut -c $(expr $quintet1 + 1))"
++
++# Bits 10-11 (high 2 bits of reserved)
++quintet2_byte=\
++"$(echo "$alphabet" | cut -c $(expr \( $profinfo_width / 8 \) + 1))"
++
++# Bit 12 (no-flat-float-array)
++AS_IF([$flat_float_array],
++  [quintet2_zinc='0'],
++  [quintet2_byte="4 + $quintet2_byte"
++  quintet2_zinc='4'])
++# Bit 13 (fp)
++AS_IF([$frame_pointers],
++  [quintet2_native="8 + $quintet2_byte"],
++  [quintet2_native="$quintet2_byte"])
++# Bit 14 (tsan) cannot be set until OCaml 5.2
++
++quintet2_zinc="$(echo "$alphabet" | cut -c $(expr $quintet2_zinc + 1))"
++quintet2_byte="$(echo "$alphabet" | cut -c $(expr $quintet2_byte + 1))"
++quintet2_native="$(echo "$alphabet" | cut -c $(expr $quintet2_native + 1))"
++
++# Bit 15 (int31)
++AS_IF([$arch64],
++  [quintet3_zinc='0'],
++  [quintet3_zinc='1'])
++# Bit 16 (static)
++AS_IF([! $supports_shared_libraries],
++  [quintet3_zinc="2 + $quintet3_zinc"])
++# Bit 17 (naked-pointers)
++AS_IF([$naked_pointers],
++  [quintet3="4 + $quintet3_zinc"],
++  [quintet3="$quintet3_zinc"])
++# Bit 18 (ansi)
++AS_CASE([$target,$windows_unicode],
++  [*-*-mingw32,0|*-pc-windows,0],
++    [quintet3="8 + $quintet3"])
++# Bit 19 (mutable-string)
++AS_IF([! $force_safe_string],
++  [quintet3="16 + $quintet3"])
++
++quintet3_zinc="$(echo "$alphabet" | cut -c $(expr $quintet3_zinc + 1))"
++quintet3="$(echo "$alphabet" | cut -c $(expr $quintet3 + 1))"
++
++zinc_runtime_id_lo="QUINTET0[]QUINTET1_ZINC"
++zinc_runtime_id_hi="${quintet2_zinc}${quintet3_zinc}"
++bytecode_runtime_id="QUINTET0${quintet1}${quintet2_byte}${quintet3}"
++native_runtime_id="QUINTET0${quintet1}${quintet2_native}${quintet3}"
++
++# Update the values for is_release, release_number and zinc_runtime_id in
++# utils/config.mlp (this is done when tools/autogen is run, not each time
++# configure is run!)
++m4_syscmd([sed -e '/^let is_release =/s/=.*/= ]'\
++'m4_if(OCAML__DEVELOPMENT_VERSION,true,false,true)[/' \
++    -e '/^let release_number =/s/=.*/= ]OCAML__RELEASE_NUMBER[/' \
++    utils/config.mlp > utils/config.mlp.new
++mv -f utils/config.mlp.new utils/config.mlp])
++
+ # Do not permanently cache the result of flexdll.h
+ unset ac_cv_header_flexdll_h
+ 
+diff --git a/runtime/Makefile b/runtime/Makefile
+index dea7c62498cb4eedb4582d0ca57205e3e05f860d..7fbdc924301fb2b8aca9d9b24edd5e36623fbbe0 100644
+--- a/runtime/Makefile
++++ b/runtime/Makefile
+@@ -275,6 +275,7 @@ build_config.h: $(ROOTDIR)/Makefile.config sak$(EXE)
+ 	  printf '#define OCAML_STDLIB_DIR %s\n' \
+ 	         $(call QUOTE_SINGLE,$(call C_LITERAL,$(TARGET_LIBDIR))); \
+ 	  echo '#define HOST "$(HOST)"'; \
++	  echo '#define BYTECODE_RUNTIME_ID "$(BYTECODE_RUNTIME_ID)"'; \
+ 	} > $@
+ 
+ prims.$(O): build_config.h
+diff --git a/runtime/Mangling.md b/runtime/Mangling.md
+new file mode 100644
+index 0000000000000000000000000000000000000000..84a0a52bfac7a1f74a18f7616d2fb0a1186d4857
+--- /dev/null
++++ b/runtime/Mangling.md
+@@ -0,0 +1,135 @@
++# Filename Mangling
++
++## Background
++
++OCaml compiler installations exist in isolation. When running the compiler, it
++is assumed that the caller will have configured the environment of the compiler
++such that files and settings related to other compiler installations will not
++interfere.
++
++This is not true of the runtime. Shared libraries are loaded from a global
++namespace (dynamically loaded bytecode stub libraries and the shared versions of
++both the native and bytecode runtimes) and programs may be searched in a global
++PATH. To allow programs compiled against different coinstalled versions of the
++runtime to be executed, a name mangling scheme is used for the runtime's
++executables and shared libraries.
++
++## Filename Mangling
++
++Filenames are mangled using one or both of two pieces of configuration
++information. The first is the standard "autoconf" triplet on which the runtime
++executes (e.g. `x86_64-pc-linux-gnu`). The other is a summary of the runtime
++version and configuration called the Runtime ID. This information is a series of
++bits encoded in base32 using the alphabet `[0-9a-v]` and with the quintets laid
++out little-endian.
++
++Mangling is applied to the name of any file which will be searched for at
++runtime:
++
++- `ocamlrun` (and variants) are triplet-prefixed and Bytecode-suffixed. For
++  example, `x86_64-pc-linux-gnu-ocamlrun-a140` is OCaml 5.5 configured with
++  `--disable-flat-float-array` on 64-bit Intel/AMD Linux. A symbolic link is
++  still created for `ocamlrun` pointing to this mangled name. Additionally, a
++  symbolic link is also created for `ocamlrun-a140`, using the Zinc-suffix.
++- C stub libraries loaded by both the bytecode runtime and bytecode `Dynlink`
++  library are triplet- and Bytecode-suffixed. For example,
++  `dllunixbyt-x86_64-pc-linux-gnu-a140.so` contains the C stubs for the Unix
++  library for OCaml 5.5 configured with `--disable-flat-float-array` on 64-bit
++  Intel/AMD Linux.
++- Shared versions of the bytecode and native runtimes (`libcamlrun_shared.so`
++  and `libasmrun_shared.so`) are triplet- and Bytecode/Native-suffixed
++  respectively. For example, `libasmrun-x86_64-pc-linux-gnu-a1k0.so` and
++  `libcamlrun-x86_64-pc-linux-gnu-a140.so` are OCaml 5.5 configured with
++  `--disable-flat-float-array` and `--enable-tsan` on 64-bit Intel/AMD Linux
++  (note the **tsan** bit not being set for the name of libcamlrun).
++  Additionally, symbolic links are also created for `libasmrun_shared.so` and
++  `libcamlrun_shared.so`.
++
++## Runtime ID
++
++A Runtime ID is a bit string describing a given OCaml runtime. At present,
++20 bits are used, but the format is intended to be trivially extensible.
++Ultimately, the only requirement is that each version and configuration
++generates some kind of unique identifier which can then be used in filenames.
++
++- Bit 0 (**dev**): Development bit. This should be set for development versions
++  of OCaml or for customised compilers. If it is not set, the compiler should be
++  an unaltered official release.
++- Bits 1-6 (**release**): OCaml release number. This is incremented for each
++  minor release of the compiler, with OCaml 3.12.0[^1] being release 0. At
++  present, the ordering of release numbers matches the semantic ordering of the
++  version numbers, but this is not guaranteed and should not be assumed[^2].
++- Bits 7-11 (**reserved**): Number of reserved header bits. This is the value
++  passed to `--enable-reserved-header-bits` when the compiler distribution was
++  configured.
++- Bit 12 (**no-flat-float-array**): Set if the compiler distribution was
++  configured with `--disable-flat-float-array`.
++- Bit 13 (**fp**): Set if the compiler distribution was configured with
++  `--enable-frame-pointers`. Affects the **native** runtime only.
++- Bit 14 (**tsan**): For OCaml 5.2 onwards, set if the compiler distribution was
++  configured with `--enable-tsan`. Prior to OCaml 5.2, set if the compiler
++  distribution was configured with `--enable-spacetime` (this option was removed
++  in OCaml 4.12, meaning this bit is always unset for OCaml 4.12-5.1). Affects
++  the **native** runtime only.
++- Bit 15 (**int31**): Set if the runtime uses 31-bit `int` values (i.e. runtimes
++  running on 32-bit systems).
++- Bit 16 (**static**): Set if the runtime does not support shared libraries,
++  meaning dynamic loading of C code is not supported in bytecode, and native
++  dynlink is not supported at all.
++- Bit 17 (**no-compression**): For OCaml 5.1 onwards, set if the runtime does
++  not support compressed marshalling. Prior to OCaml 5.1, set if the compiler
++  distribution was configured with `--enable-naked-pointers` (this bit was
++  always unset for OCaml 5.0, since it supports neither naked pointers nor
++  compressed marshalling).
++- Bit 18 (**ansi**): Set if the compiler distribution was configured with the
++  legacy support `WINDOWS_UNICODE=ansi`.
++- Bit 19 (**mutable-string**): Set if the compiler distribution was configured
++  with `--disable-force-safe-string`. This option was removed in OCaml 5.0, and
++  the bit is available for re-use. When this bit is unset, strings are
++  guaranteed to be immutable.
++
++The bit descriptions are designed such that the default configuration of the
++latest version of the compiler has unset bits. The ordering of the bits is
++designed to mean ID values in the same version of OCaml will usually have the
++same opening sequence of characters (since `--enable-reserved-header-bits` is
++now rarely used) and laying out the characters little-endian in the mangling
++scheme means that the opening two characters of the Runtime ID define its
++version (and consequently its length, should that change in future).
++
++[^1]: OCaml 3.12.0 was the first version where `ocamlrun` supported the `-vnum`
++argument; the original author had a fantasy of backporting the scheme to the
++entire 4.x series, but following some therapy stopped at 4.08. The release
++numbering persists to allow for future madness.
++[^2]: In particular, should there be any additional releases in the OCaml 4.x
++series, these will have higher release numbers than releases already made in the
++OCaml 5.x series.
++
++## Masks
++
++A particular configuration of the compiler has one Runtime ID, but this is used
++in three different contexts where certain bits are masked out:
++
++1. _Bytecode Mask_: masks out bits which are only ever set by the native runtime
++   (at present, **fp** and **tsan**).
++2. _Native Mask_: masks out bits which are only ever set by the bytecode runtime
++   (at present there aren't any).
++3. _Zinc Mask_: masks out bits which are not related to bytecode portability.
++   Where the _Bytecode_ and _Native_ masks relate to _runtimes_, the _Zinc_ mask
++   relates to _bytecode images_. The Zinc ID therefore includes:
++   - **release** and **dev** (a given bytecode image targets a specific version
++     of OCaml)
++   - **no-flat-float-array** (code compiled assuming that float arrays are boxed
++     will segfault on runtimes which unbox them)
++   - **int31**, **static**, and **no-compression** (a bytecode image using
++     63-bit integers, dynamically loaded C stubs and compressed marshalling will
++     be rejected by an interpreter which doesn't support any of these features)
++
++Note that the inclusion of a bit in a mask is determined by whether that
++property affects the ability to load and execute the code, rather than whether
++it is semantically affected by it. For example, the **reserved** bits affects
++the value representation, and therefore both runtimes. It does not directly
++affect bytecode (although a bytecode program may use unsafe features to observe
++it). **reserved** is therefore part of both the _Bytecode_ and _Native Masks_,
++but not part of the _Zinc Mask_. Similarly, although **no-flat-float-array**
++affects code generation for bytecode, **mutable-string** never did, and so would
++not be included in the _Zinc Mask_.
+diff --git a/runtime/caml/version.h.in b/runtime/caml/version.h.in
+index bfe5d70957dc127729b85927b148ae51fc97daab..66c7611bc4a5453d5f8f818a3fedf474a7ff0a90 100644
+--- a/runtime/caml/version.h.in
++++ b/runtime/caml/version.h.in
+@@ -22,3 +22,4 @@
+ #undef OCAML_VERSION_EXTRA
+ #undef OCAML_VERSION
+ #undef OCAML_VERSION_STRING
++#undef OCAML_RELEASE_NUMBER
+diff --git a/utils/Makefile b/utils/Makefile
+index 57ad3d0b9efe04b87e4c1905704bcb04133e8c6e..7a64b17fa7f5bbd08deb57e6c35859a4959352fd 100644
+--- a/utils/Makefile
++++ b/utils/Makefile
+@@ -93,6 +93,8 @@ config.ml: config.mlp $(ROOTDIR)/Makefile.config Makefile
+ 	    $(call SUBST,AS_HAS_DEBUG_PREFIX_MAP) \
+ 	    $(call SUBST,AR_SUPPORTS_RESPONSE_FILES) \
+ 	    $(call SUBST_STRING,TARGET_LAUNCH_METHOD) \
++	    $(call SUBST_STRING,BYTECODE_RUNTIME_ID) \
++	    $(call SUBST_STRING,NATIVE_RUNTIME_ID) \
+ 	    $< > $@
+ 
+ # Test for the substitution functions above
+diff --git a/utils/config.mli b/utils/config.mli
+index 0d0e128fab36d360f38e6d0bec32473d42af1b9f..d5e72f2cfba08100985d3302b9d52e324197eae7 100644
+--- a/utils/config.mli
++++ b/utils/config.mli
+@@ -23,6 +23,16 @@
+ val version: string
+ (** The current version number of the system *)
+ 
++val release_number: int
++(** The release number for the compiler
++
++    @since 5.5 *)
++
++val is_release: bool
++(** True if the compiler is an unmodified official OCaml release
++
++    @since 5.5 *)
++
+ val bindir: string
+ (** The directory containing the binary programs. If the compiler was configured
+     with [--with-relative-libdir] then this will be the directory containing the
+@@ -319,6 +329,16 @@ type search_method =
+                            if that fails *)
+ | Search               (** Always search for the interpreter *)
+ 
++val bytecode_runtime_id : string
++(** The Runtime ID for this build of the bytecode runtime system
++
++    @since 5.5 *)
++
++val native_runtime_id : string
++(** The Runtime ID for this build of the native runtime system
++
++    @since 5.5 *)
++
+ (** Access to configuration values *)
+ val print_config : out_channel -> unit
+ 
+diff --git a/utils/config.mlp b/utils/config.mlp
+index 64a1e8988b5125891015f5ba62e95b2cb5a88203..2585cb587c435caa1f9b110e7553679854999313 100644
+--- a/utils/config.mlp
++++ b/utils/config.mlp
+@@ -17,6 +17,11 @@
+ (* The main OCaml version string has moved to ../build-aux/ocaml_version.m4 *)
+ let version = Sys.ocaml_version
+ 
++(* is_release and release_number are automatically updated autoconf from values
++   in ../build-aux/ocaml_version.m4 - do not edit these lines directly. *)
++let is_release = false
++let release_number = 15
++
+ let bindir = "%%OCAML_BINDIR%%"
+ let target_bindir = "%%TARGET_BINDIR%%"
+ 
+@@ -147,6 +152,9 @@ let stack_safety_margin = 60
+ 
+ let target_win32 = Sys.win32
+ 
++let bytecode_runtime_id = "%%BYTECODE_RUNTIME_ID%%"
++let native_runtime_id = "%%NATIVE_RUNTIME_ID%%"
++
+ let architecture = "%%ARCH%%"
+ let model = "%%MODEL%%"
+ let system = "%%SYSTEM%%"
+@@ -239,6 +247,8 @@ let configuration_variables =
+   p_bool "systhread_supported" systhread_supported;
+   p "host" host;
+   p "target" target;
++  p "bytecode_runtime_id" bytecode_runtime_id;
++  p "native_runtime_id" native_runtime_id;
+   p_bool "flambda" flambda;
+   p_bool "safe_string" safe_string;
+   p_bool "default_safe_string" default_safe_string;
+diff --git a/utils/misc.ml b/utils/misc.ml
+index f86c0c917f8e955b749e5708ee1d4df0ace423a9..21216cac8821c7eb7a51673b918412b97a5fde2d 100644
+--- a/utils/misc.ml
++++ b/utils/misc.ml
+@@ -1134,3 +1134,112 @@ module Magic_number = struct
+            | Error err -> Error (Unexpected_error err)
+            | Ok () -> Ok info
+ end
++
++module RuntimeID = struct
++  type t = {
++    dev: bool;
++    release: int;
++    reserved: int;
++    no_flat_float_array: bool;
++    fp: bool;
++    tsan: bool;
++    int31: bool;
++    static: bool;
++    naked_pointers: bool;
++    ansi: bool;
++    mutable_string: bool;
++  }
++
++  let make fn ?(dev = not Config.is_release)
++              ?(release = Config.release_number)
++              ?(reserved = Config.profinfo_width)
++              ?(no_flat_float_array = not Config.flat_float_array)
++              ?(fp = Config.with_frame_pointers)
++              ?(tsan = false)
++              ?(int31 = (Sys.int_size = 31))
++              ?(static = not Config.supports_shared_libraries)
++              ?(naked_pointers = Config.naked_pointers)
++              ?(ansi = Config.target_win32 && not Config.windows_unicode)
++              ?(mutable_string = not Config.safe_string) () =
++    if release < 0 || release > 63 || reserved < 0 || reserved > 31 then
++      invalid_arg fn
++    else
++      {dev; release; reserved; no_flat_float_array; fp; tsan; int31; static;
++       naked_pointers; ansi; mutable_string}
++
++  let make_zinc =
++    make "Misc.RuntimeID.make_zinc"
++      ~reserved:0 ~fp:false ~tsan:false ~naked_pointers:false
++      ~ansi:false ~mutable_string:false
++
++  let make_bytecode =
++    make "Misc.RuntimeID.make_bytecode" ~fp:false ~tsan:false
++
++  let make_native = make "Misc.RuntimeID.make_native"
++
++  let is_zinc = function
++  | {dev = _; release = _; reserved = 0; no_flat_float_array = _; fp = false;
++     tsan = false; int31 = _; static = _; naked_pointers = false;
++     ansi = false; mutable_string = false} ->
++      true
++  | _ ->
++      false
++
++  let is_bytecode = function
++  | {dev = _; release = _; reserved = _; no_flat_float_array = _; fp = false;
++     tsan = false; int31 = _; static = _; naked_pointers = _;
++     ansi = _; mutable_string = _} -> true
++  | _ -> false
++
++  let is_native _ = true
++
++  let to_string t =
++    let alpha = "0123456789abcdefghijklmnopqrstuv" in
++    let bit bit cond = if cond then 1 lsl bit else 0 in
++    let q0 =
++      (bit 0 t.dev) lor
++      ((t.release lsl 1) land 0b11110) (* 4 bits *)
++    in
++    let q1 =
++      t.release lsr 4 lor               (* 2 bits *)
++      ((t.reserved lsl 2) land 0b11100) (* 3 bits *)
++    in
++    let q2 =
++      t.reserved lsr 3 lor (* 2 bits *)
++      bit 2 t.no_flat_float_array lor
++      bit 3 t.fp lor
++      bit 4 t.tsan
++    in
++    let q3 =
++      bit 0 t.int31 lor
++      bit 1 t.static lor
++      bit 2 t.naked_pointers lor
++      bit 3 t.ansi lor
++      bit 4 t.mutable_string
++    in
++    Printf.sprintf "%c%c%c%c" alpha.[q0] alpha.[q1] alpha.[q2] alpha.[q3]
++
++  let of_string s =
++    if String.length s <> 4 then
++      None
++    else
++      let convert c =
++        match c with
++        | '0'..'9' -> Char.code c - Char.code '0'
++        | 'a'..'v' -> Char.code c - Char.code 'a' + 10
++        | _ -> min_int
++      in
++      let set bit q = (q land (1 lsl bit) <> 0) in
++      let q0 = convert s.[0] in
++      let q1 = convert s.[1] in
++      let q2 = convert s.[2] in
++      let q3 = convert s.[3] in
++      if q0 + q1 + q2 + q3 >= 0 then
++        Some {dev = set 0 q0; release = ((q1 land 0b11) lsl 4) lor (q0 lsr 1);
++              reserved = ((q2 land 0b11) lsl 2) lor (q1 lsr 2);
++              no_flat_float_array = set 2 q2; fp = set 3 q2; tsan = set 4 q2;
++              int31 = set 0 q3; static = set 1 q3; naked_pointers = set 2 q3;
++              ansi = set 3 q3; mutable_string = set 4 q3}
++      else
++        None
++end
+diff --git a/utils/misc.mli b/utils/misc.mli
+index 794cf1224128bcf93006efc4c0a6612457172522..5efb24695d3e9ddc8cdf731193dd9a4d167e8283 100644
+--- a/utils/misc.mli
++++ b/utils/misc.mli
+@@ -671,3 +671,77 @@ module Magic_number : sig
+ 
+   val all_kinds : kind list
+ end
++
++module RuntimeID : sig
++  (** Manipulation of the Runtime ID values used to mangle the filenames of
++      shared libraries and the bytecode interpreters.
++
++      @since 5.5 *)
++
++  (** Runtime IDs *)
++  type t = private {
++    dev: bool;
++      (** [true] if this not an unaltered official release of OCaml *)
++    release: int;
++      (** Release number (OCaml 5.5 is release 21) *)
++    reserved: int;
++      (** The number of reserved bits (0-31) in the {v value v} header *)
++    no_flat_float_array: bool;
++      (** [true] if float arrays must be boxed (i.e. configured with
++          {v --disable-flat-float-array v}) *)
++    fp: bool;
++      (** [true] if frame pointers are required (i.e. configured with
++          {v --enable-frame-pointers v} *)
++    tsan: bool;
++      (** [true] if ThreadSanitizer (TSAN) is required (i.e. configured with
++          {v --enable-tsan v}) *)
++    int31: bool;
++      (** [true] if the platform has 31-bit [int]s (i.e. 32-bit systems) *)
++    static: bool;
++      (** [true] if dynamic loading of libraries is not supported *)
++    naked_pointers: bool;
++      (** [true] if the runtime allows naked pointers *)
++    ansi: bool;
++      (** [true] if Unicode support on Windows is disabled *)
++    mutable_string: bool;
++      (** [true] if the runtime does not require immutable strings *)
++  }
++
++  val make_zinc: ?dev:bool -> ?release:int
++    -> ?no_flat_float_array:bool
++    -> ?int31:bool -> ?static:bool
++    -> unit -> t
++  (** Returns the Zinc Runtime ID for the given parameters (using default values
++      from {!Config} and {!Sys} as necessary) *)
++
++  val make_bytecode: ?dev:bool -> ?release:int
++    -> ?reserved:int -> ?no_flat_float_array:bool
++    -> ?int31:bool -> ?static:bool
++    -> ?naked_pointers:bool -> ?ansi:bool -> ?mutable_string:bool
++    -> unit -> t
++  (** Returns the Bytecode Runtime ID for the given parameters (using default
++      values from {!Config} and {!Sys} as necessary) *)
++
++  val make_native: ?dev:bool -> ?release:int
++    -> ?reserved:int -> ?no_flat_float_array:bool -> ?fp:bool -> ?tsan:bool
++    -> ?int31:bool -> ?static:bool
++    -> ?naked_pointers:bool -> ?ansi:bool -> ?mutable_string:bool
++    -> unit -> t
++  (** Returns the Native Runtime ID for the given parameters (using default
++      values from {!Config} and {!Sys} as necessary) *)
++
++  val is_zinc: t -> bool
++  (** [is_zinc t] is true if [t] can be used as a Zinc Runtime ID *)
++
++  val is_bytecode: t -> bool
++  (** [is_bytecode t] is true if [t] can be used as a Bytecode Runtime ID *)
++
++  val is_native: t -> bool
++  (** [is_native t] is true if [t] can be used as a Native Runtime ID *)
++
++  val to_string: t -> string
++  (** Returns the 4-character representation of a {!t} *)
++
++  val of_string: string -> t option
++  (** Converts the 4-character representation back to a {!t} *)
++end
+-- 
+2.53.0.windows.2
+

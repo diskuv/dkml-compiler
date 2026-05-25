@@ -1,0 +1,29 @@
+From 180299df600c859a4d570030f1ce9ed92c878c5a Mon Sep 17 00:00:00 2001
+From: David Allsopp <david.allsopp@metastack.com>
+Date: Thu, 17 Jul 2025 11:14:59 +0100
+Subject: [PATCH] Don't explicitly install main.cmx and optmain.cmx
+
+It's necessary to install main.o and optmain.o because the two modules
+are not part of ocamlbytecomp.cmxa and ocamloptcomp.cmxa, but the .cmx
+files are already installed as part of wildcard patterns on driver/
+
+(cherry picked from commit 6864f1a686144e36075cc84140503e5d2d0e586a)
+
+diff --git a/Makefile b/Makefile
+index d6a127bfd58d1e9f03c8579be4ea28718ed80dd4..b0dc66ee27d2d8147c872f8dae835051b20d5f5c 100644
+--- a/Makefile
++++ b/Makefile
+@@ -580,8 +580,8 @@ endif
+ 	   compilerlibs/*.cmxa compilerlibs/*.$(A) \
+ 	   "$(INSTALL_COMPLIBDIR)"
+ 	$(INSTALL_DATA) \
+-	   $(BYTESTART:.cmo=.cmx) $(BYTESTART:.cmo=.$(O)) \
+-	   $(OPTSTART:.cmo=.cmx) $(OPTSTART:.cmo=.$(O)) \
++	   $(BYTESTART:.cmo=.$(O)) \
++	   $(OPTSTART:.cmo=.$(O)) \
+ 	   $(TOPLEVELSTART:.cmo=.$(O)) \
+ 	   "$(INSTALL_COMPLIBDIR)"
+ ifeq "$(INSTALL_OCAMLNAT)" "true"
+-- 
+2.53.0.windows.2
+

@@ -1,0 +1,13 @@
+diff --git a/stdlib/Makefile b/stdlib/Makefile
+index e9a87e6..04a6429 100644
+--- a/stdlib/Makefile
++++ b/stdlib/Makefile
+@@ -42,7 +42,7 @@ COMPFLAGS=-strict-sequence -absname -w +a-4-9-41-42-44-45-48-70 \
+ ifeq "$(FLAMBDA)" "true"
+ OPTCOMPFLAGS += -O3
+ endif
+-OPTCOMPILER=$(ROOTDIR)/ocamlopt
++OPTCOMPILER=$(ROOTDIR)/ocamlopt$(EXE)
+ CAMLOPT=$(OCAMLRUN) $(OPTCOMPILER)
+ CAMLDEP=$(BOOT_OCAMLC) -depend
+ DEPFLAGS=-slash

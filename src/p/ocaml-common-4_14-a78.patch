@@ -1,0 +1,25 @@
+From cd1c7628ff6cdf5363b6d679cfad41e3af2aa9c3 Mon Sep 17 00:00:00 2001
+From: David Allsopp <david.allsopp@metastack.com>
+Date: Wed, 23 Jul 2025 10:24:53 +0100
+Subject: [PATCH] Remove invalid directory in source install
+
+Line was added (with typo) in PR#8925 (4.09) and should have been
+removed as part of PR#10355 (4.13)
+
+(cherry picked from commit 27cc91735e15b01a6c2d620864ef09abd3be0a47)
+
+diff --git a/Makefile b/Makefile
+index 4a6702e32967b7b5fbd850ba6c4c27d3eea797ab..ea1ba2bff78e353fe9e4b581929f515fba26f04c 100644
+--- a/Makefile
++++ b/Makefile
+@@ -604,7 +604,6 @@ ifeq "$(INSTALL_SOURCE_ARTIFACTS)" "true"
+ 	   middle_end/*.ml middle_end/closure/*.ml \
+      middle_end/flambda/*.ml middle_end/flambda/base_types/*.ml \
+ 	   asmcomp/*.ml \
+-	   asmcmp/debug/*.ml \
+ 	   "$(INSTALL_COMPLIBDIR)"
+ endif
+ 
+-- 
+2.53.0.windows.2
+

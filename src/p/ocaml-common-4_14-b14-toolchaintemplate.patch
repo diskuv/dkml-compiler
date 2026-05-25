@@ -1,0 +1,26 @@
+diff --git a/testsuite/tools/toolchain.ml.in b/testsuite/tools/toolchain.ml.in
+new file mode 100644
+index 0000000..1e65c3d
+--- /dev/null
++++ b/testsuite/tools/toolchain.ml.in
+@@ -0,0 +1,19 @@
++type launch_method =
++  | Executable
++  | Shebang of string option
++
++type search_method =
++  | Absolute
++  | Absolute_then_search
++  | Search
++
++let target_bindir = "%%TARGET_BINDIR%%"
++
++let launch_method =
++  match "%%TARGET_LAUNCH_METHOD%%" with
++  | "exe" -> Executable
++  | "sh" -> Shebang None
++  | s -> Shebang (Some s)
++
++let search_method =
++  match "%%TARGET_SEARCH_METHOD%%" with
++  | "always" -> Search | "enable" -> Absolute_then_search | _ -> Absolute

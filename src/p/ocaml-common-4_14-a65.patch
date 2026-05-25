@@ -1,0 +1,576 @@
+From 36ea0b0882240e18a596b790d4ffd6fe1366feb7 Mon Sep 17 00:00:00 2001
+From: David Allsopp <david.allsopp@metastack.com>
+Date: Sat, 11 Sep 2021 16:52:08 +0100
+Subject: [PATCH] Add runtime suffixes to bytecode stub libraries
+
+ocamlc -dllib-suffixed appends the runtime's host triplet and bytecode
+runtime ID to the supplied name when searching for the DLL, and records
+the base name only in .cma / executable files.
+
+ocamlmklib -suffixed instructs ocamlmklib to use -dllib-suffixed when
+generating .cma files instead of -dllib.
+
+The effect is that stub libraries built this way have names which will
+be unique for a given configuration of OCaml and so will be ignored by
+other runtimes.
+
+(cherry picked from commit 9a65e6841307c70f2de9208605eae36d0ef528ea)
+
+diff --git a/Changes b/Changes
+index 182b2551875c066cdc2b4fed1239cf14e082bfa1..8274d92bbaa4852af66a6d850859bb9f441df47d 100644
+--- a/Changes
++++ b/Changes
+@@ -39,8 +39,10 @@ OCaml 4.14 maintenance version
+   harmoniously on a single system. The IDs are used, along with the host
+   triplet, to provide mangled names for the ocamlrun executable and its variants
+   and the DLL versions of both the bytecode and native runtimes, with symlinks
+-  created for the original names. The behaviour is disabled by configuring with
+-  --disable-suffixing.
++  created for the original names. They are also used to mangle the names of stub
++  libraries so that stub libraries compiled for a given configuration of the
++  runtime will only be sought by that runtime. The behaviour is disabled by
++  configuring with --disable-suffixing.
+   (David Allsopp, review by ???)
+ 
+ ### Code generation and optimizations:
+diff --git a/bytecomp/bytelink.ml b/bytecomp/bytelink.ml
+index 63960c15fe5d9b2dca7c8dd6037fd78c911a2293..87e1f5c071d1bb44128801a6db94d2fd932fbfe4 100644
+--- a/bytecomp/bytelink.ml
++++ b/bytecomp/bytelink.ml
+@@ -558,13 +558,28 @@ let link_bytecode ?final_name tolink exec_name standalone =
+        let start_code = pos_out outchan in
+        Symtable.init();
+        clear_crc_interfaces ();
+-       let sharedobjs = List.map Dll.extract_dll_name !Clflags.dllibs in
++       let (tocheck, sharedobjs) =
++         let process_dllib ((suffixed, name) as dllib) (tocheck, sharedobjs) =
++           let resolved_name = Dll.extract_dll_name dllib in
++           let partial_name =
++             if suffixed then
++               if String.starts_with ~prefix:"-l" name then
++                 (suffixed, "dll" ^ String.sub name 2 (String.length name - 2))
++               else
++                 dllib
++             else
++               (false, resolved_name)
++           in
++           (resolved_name::tocheck, partial_name::sharedobjs)
++         in
++         List.fold_right process_dllib !Clflags.dllibs ([], [])
++       in
+        let check_dlls = standalone && Config.target = Config.host in
+        if check_dlls then begin
+          (* Initialize the DLL machinery *)
+          Dll.init_compile !Clflags.no_std_include;
+          Dll.add_path (Load_path.get_paths ());
+-         try Dll.open_dlls Dll.For_checking sharedobjs
++         try Dll.open_dlls Dll.For_checking tocheck
+          with Failure reason -> raise(Error(Cannot_open_dll reason))
+        end;
+        let output_fun = output_bytes outchan
+@@ -580,11 +595,20 @@ let link_bytecode ?final_name tolink exec_name standalone =
+        (* DLL stuff *)
+        if standalone then begin
+          (* The extra search path for DLLs *)
+-         output_stringlist outchan !Clflags.dllpaths;
+-         Bytesections.record outchan "DLPT";
++         if !Clflags.dllpaths <> [] then begin
++           output_stringlist outchan !Clflags.dllpaths;
++           Bytesections.record outchan "DLPT"
++         end;
+          (* The names of the DLLs *)
+-         output_stringlist outchan sharedobjs;
+-         Bytesections.record outchan "DLLS"
++         if sharedobjs <> [] then begin
++           let output_sharedobj (suffixed, name) =
++             output_char outchan (if suffixed then '-' else ':');
++             output_string outchan name;
++             output_byte outchan 0
++           in
++           List.iter output_sharedobj sharedobjs;
++           Bytesections.record outchan "DLLS"
++         end
+        end;
+        (* The names of all primitives *)
+        Symtable.output_primitive_names outchan;
+diff --git a/bytecomp/dll.ml b/bytecomp/dll.ml
+index d91e621e7e8dcc9ca7e352938177beb5717dd09e..b9007dfda1b51460bc53e27209ea587cdf7cf464 100644
+--- a/bytecomp/dll.ml
++++ b/bytecomp/dll.ml
+@@ -54,13 +54,20 @@ let remove_path dirs =
+ 
+ (* Extract the name of a DLLs from its external name (xxx.so or -lxxx) *)
+ 
+-let extract_dll_name file =
+-  if Filename.check_suffix file Config.ext_dll then
++let extract_dll_name (suffixed, file) =
++  if not suffixed && Filename.check_suffix file Config.ext_dll then
+     Filename.chop_suffix file Config.ext_dll
+-  else if String.length file >= 2 && String.sub file 0 2 = "-l" then
+-    "dll" ^ String.sub file 2 (String.length file - 2)
+   else
+-    file (* will cause error later *)
++    let file =
++      if String.starts_with ~prefix:"-l" file then
++      "dll" ^ String.sub file 2 (String.length file - 2)
++    else
++      file
++    in
++      if suffixed then
++        Misc.RuntimeID.stubslib file
++      else
++        file
+ 
+ (* Open a list of DLLs, adding them to opened_dlls.
+    Raise [Failure msg] in case of error. *)
+diff --git a/bytecomp/dll.mli b/bytecomp/dll.mli
+index c93a5b3452887b98c5d9fd12082f1cf8d433a5e1..75242cc39cbf39e458ce1b2d204c389f4ea0fcdd 100644
+--- a/bytecomp/dll.mli
++++ b/bytecomp/dll.mli
+@@ -16,7 +16,7 @@
+ (* Handling of dynamically-linked libraries *)
+ 
+ (* Extract the name of a DLLs from its external name (xxx.so or -lxxx) *)
+-val extract_dll_name: string -> string
++val extract_dll_name: bool * string -> string
+ 
+ type dll_mode =
+   | For_checking     (* will just check existence of symbols;
+diff --git a/driver/compenv.ml b/driver/compenv.ml
+index c6c0e5c908be10cb725a52a922211a01054b3eff..40a99d2430d1a494a8fa8ad405101fd3df2dd36e 100644
+--- a/driver/compenv.ml
++++ b/driver/compenv.ml
+@@ -621,7 +621,7 @@ type deferred_action =
+   | ProcessCFile of string
+   | ProcessOtherFile of string
+   | ProcessObjects of string list
+-  | ProcessDLLs of string list
++  | ProcessDLLs of bool * string list
+ 
+ let c_object_of_filename name =
+   Filename.chop_suffix (Filename.basename name) ".c" ^ Config.ext_obj
+@@ -654,8 +654,8 @@ let process_action
+       ccobjs := obj_name :: !ccobjs
+   | ProcessObjects names ->
+       ccobjs := names @ !ccobjs
+-  | ProcessDLLs names ->
+-      dllibs := names @ !dllibs
++  | ProcessDLLs (suffixed, names) ->
++      dllibs := (List.map (fun n -> (suffixed, n)) names) @ !dllibs
+   | ProcessOtherFile name ->
+       if Filename.check_suffix name ocaml_mod_ext
+       || Filename.check_suffix name ocaml_lib_ext then
+@@ -668,7 +668,7 @@ let process_action
+         ccobjs := name :: !ccobjs
+       end
+       else if not !native_code && Filename.check_suffix name Config.ext_dll then
+-        dllibs := name :: !dllibs
++        dllibs := (false, name) :: !dllibs
+       else
+         match Compiler_pass.of_input_filename name with
+         | Some start_from ->
+diff --git a/driver/compenv.mli b/driver/compenv.mli
+index 70e3aedb96cf4efef136c53d40f07daea80cb0b7..beabc8bd78b0c6cd8d6bbd447577ff2c77fa1e89 100644
+--- a/driver/compenv.mli
++++ b/driver/compenv.mli
+@@ -62,7 +62,7 @@ type deferred_action =
+   | ProcessCFile of string
+   | ProcessOtherFile of string
+   | ProcessObjects of string list
+-  | ProcessDLLs of string list
++  | ProcessDLLs of bool * string list
+ 
+ val c_object_of_filename : string -> string
+ 
+diff --git a/driver/main_args.ml b/driver/main_args.ml
+index d7a1240e7c0d0ce0042643262b632d1f9c134982..21418046c01445a902dedb94a7bff163ed83bf3e 100644
+--- a/driver/main_args.ml
++++ b/driver/main_args.ml
+@@ -89,6 +89,11 @@ let mk_dllib f =
+   "-dllib", Arg.String f, "<lib>  Use the dynamically-loaded library <lib>"
+ ;;
+ 
++let mk_dllib_suffixed f =
++  "-dllib-suffixed", Arg.String f,
++  "<lib>  Use the dynamically-loaded library <lib>, with the runtime suffix \
++          appended to the name"
++
+ let mk_dllpath f =
+   "-dllpath", Arg.String f,
+   "<dir>  Add <dir> to the run-time search path for shared libraries"
+@@ -1065,6 +1070,7 @@ module type Bytecomp_options = sig
+   val _custom : unit -> unit
+   val _no_check_prims : unit -> unit
+   val _dllib : string -> unit
++  val _dllib_suffixed : string -> unit
+   val _dllpath : string -> unit
+   val _make_runtime : unit -> unit
+   val _vmthread : unit -> unit
+@@ -1198,6 +1204,7 @@ struct
+     mk_config_var F._config_var;
+     mk_custom F._custom;
+     mk_dllib F._dllib;
++    mk_dllib_suffixed F._dllib_suffixed;
+     mk_dllpath F._dllpath;
+     mk_dtypes F._annot;
+     mk_for_pack_byt F._for_pack;
+@@ -2038,7 +2045,9 @@ third-party libraries such as Lwt, but with a different API."
+     let _custom = set custom_runtime
+     let _dcamlprimc = set keep_camlprimc_file
+     let _dinstr = set dump_instr
+-    let _dllib s = Compenv.defer (ProcessDLLs (Misc.rev_split_words s))
++    let _dllib s = Compenv.defer (ProcessDLLs (false, Misc.rev_split_words s))
++    let _dllib_suffixed s =
++      Compenv.defer (ProcessDLLs (true, Misc.rev_split_words s))
+     let _dllpath s = dllpaths := ((!dllpaths) @ [s])
+     let _make_runtime () =
+       custom_runtime := true; make_runtime := true; link_everything := true
+diff --git a/driver/main_args.mli b/driver/main_args.mli
+index 8ed9a611c3867b399f1ea1fcb3e06e39f5b6def4..39c9b20fd55e7e25175b52caba9dd91f4bfb63e5 100644
+--- a/driver/main_args.mli
++++ b/driver/main_args.mli
+@@ -151,6 +151,7 @@ module type Bytecomp_options = sig
+   val _custom : unit -> unit
+   val _no_check_prims : unit -> unit
+   val _dllib : string -> unit
++  val _dllib_suffixed : string -> unit
+   val _dllpath : string -> unit
+   val _make_runtime : unit -> unit
+   val _vmthread : unit -> unit
+diff --git a/file_formats/cmo_format.mli b/file_formats/cmo_format.mli
+index 0952157b37a2f4527580e54cdebf126e1e55d1cb..fc18c236bc4c11b2ca5e1f7909ccd6a69fcd06df 100644
+--- a/file_formats/cmo_format.mli
++++ b/file_formats/cmo_format.mli
+@@ -57,7 +57,7 @@ type library =
+        how they end up being used on the command line. *)
+     lib_ccobjs: string list;            (* C object files needed for -custom *)
+     lib_ccopts: string list;            (* Extra opts to C compiler *)
+-    lib_dllibs: string list }           (* DLLs needed *)
++    lib_dllibs: (bool * string) list }  (* DLLs needed *)
+ 
+ (* Format of a .cma file:
+      magic number (Config.cma_magic_number)
+diff --git a/ocamltest/ocaml_actions.ml b/ocamltest/ocaml_actions.ml
+index ab99f3f19863b53d04a77551036a24a7cc40e098..981a3505fddb753cb45cc8c1b0d769d2603b866e 100644
+--- a/ocamltest/ocaml_actions.ml
++++ b/ocamltest/ocaml_actions.ml
+@@ -613,7 +613,9 @@ let mklib log env =
+     Ocaml_commands.ocamlrun_ocamlmklib;
+     "-ocamlc '" ^ ocamlc_command ^ "'";
+     "-o " ^ program
+-  ] @ modules env in
++  ] @ (if Ocamltest_config.suffixing then ["-suffixed"] else [])
++    @ modules env
++  in
+   let expected_exit_status = 0 in
+   let exit_status =
+     Actions_helpers.run_cmd
+diff --git a/ocamltest/ocamltest_config.ml.in b/ocamltest/ocamltest_config.ml.in
+index dc5b894618f583d9d3e9d1c1d2ac21976b714ee2..289208908cc35a9f318ed85a4ef107811b12e6e2 100644
+--- a/ocamltest/ocamltest_config.ml.in
++++ b/ocamltest/ocamltest_config.ml.in
+@@ -90,3 +90,5 @@ let instrumented_runtime = %%INSTRUMENTED_RUNTIME%%
+ let naked_pointers = %%NAKED_POINTERS%%
+ 
+ let has_relative_libdir = @target_libdir_is_relative@
++
++let suffixing = @suffixing@
+diff --git a/ocamltest/ocamltest_config.mli b/ocamltest/ocamltest_config.mli
+index d640021223971cc44fe1cb9d1c3dc19e7fc2851e..3b3edae4f450aed162b48764f1326938b091dde7 100644
+--- a/ocamltest/ocamltest_config.mli
++++ b/ocamltest/ocamltest_config.mli
+@@ -127,3 +127,7 @@ val naked_pointers : bool
+ 
+ val has_relative_libdir : bool
+ (** Whether the compiler has been configured using --with-relative-libdir *)
++
++val suffixing : bool
++(** Whether C stub library filenames are being mangled with the Bytecode
++    Runtime ID and {!Config.target}. *)
+diff --git a/otherlibs/Makefile.otherlibs.common b/otherlibs/Makefile.otherlibs.common
+index 86aa464d48de773d05fcf0b640be821d8ab0f98c..e730336a4235c2a018569ffd9a01befaed1e2b67 100644
+--- a/otherlibs/Makefile.otherlibs.common
++++ b/otherlibs/Makefile.otherlibs.common
+@@ -36,6 +36,9 @@ ifeq "$(FLAMBDA)" "true"
+ OPTCOMPFLAGS += -O3
+ endif
+ MKLIB=$(OCAMLRUN) $(ROOTDIR)/tools/ocamlmklib
++ifeq "$(SUFFIXING)" "true"
++MKLIB += -suffixed
++endif
+ 
+ # Variables that must be defined by individual libraries:
+ # LIBNAME
+@@ -55,9 +58,19 @@ CAMLOBJS_NAT ?= $(CAMLOBJS:.cmo=.cmx)
+ CLIBNAME ?= $(LIBNAME)
+ 
+ ifeq "$(COBJS)" ""
++
+ STUBSLIB=
++STUBSDLL=
++
+ else
++
+ STUBSLIB=lib$(CLIBNAME).$(A)
++
++ifeq "$(SUFFIXING)" "true"
++STUBSDLL=dll$(CLIBNAME)-$(TARGET)-$(BYTECODE_RUNTIME_ID)$(EXT_DLL)
++else
++STUBSDLL=dll$(CLIBNAME)$(EXT_DLL)
++endif
+ endif
+ 
+ .PHONY: all allopt opt.opt # allopt and opt.opt are synonyms
+@@ -89,10 +102,10 @@ lib$(CLIBNAME).$(A): $(COBJS)
+ 	$(MKLIB_CMD) -oc $(CLIBNAME) $(COBJS) $(LDOPTS)
+ 
+ install::
++ifneq "$(STUBSLIB)" ""
+ ifeq "$(SUPPORTS_SHARED_LIBRARIES)" "true"
+-	$(INSTALL_PROG) dll$(CLIBNAME)$(EXT_DLL) "$(INSTALL_STUBLIBDIR)"
++	$(INSTALL_PROG) $(STUBSDLL) "$(INSTALL_STUBLIBDIR)"
+ endif
+-ifneq "$(STUBSLIB)" ""
+ 	$(INSTALL_DATA) $(STUBSLIB) "$(INSTALL_LIBDIR)/"
+ endif
+ 
+diff --git a/otherlibs/systhreads/Makefile b/otherlibs/systhreads/Makefile
+index 8f8cf540163ec8c76e376c53879b179f4489d513..b22b645f45700806baf13beb85b3fcb1434006b0 100644
+--- a/otherlibs/systhreads/Makefile
++++ b/otherlibs/systhreads/Makefile
+@@ -35,6 +35,12 @@ CAMLC=$(BEST_OCAMLC) $(LIBS)
+ CAMLOPT=$(BEST_OCAMLOPT) $(LIBS)
+ 
+ MKLIB=$(OCAMLRUN) $(ROOTDIR)/tools/ocamlmklib$(EXE)
++ifeq "$(SUFFIXING)" "true"
++MKLIB += -suffixed
++DLLTHREADS = dllthreads-$(TARGET)-$(BYTECODE_RUNTIME_ID)$(EXT_DLL)
++else
++DLLTHREADS = dllthreads$(EXT_DLL)
++endif
+ COMPFLAGS=-w +33..39 -warn-error +A -g -bin-annot -safe-string
+ ifeq "$(FLAMBDA)" "true"
+ OPTCOMPFLAGS += -O3
+@@ -109,7 +115,7 @@ INSTALL_THREADSLIBDIR=$(INSTALL_LIBDIR)/$(LIBNAME)
+ 
+ install:
+ ifeq "$(SUPPORTS_SHARED_LIBRARIES)" "true"
+-	$(INSTALL_PROG) dllthreads$(EXT_DLL) "$(INSTALL_STUBLIBDIR)"
++	$(INSTALL_PROG) $(DLLTHREADS) "$(INSTALL_STUBLIBDIR)"
+ endif
+ 	$(INSTALL_DATA) libthreads.$(A) "$(INSTALL_LIBDIR)"
+ 	mkdir -p "$(INSTALL_THREADSLIBDIR)"
+diff --git a/runtime/dynlink.c b/runtime/dynlink.c
+index c6c0d02bff9b6b568db65482460279be1f4b0eaf..b0a788392c9c37e3e6c159fb2370702fcb10aa64 100644
+--- a/runtime/dynlink.c
++++ b/runtime/dynlink.c
+@@ -255,10 +255,24 @@ CAMLprim value caml_dynlink_parse_runtime_ld_conf(value ignored)
+    Abort on error. */
+ static void open_shared_lib(char_os * name)
+ {
+-  char_os * realname;
++  char_os * realname, * suffixed = NULL;
+   char * u8;
+   void * handle;
+ 
++  if (*name == '\0')
++    caml_fatal_error("corrupt DLLS section");
++
++  if (*name == '-') {
++    char * suffix =
++      caml_stat_strconcat(4, "-", HOST, "-", BYTECODE_RUNTIME_ID);
++    char_os * suffix_os = caml_stat_strdup_to_os(suffix);
++    name = suffixed = caml_stat_strconcat_os(2, name + 1, suffix_os);
++    caml_stat_free(suffix_os);
++    caml_stat_free(suffix);
++  } else {
++    name++;
++  }
++
+   realname = caml_search_dll_in_path(&caml_shared_libs_path, name);
+   u8 = caml_stat_strdup_of_os(realname);
+   caml_gc_message(0x100, "Loading shared library %s\n", u8);
+@@ -275,6 +289,7 @@ static void open_shared_lib(char_os * name)
+       caml_dlerror()
+     );
+   caml_ext_table_add(&shared_libs, handle);
++  caml_stat_free(suffixed);
+   caml_stat_free(realname);
+ }
+ 
+diff --git a/tools/objinfo.ml b/tools/objinfo.ml
+index e620d4bac7eca6d00fad8b4052c04e4007fdf5f7..df3dacbafeb3f84c42916166a2e2b09d69eda57a 100644
+--- a/tools/objinfo.ml
++++ b/tools/objinfo.ml
+@@ -84,6 +84,12 @@ let print_cmo_infos cu =
+ let print_spaced_string s =
+   printf " %s" s
+ 
++let dllib (suffixed, name) =
++  if suffixed then
++    Printf.sprintf "%s-<target>-<bytecode-runtime-id>" name
++  else
++    name
++
+ let print_cma_infos (lib : Cmo_format.library) =
+   printf "Force custom: %a\n" yesno_of_bool lib.lib_custom;
+   printf "Extra C object files:";
+@@ -93,7 +99,7 @@ let print_cma_infos (lib : Cmo_format.library) =
+   List.iter print_spaced_string (List.rev lib.lib_ccopts);
+   printf "\n";
+   print_string "Extra dynamically-loaded libraries:";
+-  List.iter print_spaced_string (List.rev lib.lib_dllibs);
++  List.iter print_spaced_string (List.rev_map dllib lib.lib_dllibs);
+   printf "\n";
+   List.iter print_cmo_infos lib.lib_units
+ 
+diff --git a/tools/ocamlmklib.ml b/tools/ocamlmklib.ml
+index e341d001fdcd241ded902d0c073af197af5b4ab2..2e0352f278e841c3114815da33210f36a7558582 100644
+--- a/tools/ocamlmklib.ml
++++ b/tools/ocamlmklib.ml
+@@ -52,6 +52,7 @@ and output_c = ref ""       (* Output name for C part of library *)
+ and rpath = ref []          (* rpath options *)
+ and debug = ref false       (* -g option *)
+ and verbose = ref false
++and suffixed = ref false    (* -suffixed option *)
+ 
+ let starts_with s pref =
+   String.length s >= String.length pref &&
+@@ -168,6 +169,10 @@ let parse_arguments argv =
+       c_opts := s :: !c_opts
+     else if s = "-framework" then
+       (let a = next_arg s in c_opts := a :: s :: !c_opts)
++    else if s = "-suffixed" then
++      suffixed := true
++    else if s = "-no-suffixed" then
++      suffixed := false
+     else if starts_with s "-" then
+       prerr_endline ("Unknown option " ^ s)
+     else
+@@ -214,6 +219,7 @@ Usage: ocamlmklib [options] <.cmo|.cma|.cmx|.ml|.mli|.o|.a|.obj|.lib|\
+ \n  -oc <name>     Generated C library is named dll<name>.so or lib<name>.a\
+ \n  -rpath <dir>   Same as -dllpath <dir>\
+ \n  -R<dir>        Same as -rpath\
++\n  -suffixed      Append runtime ID to any generated shared libraries\
+ \n  -verbose       Print commands before executing them\
+ \n  -v             same as -verbose\
+ \n  -version       Print version and exit\
+@@ -291,11 +297,17 @@ let flexdll_dirs =
+ let build_libs () =
+   if !c_objs <> [] then begin
+     if !dynlink then begin
++      let dllname =
++        if !suffixed then
++          Misc.RuntimeID.stubslib !output_c
++        else
++          !output_c
++      in
+       let retcode = command
+           (Printf.sprintf "%s %s -o %s %s %s %s %s %s %s"
+              Config.mkdll
+              (if !debug then "-g" else "")
+-             (prepostfix "dll" !output_c Config.ext_dll)
++             (prepostfix "dll" dllname Config.ext_dll)
+              (String.concat " " !c_objs)
+              (String.concat " " !c_opts)
+              (String.concat " " !ld_opts)
+@@ -313,7 +325,7 @@ let build_libs () =
+   end;
+   if !bytecode_objs <> [] then
+     scommand
+-      (sprintf "%s -a %s %s %s -o %s.cma %s %s -dllib -l%s -cclib -l%s \
++      (sprintf "%s -a %s %s %s -o %s.cma %s %s -dllib%s -l%s -cclib -l%s \
+                    %s %s %s %s"
+                   (transl_path !ocamlc)
+                   (if !debug then "-g" else "")
+@@ -322,6 +334,7 @@ let build_libs () =
+                   !output
+                   (String.concat " " !caml_opts)
+                   (String.concat " " !bytecode_objs)
++                  (if !suffixed then "-suffixed" else "")
+                   (Filename.basename !output_c)
+                   (Filename.basename !output_c)
+                   (String.concat " " (prefix_list "-ccopt " !c_opts))
+diff --git a/utils/clflags.ml b/utils/clflags.ml
+index 3479b25c59b7660e4538a949bcb3d3110352ba57..a8b2c5913bdf4cba854c62d800e61a299520ac42 100644
+--- a/utils/clflags.ml
++++ b/utils/clflags.ml
+@@ -38,9 +38,10 @@ module Float_arg_helper = Arg_helper.Make (struct
+   end
+ end)
+ 
+-let objfiles = ref ([] : string list)   (* .cmo and .cma files *)
+-and ccobjs = ref ([] : string list)     (* .o, .a, .so and -cclib -lxxx *)
+-and dllibs = ref ([] : string list)     (* .so and -dllib -lxxx *)
++let objfiles = ref ([] : string list)         (* .cmo and .cma files *)
++and ccobjs = ref ([] : string list)           (* .o, .a, .so and -cclib -lxxx *)
++and dllibs = ref ([] : (bool * string) list)  (* .so, -dllib -lxxx and
++                                                 '-dllib-suffixed -lxxx *)
+ 
+ let compile_only = ref false            (* -c *)
+ and output_name = ref (None : string option) (* -o *)
+diff --git a/utils/clflags.mli b/utils/clflags.mli
+index 1c37adbbc5837d5feb4c649e0d87014f1bd9804c..3ff6359daa72c0782286ba31b42aac21d02c9de8 100644
+--- a/utils/clflags.mli
++++ b/utils/clflags.mli
+@@ -70,7 +70,7 @@ val use_inlining_arguments_set : ?round:int -> inlining_arguments -> unit
+ 
+ val objfiles : string list ref
+ val ccobjs : string list ref
+-val dllibs : string list ref
++val dllibs : (bool * string) list ref
+ val compile_only : bool ref
+ val output_name : string option ref
+ val include_dirs : string list ref
+diff --git a/utils/config.mli b/utils/config.mli
+index e5fd63db071414a2d39427fe4ab0a4af693bae79..1b9a7c434d96329f311f47a2caa1a7b04cac9302 100644
+--- a/utils/config.mli
++++ b/utils/config.mli
+@@ -330,8 +330,8 @@ type search_method =
+ | Search               (** Always search for the interpreter *)
+ 
+ val suffixing : bool
+-(** Whether the runtime executable and shared library filenames are being
+-    mangled with Runtime IDs and the {!target}.
++(** Whether the runtime executable and shared library filenames and C stub
++    library filenames are being mangled with Runtime IDs and the {!target}.
+ 
+     @since 5.5 *)
+ 
+diff --git a/utils/misc.ml b/utils/misc.ml
+index af61e1141fd6b25d4dfe013901f2c116cdf8aa42..cfc9ac6fa80439df5bdbbb1e460bf3aa8c774fd9 100644
+--- a/utils/misc.ml
++++ b/utils/misc.ml
+@@ -1264,4 +1264,9 @@ module RuntimeID = struct
+         Printf.sprintf "%scamlrun-%s-%s" prefix host (to_string runtime_id)
+     | Sys.Other _ ->
+         invalid_arg "Misc.RuntimeID.shared_runtime"
++
++  let stubslib ?(runtime_id = make_bytecode ())
++               ?(host = Config.target)
++               name =
++    Printf.sprintf "%s-%s-%s" name host (to_string runtime_id)
+ end
+diff --git a/utils/misc.mli b/utils/misc.mli
+index a15071bce5d7da6863a3cbd462880baf6ed396cd..47e0fad78af607b086ed2109ec2c6a7ac014c3fe 100644
+--- a/utils/misc.mli
++++ b/utils/misc.mli
+@@ -765,4 +765,15 @@ module RuntimeID : sig
+               = "-lasmrun-x86_64-pc-linux-gnu-b100"] for a default OCaml 5.5
+            build on a 64-bit system with shared library support and compressed
+            marshalling. *)
++
++  val stubslib: ?runtime_id:t -> ?host:string -> string -> string
++  (** [stublibs ?runtime_id ?host dllname] returns the name for the given DLL
++      basename. [dllname] should not include {!Config.ext_dll} (and the result
++      does not include it either). [host] and [runtime_id] default to
++      {!Config.target} and {!make_bytecode} respectively.
++
++      e.g. [stubslib ~host:"x86_64-pc-linux-gnu" "dllunixbyt"
++              = "dllunixbyt-x86_64-pc-linux-gnu-001b"] for a default OCaml 5.5
++           build on a 64-bit system with shared library support and compressed
++           marshalling. *)
+ end
+-- 
+2.53.0.windows.2
+

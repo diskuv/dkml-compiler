@@ -1,0 +1,231 @@
+From bcbdd6f04eb2cc4a4f755fb6e62f0070fcc1ee23 Mon Sep 17 00:00:00 2001
+From: David Allsopp <david.allsopp@metastack.com>
+Date: Wed, 11 Aug 2021 17:25:09 +0100
+Subject: [PATCH] Add -set-runtime-default
+
+Allows the default location used by the bytecode runtime for the
+Standard Library to be overridden when creating bytecode executables.
+
+(cherry picked from commit 539e5540bab101c768db65150bd919299ca068bc)
+
+diff --git a/Changes b/Changes
+index b58b5395cf77440c403710f28cc22cb8274e2fb0..3bb2f2793a80ffed9c06d6cce537cc06e31001f5 100644
+--- a/Changes
++++ b/Changes
+@@ -42,6 +42,10 @@ OCaml 4.14 maintenance version
+ 
+ ### Compiler user-interface and warnings:
+ 
++- #14???: Add -set-runtime-default option to the compiler, allowing the default
++  value of the Standard Library location used by the runtime to be overridden.
++  (Antonin Décimo, review by David Allsopp)
++
+ ### Internal/compiler-libs changes:
+ 
+ - #12896: Simplify the compilation of custom bytecode runtimes by explicitly
+diff --git a/asmcomp/asmlink.ml b/asmcomp/asmlink.ml
+index a15a610ec21ce58af5cf18f90c2b4b91d4cb1107..c902158e4dc643195f15c3abd6b3c19e9ed1d31d 100644
+--- a/asmcomp/asmlink.ml
++++ b/asmcomp/asmlink.ml
+@@ -250,9 +250,12 @@ let make_startup_file ~ppf_dump units_list ~crc_interfaces =
+     (fun i name -> compile_phrase (Cmm_helpers.predef_exception i name))
+     Runtimedef.builtin_exceptions;
+   if need_stdlib then begin
++    let standard_library_default =
++      Option.value ~default:Config.standard_library_default
++                   !Clflags.standard_library_default in
+     compile_phrase
+       (Cmm_helpers.emit_global_string_constant
+-        "caml_standard_library_nat" Config.standard_library_default)
++        "caml_standard_library_nat" standard_library_default)
+   end;
+   compile_phrase (Cmm_helpers.global_table name_list);
+   let globals_map = make_globals_map units_list ~crc_interfaces in
+diff --git a/bytecomp/bytelink.ml b/bytecomp/bytelink.ml
+index af1f90b782feb9f0f9ff82721e531b792480b919..6a9b87c4816f1bc752d3ccfded473095c5c4434e 100644
+--- a/bytecomp/bytelink.ml
++++ b/bytecomp/bytelink.ml
+@@ -534,7 +534,11 @@ let link_bytecode ?final_name tolink exec_name standalone =
+        Bytesections.record outchan "DATA";
+        let standard_library_default =
+          if standalone && needs_stdlib then
+-           Some Config.standard_library_default
++           (* -set-runtime-default *)
++           if !Clflags.standard_library_default = None then
++             Some Config.standard_library_default
++           else
++             !Clflags.standard_library_default
+          else
+            (* -custom executables don't need OSLD sections - the correct value
+               is already included in the runtime. *)
+@@ -654,7 +658,10 @@ let c_string_literal_of_string s =
+   Buffer.contents b
+ 
+ let emit_runtime_standard_library_default outchan =
+-  let literal = c_string_literal_of_string Config.standard_library_default in
++  let stdlib =
++    let default = Config.standard_library_default in
++    Option.value ~default !Clflags.standard_library_default in
++  let literal = c_string_literal_of_string stdlib in
+   Printf.fprintf outchan
+     "const char_os * caml_runtime_standard_library_default = %s;\n" literal
+ 
+diff --git a/driver/compenv.ml b/driver/compenv.ml
+index 8b1c4e5559b116ab5c7cc73d9f1347f16e17561d..c6c0e5c908be10cb725a52a922211a01054b3eff 100644
+--- a/driver/compenv.ml
++++ b/driver/compenv.ml
+@@ -43,6 +43,8 @@ let fatal err =
+   prerr_endline err;
+   raise (Exit_with_status 2)
+ 
++let fatalf fmt = Printf.ksprintf fatal fmt
++
+ let extract_output = function
+   | Some s -> s
+   | None ->
+@@ -753,3 +755,14 @@ let parse_arguments ?(current=ref 0) argv f program =
+         Printf.sprintf "Usage: %s <options> <files>\nOptions are:" program in
+       Printf.printf "%s\n%s" help_msg err_msg;
+       raise (Exit_with_status 0)
++
++let parse_runtime_parameter opt =
++  let k, setting =
++    try Misc.cut_at opt '='
++    with Not_found ->
++      fatalf "-set-runtime-default: invalid runtime parameter '%s'. \
++              Expected <name>=<value>." opt in
++    if k = "standard_library_default" then
++      Clflags.standard_library_default := Some setting
++    else
++      fatalf "-set-runtime-default: unrecognized runtime parameter %s." k
+diff --git a/driver/compenv.mli b/driver/compenv.mli
+index f849a9ce8d6135c7de31f9cf27080f7695630b9b..70e3aedb96cf4efef136c53d40f07daea80cb0b7 100644
+--- a/driver/compenv.mli
++++ b/driver/compenv.mli
+@@ -25,6 +25,7 @@ val print_version_and_library : string -> 'a
+ val print_version_string : unit -> 'a
+ val print_standard_library : unit -> 'a
+ val fatal : string -> 'a
++val fatalf : ('a, unit, string, 'b) format4 -> 'a
+ 
+ val first_ccopts : string list ref
+ val first_ppx : string list ref
+@@ -85,3 +86,6 @@ val process_deferred_actions :
+ *)
+ val parse_arguments : ?current:(int ref)
+       -> string array ref -> Arg.anon_fun -> string -> unit
++
++(** Validate a single -set-runtime-default parameter specification. *)
++val parse_runtime_parameter : string -> unit
+diff --git a/driver/main_args.ml b/driver/main_args.ml
+index 60db017aa8570ac3d6ad21f0be6175a6c31b4b4f..f18a1ad73c91f82ebf253a6e0b8b2f65c70fdf1f 100644
+--- a/driver/main_args.ml
++++ b/driver/main_args.ml
+@@ -162,6 +162,10 @@ let mk_I f =
+   "-I", Arg.String f, "<dir>  Add <dir> to the list of include directories"
+ ;;
+ 
++let mk_set_runtime_default f =
++  "-set-runtime-default", Arg.String f, "<param>=<value>  Set the default for \
++      runtime parameter <param> to <value>"
++
+ let mk_impl f =
+   "-impl", Arg.String f, "<file>  Compile <file> as a .ml file"
+ ;;
+@@ -1000,6 +1004,7 @@ module type Compiler_options = sig
+   val _with_runtime : unit -> unit
+   val _without_runtime : unit -> unit
+   val _safe_string : unit -> unit
++  val _set_runtime_default : string -> unit
+   val _short_paths : unit -> unit
+   val _thread : unit -> unit
+   val _v : unit -> unit
+@@ -1221,6 +1226,7 @@ struct
+     mk_with_runtime F._with_runtime;
+     mk_without_runtime F._without_runtime;
+     mk_safe_string F._safe_string;
++    mk_set_runtime_default F._set_runtime_default;
+     mk_short_paths F._short_paths;
+     mk_strict_sequence F._strict_sequence;
+     mk_no_strict_sequence F._no_strict_sequence;
+@@ -1422,6 +1428,7 @@ struct
+     mk_without_runtime F._without_runtime;
+     mk_S F._S;
+     mk_safe_string F._safe_string;
++    mk_set_runtime_default F._set_runtime_default;
+     mk_shared F._shared;
+     mk_short_paths F._short_paths;
+     mk_strict_sequence F._strict_sequence;
+@@ -1886,6 +1893,7 @@ module Default = struct
+     let _plugin _p = plugin := true
+     let _pp s = preprocessor := (Some s)
+     let _runtime_variant s = runtime_variant := s
++    let _set_runtime_default s = Compenv.parse_runtime_parameter s
+     let _stop_after pass =
+       let module P = Compiler_pass in
+         match P.of_string pass with
+diff --git a/driver/main_args.mli b/driver/main_args.mli
+index d8b0b0177af34902a657920a822b9d5bc9a92f31..69f357fdbdb5b558441460c308d98c63656df09f 100644
+--- a/driver/main_args.mli
++++ b/driver/main_args.mli
+@@ -108,6 +108,7 @@ module type Compiler_options = sig
+   val _with_runtime : unit -> unit
+   val _without_runtime : unit -> unit
+   val _safe_string : unit -> unit
++  val _set_runtime_default : string -> unit
+   val _short_paths : unit -> unit
+   val _thread : unit -> unit
+   val _v : unit -> unit
+diff --git a/driver/maindriver.ml b/driver/maindriver.ml
+index 1b65433d608f2ae0e9f870966fa4d96332e8caf6..00ad276d22cb98cc0257ad5323c53e1944754958 100644
+--- a/driver/maindriver.ml
++++ b/driver/maindriver.ml
+@@ -58,7 +58,7 @@ let main argv ppf =
+             "Please specify at most one of -pack, -a, -c, -output-obj";
+       | Some ((P.Parsing | P.Typing) as p) ->
+         assert (P.is_compilation_pass p);
+-        Printf.ksprintf Compenv.fatal
++        Compenv.fatalf
+           "Options -i and -stop-after (%s) \
+            are  incompatible with -pack, -a, -output-obj"
+           (String.concat "|"
+diff --git a/driver/optmaindriver.ml b/driver/optmaindriver.ml
+index 41316ae0b17df8fdff9d3ba86b276418a1f6052e..671550a56e6b582e4a11044ac9cecc799241ec61 100644
+--- a/driver/optmaindriver.ml
++++ b/driver/optmaindriver.ml
+@@ -77,7 +77,7 @@ let main argv ppf =
+                          -output-obj";
+       | Some ((P.Parsing | P.Typing | P.Scheduling | P.Emit) as p) ->
+         assert (P.is_compilation_pass p);
+-        Printf.ksprintf Compenv.fatal
++        Compenv.fatalf
+           "Options -i and -stop-after (%s) \
+            are  incompatible with -pack, -a, -shared, -output-obj"
+           (String.concat "|"
+diff --git a/utils/clflags.ml b/utils/clflags.ml
+index 83bd357f15e8a3332c12e155664e33b8caa5af99..ee1ff3a4e4f5896f77a19030fa62b87e49791cfb 100644
+--- a/utils/clflags.ml
++++ b/utils/clflags.ml
+@@ -45,6 +45,7 @@ and dllibs = ref ([] : string list)     (* .so and -dllib -lxxx *)
+ let compile_only = ref false            (* -c *)
+ and output_name = ref (None : string option) (* -o *)
+ and include_dirs = ref ([] : string list)(* -I *)
++and standard_library_default = ref None (* -set-runtime-default *)
+ and no_std_include = ref false          (* -nostdlib *)
+ and print_types = ref false             (* -i *)
+ and make_archive = ref false            (* -a *)
+diff --git a/utils/clflags.mli b/utils/clflags.mli
+index 8cab8f15accf5aba180505c6f7da016593932277..d12ccd287bf05b261b5c27edc17b7fecae9a31c2 100644
+--- a/utils/clflags.mli
++++ b/utils/clflags.mli
+@@ -74,6 +74,7 @@ val dllibs : string list ref
+ val compile_only : bool ref
+ val output_name : string option ref
+ val include_dirs : string list ref
++val standard_library_default : string option ref
+ val no_std_include : bool ref
+ val print_types : bool ref
+ val make_archive : bool ref
+-- 
+2.53.0.windows.2
+

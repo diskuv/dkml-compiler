@@ -1,0 +1,819 @@
+From d2226089ec0241145039e3c3f179bc1ac73c80c9 Mon Sep 17 00:00:00 2001
+From: David Allsopp <david.allsopp@metastack.com>
+Date: Thu, 17 Jul 2025 10:21:13 +0100
+Subject: [PATCH] Use macros to generate installation commands
+
+make install works as it did before. All the commands in the install
+targets now go through a macro call which allows the semantic intent of
+each command to be more clearly specified.
+
+(cherry picked from commit 476688b137c8f42bb4cc7aa7a6128f5f3b43a146)
+
+diff --git a/Makefile b/Makefile
+index b03e1a8fbeed65bbd816d7e4efbd21013dc57e0c..cfe9b4bbccf645c0026098a38a00cb1d2c9c9cd3 100644
+--- a/Makefile
++++ b/Makefile
+@@ -403,9 +403,11 @@ NATIVE_ARTEFACT_DIRS = \
+ # future.
+ 
+ ifeq "$(NATIVE_COMPILER)" "true"
+-install: full-installoptopt ;
++install: full-installoptopt
++	$(call INSTALL_END)
+ else
+-install: common-install ;
++install: common-install
++	$(call INSTALL_END)
+ endif
+ 
+ # These three targets are the slightly esoteric special sauce that avoid
+@@ -433,50 +435,50 @@ full-installoptopt: full-installopt
+ 
+ .PHONY: common-install
+ common-install::
+-	$(MKDIR) "$(INSTALL_BINDIR)"
+-	$(MKDIR) "$(INSTALL_LIBDIR)"
+-ifeq "$(SUPPORTS_SHARED_LIBRARIES)" "true"
+-	$(MKDIR) "$(INSTALL_STUBLIBDIR)"
+-endif
+-	$(MKDIR) "$(INSTALL_LIBDIR_COMPILERLIBS)"
+-	$(MKDIR) "$(INSTALL_DOCDIR)"
++	$(call INSTALL_BEGIN)
+ 	$(MAKE) -C runtime install
+-	$(INSTALL_PROG) ocaml$(EXE) "$(INSTALL_BINDIR)"
++	$(call INSTALL_ITEMS, ocaml$(EXE), bin)
+ ifeq "$(INSTALL_BYTECODE_PROGRAMS)" "true"
+-	$(INSTALL_PROG) ocamlc$(EXE) "$(INSTALL_BINDIR)/ocamlc.byte$(EXE)"
++ifeq "$(NATIVE_COMPILER)" "true"
++	$(call INSTALL_ITEM, \
++	  ocamlc$(EXE), bin, , ocamlc.byte$(EXE))
++else
++	$(call INSTALL_ITEM, \
++	  ocamlc$(EXE), bin, , ocamlc.byte$(EXE), ocamlc$(EXE))
++endif
+ endif
+ 	$(MAKE) -C stdlib install
+ ifeq "$(INSTALL_BYTECODE_PROGRAMS)" "true"
+-	$(INSTALL_PROG) lex/ocamllex$(EXE) \
+-	  "$(INSTALL_BINDIR)/ocamllex.byte$(EXE)"
++ifeq "$(NATIVE_COMPILER)" "true"
++	$(call INSTALL_ITEM, \
++	  lex/ocamllex$(EXE), bin, , ocamllex.byte$(EXE))
++else
++	$(call INSTALL_ITEM, \
++	  lex/ocamllex$(EXE), bin, , ocamllex.byte$(EXE), ocamllex$(EXE))
+ endif
+-	$(INSTALL_PROG) yacc/ocamlyacc$(EXE) "$(INSTALL_BINDIR)"
+-	$(INSTALL_DATA) \
+-	  $(call COMPILER_ARTEFACT_DIRS, *.cmi) \
+-	  "$(INSTALL_LIBDIR_COMPILERLIBS)"
++endif
++	$(call INSTALL_ITEMS, yacc/ocamlyacc$(EXE), bin)
++	$(call INSTALL_ITEMS, \
++	    $(call COMPILER_ARTEFACT_DIRS, *.cmi), \
++	  lib, $(INSTALL_LIBDIR_COMPILERLIBS))
+ ifeq "$(INSTALL_SOURCE_ARTIFACTS)" "true"
+-	$(INSTALL_DATA) \
+-	  $(call COMPILER_ARTEFACT_DIRS, *.cmt *.cmti *.mli) \
+-	  "$(INSTALL_LIBDIR_COMPILERLIBS)"
+-	$(INSTALL_DATA) \
+-	   toplevel/byte/*.cmt \
+-	   "$(INSTALL_LIBDIR_COMPILERLIBS)"
++	$(call INSTALL_ITEMS, \
++	    $(call COMPILER_ARTEFACT_DIRS, *.cmt *.cmti *.mli), \
++	  lib, $(INSTALL_LIBDIR_COMPILERLIBS))
++	$(call INSTALL_ITEMS, toplevel/byte/*.cmt, \
++	  lib, $(INSTALL_LIBDIR_COMPILERLIBS))
+ endif
+-	$(INSTALL_DATA) \
+-	  compilerlibs/*.cma \
+-	  "$(INSTALL_LIBDIR_COMPILERLIBS)"
+-	$(INSTALL_DATA) \
+-	   $(BYTESTART) $(TOPLEVELSTART) \
+-	   "$(INSTALL_LIBDIR_COMPILERLIBS)"
+-	$(INSTALL_PROG) $(expunge) "$(INSTALL_LIBDIR)"
+-	$(INSTALL_DATA) \
+-	   toplevel/topdirs.cmi \
+-	   "$(INSTALL_LIBDIR)"
++	$(call INSTALL_ITEMS, compilerlibs/*.cma, \
++	  lib, $(INSTALL_LIBDIR_COMPILERLIBS))
++	$(call INSTALL_ITEMS, \
++	    $(BYTESTART) $(TOPLEVELSTART), \
++	  lib, $(INSTALL_LIBDIR_COMPILERLIBS))
++	$(call INSTALL_ITEMS, $(expunge), libexec)
++	$(call INSTALL_ITEMS, toplevel/topdirs.cmi, lib)
+ ifeq "$(INSTALL_SOURCE_ARTIFACTS)" "true"
+-	$(INSTALL_DATA) \
+-	   toplevel/topdirs.cmt \
+-	   toplevel/topdirs.cmti toplevel/topdirs.mli \
+-	   "$(INSTALL_LIBDIR)"
++	$(call INSTALL_ITEMS, \
++	    toplevel/topdirs.cmt toplevel/topdirs.cmti toplevel/topdirs.mli, \
++	  lib)
+ endif
+ 	$(MAKE) -C tools install
+ ifeq "$(UNIX_OR_WIN32)" "unix" # Install manual pages only on Unix
+@@ -496,70 +498,65 @@ ifneq "$(WITH_DEBUGGER)" ""
+ endif
+ ifeq "$(BOOTSTRAPPING_FLEXDLL)" "true"
+ ifeq "$(TOOLCHAIN)" "msvc"
+-	$(INSTALL_DATA) $(FLEXDLL_SOURCES)/$(FLEXDLL_MANIFEST) \
+-    "$(INSTALL_BINDIR)/"
++	# Technically this should not be installed with "executable"
++	# permissions, but in practice that request will be ignored.
++	$(call INSTALL_ITEMS, $(FLEXDLL_SOURCES)/$(FLEXDLL_MANIFEST), bin)
+ endif
+ ifeq "$(INSTALL_BYTECODE_PROGRAMS)" "true"
+-	$(INSTALL_PROG) \
+-	  boot/flexlink.byte$(EXE) "$(INSTALL_BINDIR)/flexlink.byte$(EXE)"
++ifeq "$(NATIVE_COMPILER)" "true"
++	$(call INSTALL_ITEMS, boot/flexlink.byte$(EXE), bin)
++else
++	$(call INSTALL_ITEM, boot/flexlink.byte$(EXE), bin, , , flexlink$(EXE))
++endif
+ endif # ifeq "$(INSTALL_BYTECODE_PROGRAMS)" "true"
+-	$(MKDIR) "$(INSTALL_LIBDIR_FLEXDLL)"
+-	$(INSTALL_DATA) $(addprefix stdlib/flexdll/, $(FLEXDLL_OBJECTS)) \
+-    "$(INSTALL_LIBDIR_FLEXDLL)"
++	$(call INSTALL_ITEMS, \
++	    $(addprefix stdlib/flexdll/, $(FLEXDLL_OBJECTS)), \
++	  lib, $(INSTALL_LIBDIR_FLEXDLL))
+ endif # ifeq "$(BOOTSTRAPPING_FLEXDLL)" "true"
+-	$(INSTALL_DATA) Makefile.config "$(INSTALL_LIBDIR)"
+-	$(INSTALL_DATA) $(DOC_FILES) "$(INSTALL_DOCDIR)"
+-ifeq "$(NATIVE_COMPILER)-$(INSTALL_BYTECODE_PROGRAMS)" "false-true"
+-	cd "$(INSTALL_BINDIR)"; \
+-	$(LN) ocamlc.byte$(EXE) ocamlc$(EXE); \
+-	$(LN) ocamllex.byte$(EXE) ocamllex$(EXE); \
+-	(test -f flexlink.byte$(EXE) && \
+-	  $(LN) flexlink.byte$(EXE) flexlink$(EXE)) || true
+-endif
++	$(call INSTALL_ITEMS, Makefile.config, lib)
++	$(call INSTALL_ITEMS, $(DOC_FILES), doc)
+ 
+ # Installation of the native-code compiler
+ .PHONY: full-installopt native-install
+ full-installopt native-install:
+ 	$(MAKE) -C runtime installopt
+ ifeq "$(INSTALL_BYTECODE_PROGRAMS)" "true"
+-	$(INSTALL_PROG) ocamlopt$(EXE) "$(INSTALL_BINDIR)/ocamlopt.byte$(EXE)"
++	$(call INSTALL_ITEM, ocamlopt$(EXE), bin, , ocamlopt.byte$(EXE))
+ endif
+ 	$(MAKE) -C stdlib installopt
+-	$(INSTALL_DATA) \
+-	    middle_end/*.cmi \
+-	    "$(INSTALL_LIBDIR_COMPILERLIBS)"
+-	$(INSTALL_DATA) \
+-	    middle_end/closure/*.cmi \
+-	    "$(INSTALL_LIBDIR_COMPILERLIBS)"
+-	$(INSTALL_DATA) \
+-	    middle_end/flambda/*.cmi \
+-	    "$(INSTALL_LIBDIR_COMPILERLIBS)"
+-	$(INSTALL_DATA) \
+-	    middle_end/flambda/base_types/*.cmi \
+-	    "$(INSTALL_LIBDIR_COMPILERLIBS)"
+-	$(INSTALL_DATA) \
+-	    asmcomp/*.cmi \
+-	    "$(INSTALL_LIBDIR_COMPILERLIBS)"
++	$(call INSTALL_ITEMS, \
++	    middle_end/*.cmi, \
++	  lib, $(INSTALL_LIBDIR_COMPILERLIBS))
++	$(call INSTALL_ITEMS, \
++	    middle_end/closure/*.cmi, \
++	  lib, $(INSTALL_LIBDIR_COMPILERLIBS))
++	$(call INSTALL_ITEMS, \
++	    middle_end/flambda/*.cmi, \
++	  lib, $(INSTALL_LIBDIR_COMPILERLIBS))
++	$(call INSTALL_ITEMS, \
++	    middle_end/flambda/base_types/*.cmi, \
++	  lib, $(INSTALL_LIBDIR_COMPILERLIBS))
++	$(call INSTALL_ITEMS, \
++	    asmcomp/*.cmi, \
++	  lib, $(INSTALL_LIBDIR_COMPILERLIBS))
+ ifeq "$(INSTALL_SOURCE_ARTIFACTS)" "true"
+-	$(INSTALL_DATA) \
+-	    $(addprefix middle_end/, *.cmt *.cmti *.mli) \
+-	    "$(INSTALL_LIBDIR_COMPILERLIBS)"
+-	$(INSTALL_DATA) \
+-	    $(addprefix middle_end/closure/, *.cmt *.cmti *.mli) \
+-	    "$(INSTALL_LIBDIR_COMPILERLIBS)"
+-	$(INSTALL_DATA) \
+-	    $(addprefix middle_end/flambda/, *.cmt *.cmti *.mli) \
+-	    "$(INSTALL_LIBDIR_COMPILERLIBS)"
+-	$(INSTALL_DATA) \
+-	    $(addprefix middle_end/flambda/base_types/, *.cmt *.cmti *.mli) \
+-	    "$(INSTALL_LIBDIR_COMPILERLIBS)"
+-	$(INSTALL_DATA) \
+-	    $(addprefix asmcomp/, *.cmt *.cmti *.mli) \
+-	    "$(INSTALL_LIBDIR_COMPILERLIBS)"
++	$(call INSTALL_ITEMS, \
++	    $(addprefix middle_end/, *.cmt *.cmti *.mli), \
++	  lib, $(INSTALL_LIBDIR_COMPILERLIBS))
++	$(call INSTALL_ITEMS, \
++	    $(addprefix middle_end/closure/, *.cmt *.cmti *.mli), \
++	  lib, $(INSTALL_LIBDIR_COMPILERLIBS))
++	$(call INSTALL_ITEMS, \
++	    $(addprefix middle_end/flambda/, *.cmt *.cmti *.mli), \
++	  lib, $(INSTALL_LIBDIR_COMPILERLIBS))
++	$(call INSTALL_ITEMS, \
++	    $(addprefix middle_end/flambda/base_types/, *.cmt *.cmti *.mli), \
++	  lib, $(INSTALL_LIBDIR_COMPILERLIBS))
++	$(call INSTALL_ITEMS, \
++	    $(addprefix asmcomp/, *.cmt *.cmti *.mli), \
++	  lib, $(INSTALL_LIBDIR_COMPILERLIBS))
+ endif
+-	$(INSTALL_DATA) \
+-	    $(OPTSTART) \
+-	    "$(INSTALL_LIBDIR_COMPILERLIBS)"
++	$(call INSTALL_ITEMS, $(OPTSTART), lib, $(INSTALL_LIBDIR_COMPILERLIBS))
+ ifneq "$(WITH_OCAMLDOC)" ""
+ 	$(MAKE) -C ocamldoc installopt
+ endif
+@@ -570,42 +567,35 @@ endif
+ 
+ .PHONY: full-installoptopt installopt installoptopt
+ full-installoptopt installopt installoptopt:
+-	$(INSTALL_PROG) ocamlc.opt$(EXE) "$(INSTALL_BINDIR)"
+-	$(INSTALL_PROG) ocamlopt.opt$(EXE) "$(INSTALL_BINDIR)"
+-	$(INSTALL_PROG) lex/ocamllex.opt$(EXE) "$(INSTALL_BINDIR)"
+-	cd "$(INSTALL_BINDIR)"; \
+-	   $(LN) ocamlc.opt$(EXE) ocamlc$(EXE); \
+-	   $(LN) ocamlopt.opt$(EXE) ocamlopt$(EXE); \
+-	   $(LN) ocamllex.opt$(EXE) ocamllex$(EXE)
++	$(call INSTALL_ITEM, ocamlc.opt$(EXE), bin, , , ocamlc$(EXE))
++	$(call INSTALL_ITEM, ocamlopt.opt$(EXE), bin, , , ocamlopt$(EXE))
++	$(call INSTALL_ITEM, lex/ocamllex.opt$(EXE), bin, , , ocamllex$(EXE))
+ ifeq "$(BOOTSTRAPPING_FLEXDLL)" "true"
+-	$(INSTALL_PROG) flexlink.opt$(EXE) "$(INSTALL_BINDIR)"
+-	cd "$(INSTALL_BINDIR)"; \
+-	  $(LN) flexlink.opt$(EXE) flexlink$(EXE)
++	$(call INSTALL_ITEM, flexlink.opt$(EXE), bin, , , flexlink$(EXE))
+ endif
+-	$(INSTALL_DATA) \
+-	  $(call COMPILER_ARTEFACT_DIRS, *.cmx, $(NATIVE_ARTEFACT_DIRS)) \
+-	  toplevel/native/tophooks.cmi \
+-    "$(INSTALL_LIBDIR_COMPILERLIBS)"
+-	$(INSTALL_DATA) \
+-	   compilerlibs/*.cmxa compilerlibs/*.$(A) \
+-	   "$(INSTALL_LIBDIR_COMPILERLIBS)"
+-	$(INSTALL_DATA) \
+-	   $(BYTESTART:.cmo=.$(O)) \
+-	   $(OPTSTART:.cmo=.$(O)) \
+-	   $(TOPLEVELSTART:.cmo=.$(O)) \
+-	   "$(INSTALL_LIBDIR_COMPILERLIBS)"
++	$(call INSTALL_ITEMS, \
++	    $(call COMPILER_ARTEFACT_DIRS, *.cmx, $(NATIVE_ARTEFACT_DIRS)) \
++	    toplevel/native/tophooks.cmi, \
++	  lib, $(INSTALL_LIBDIR_COMPILERLIBS))
++	$(call INSTALL_ITEMS, compilerlibs/*.cmxa compilerlibs/*.$(A), \
++	  lib, $(INSTALL_LIBDIR_COMPILERLIBS))
++	$(call INSTALL_ITEMS, \
++	    $(BYTESTART:.cmo=.$(O)) \
++	    $(OPTSTART:.cmo=.$(O)) \
++	    $(TOPLEVELSTART:.cmo=.$(O)), \
++	  lib, $(INSTALL_LIBDIR_COMPILERLIBS))
+ ifeq "$(INSTALL_OCAMLNAT)" "true"
+-	  $(INSTALL_PROG) ocamlnat$(EXE) "$(INSTALL_BINDIR)"
++	  $(call INSTALL_ITEMS, ocamlnat$(EXE), bin)
+ endif
+ 
+ # Installation of the *.ml sources of compiler-libs
+ .PHONY: install-compiler-sources
+ install-compiler-sources:
+ ifeq "$(INSTALL_SOURCE_ARTIFACTS)" "true"
+-	$(INSTALL_DATA) \
+-	  $(call COMPILER_ARTEFACT_DIRS, *.ml, $(NATIVE_ARTEFACT_DIRS)) \
+-	  toplevel/byte/*.ml \
+-	  "$(INSTALL_LIBDIR_COMPILERLIBS)"
++	$(call INSTALL_ITEMS, \
++	    $(call COMPILER_ARTEFACT_DIRS, *.ml, $(NATIVE_ARTEFACT_DIRS)) \
++	    toplevel/byte/*.ml, \
++	  lib, $(INSTALL_LIBDIR_COMPILERLIBS))
+ endif
+ 
+ # Run all tests
+diff --git a/Makefile.common b/Makefile.common
+index cb25634d3fde8b575bfe9e55ed81e9c2eca51eed..7f5f053c639e8f5b9a9f1fae72b337e27c9cb5f0 100644
+--- a/Makefile.common
++++ b/Makefile.common
+@@ -53,15 +53,119 @@ INSTALL_STUBLIBDIR = $(DESTDIR)$(STUBLIBDIR)
+ 
+ # Library subdirectories. The compiler distribution does make assumptions about
+ # these, and they cannot be freely overridden by the user.
+-INSTALL_LIBDIR_CAML = $(INSTALL_LIBDIR)/caml
+-INSTALL_LIBDIR_COMPILERLIBS = $(INSTALL_LIBDIR)/compiler-libs
+-INSTALL_LIBDIR_DYNLINK = $(INSTALL_LIBDIR)/dynlink
+-INSTALL_LIBDIR_FLEXDLL = $(INSTALL_LIBDIR)/flexdll
+-INSTALL_LIBDIR_OCAMLDOC = $(INSTALL_LIBDIR)/ocamldoc
+-INSTALL_LIBDIR_SYSTHREADS = $(INSTALL_LIBDIR)/threads
+-
+-INSTALL_MANDIR_PROGRAMS = $(INSTALL_MANDIR)/man1
+-INSTALL_MANDIR_LIBRARIES = $(INSTALL_MANDIR)/man3
++INSTALL_LIBDIR_CAML = caml
++INSTALL_LIBDIR_COMPILERLIBS = compiler-libs
++INSTALL_LIBDIR_DYNLINK = dynlink
++INSTALL_LIBDIR_FLEXDLL = flexdll
++INSTALL_LIBDIR_OCAMLDOC = ocamldoc
++INSTALL_LIBDIR_SYSTHREADS = threads
++
++INSTALL_MANDIR_PROGRAMS = man1
++INSTALL_MANDIR_LIBRARIES = man3
++
++INSTALL_MODE ?= install
++
++# INSTALL_ITEM installs a single file, possibly with a different name and
++# possibly creating additional symlinks/copies
++#   $1 = source file (may include directories)
++#   $2 = section (bin, doc, lib, libexec, man, stublibs)
++#   $3 = directory within section (may be empty)
++#   $4 = target basename (may be empty)
++#   $5 = additional basenames (either symlinked or copied, depending on what the
++#        platform supports)
++# The $(origin n) dance is necessary to suppress warnings about undefined
++# variables.
++INSTALL_ITEM = \
++  $(INSTALL_$(INSTALL_MODE)_PREFIX)$(call INSTALL_ENSURE_DIR,$\
++    $(strip $(2)),$(if $(filter-out undefined,$(origin 3)),$(strip $(3))))$\
++  $(call INSTALL_DESPATCH_$(INSTALL_MODE)_ITEM,$\
++    $(strip $(1)),$\
++    $(strip $(2)),$\
++    $(if $(filter-out undefined,$(origin 3)),$(strip $(3))),$\
++    $(if $(filter-out undefined,$(origin 4)),$(strip $(4))),$\
++    $(if $(filter-out undefined,$(origin 5)),$(strip $(5))))
++
++# INSTALL_ITEMS installs a series of files to a single directory
++#   $1 = source file(s) (may include directories and glob patterns)
++#   $2 = section (as for INSTALL_ITEM)
++#   $3 = directory within section (may be omitted)
++# INSTALL_ITEMS is sometimes an alias for INSTALL_ITEM. For simplicity with
++# undefined variable warnings, INSTALL_DESPATCH_foo_ITEMS is passed 5 parameters
++# but $4 and $5 are always empty.
++INSTALL_ITEMS = \
++  $(INSTALL_$(INSTALL_MODE)_PREFIX)$(call INSTALL_ENSURE_DIR,$\
++    $(strip $(2)),$(if $(filter-out undefined,$(origin 3)),$(strip $(3))))$\
++  $(call INSTALL_DESPATCH_$(INSTALL_MODE)_ITEMS,$\
++    $(strip $(1)),$\
++    $(strip $(2)),$\
++    $(if $(filter-out undefined,$(origin 3)),$(strip $(3))),,)
++
++# INSTALL_ITEMS_OPT is INSTALL_ITEMS, but does nothing if the source file(s) do
++# not exist
++INSTALL_ITEMS_OPT = \
++  $(if $(wildcard $(1)),$(call INSTALL_ITEMS, \
++    $(1), $(2), $(if $(filter-out undefined,$(origin 3)), $(3))))
++
++INSTALL_ENSURE_DIR = \
++  $(if $(filter undefined,$(origin DIR_CREATED_$(subst exec,,$(1))_$(2))),$\
++    $(eval DIR_CREATED_$(1)_$(2):=)$\
++    $(call INSTALL_DESPATCH_$(INSTALL_MODE)_MKDIR,$\
++      $(subst exec,,$(1)),$(2)))
++
++# INSTALL_RM takes a single argument which may include glob patterns of files to
++# be removed when performing a physical install.
++INSTALL_RM = $(call INSTALL_DESPATCH_$(INSTALL_MODE)_RM,$(strip $(1)))
++
++# INSTALL_BEGIN and INSTALL_END are used in the root Makefile's install target
++INSTALL_BEGIN = $(INSTALL_DESPATCH_$(INSTALL_MODE)_BEGIN)
++INSTALL_END = $(INSTALL_DESPATCH_$(INSTALL_MODE)_END)
++
++# Normal installation
++INSTALL_CMD_bin = $(INSTALL_PROG)
++INSTALL_CMD_doc = $(INSTALL_DATA)
++INSTALL_CMD_lib = $(INSTALL_DATA)
++INSTALL_CMD_libexec = $(INSTALL_PROG)
++INSTALL_CMD_man = $(INSTALL_DATA)
++INSTALL_CMD_stublibs = $(INSTALL_PROG)
++
++INSTALL_SECTION_bin = $(INSTALL_BINDIR)
++INSTALL_SECTION_doc = $(INSTALL_DOCDIR)
++INSTALL_SECTION_lib = $(INSTALL_LIBDIR)
++INSTALL_SECTION_libexec = $(INSTALL_LIBDIR)
++INSTALL_SECTION_man = $(INSTALL_MANDIR)
++INSTALL_SECTION_stublibs = $(INSTALL_STUBLIBDIR)
++
++QUOTE_SINGLE = '$(subst ','\'',$(1))'
++
++define NEWLINE
++
++
++endef
++SH_AND = && \$(NEWLINE)
++
++INSTALL_install_PREFIX =
++
++INSTALL_DESPATCH_install_RM = rm -f $(1)
++
++INSTALL_DESPATCH_install_MKDIR = \
++  $(MKDIR) $(call QUOTE_SINGLE,$(INSTALL_SECTION_$(1))$(addprefix /,$(2))) \
++    $(SH_AND)
++
++MK_LINK = \
++  (cd "$(INSTALL_SECTION_$(2))$(addprefix /,$(3))" && \
++    $(LN) $(call QUOTE_SINGLE,$(1)) $(call QUOTE_SINGLE,$(4)))
++
++INSTALL_DESPATCH_install_ITEM = \
++  $(INSTALL_CMD_$(2)) $(1) \
++    $(call QUOTE_SINGLE,$\
++      $(INSTALL_SECTION_$(2))$(addprefix /,$(3))$(addprefix /,$(4))) \
++  $(foreach link, $(5),$(SH_AND)$\
++    $(call MK_LINK,$(if $(4),$(4),$(notdir $(1))),$(2),$(3),$(link)))
++
++INSTALL_DESPATCH_install_ITEMS = $(INSTALL_DESPATCH_install_ITEM)
++
++INSTALL_DESPATCH_install_BEGIN = @
++INSTALL_DESPATCH_install_END = @
+ 
+ FLEXDLL_SUBMODULE_PRESENT := $(wildcard $(ROOTDIR)/flexdll/Makefile)
+ 
+diff --git a/api_docgen/ocamldoc/Makefile b/api_docgen/ocamldoc/Makefile
+index d3ec00a81cbb053adffc845d5540b8b9fd980f28..cf6c67166e1db724f877a500932c6bd311ef9c76 100644
+--- a/api_docgen/ocamldoc/Makefile
++++ b/api_docgen/ocamldoc/Makefile
+@@ -122,6 +122,4 @@ build/latex/compilerlibs_input.tex: | build/latex
+ 
+ .PHONY: install
+ install:
+-	$(MKDIR) "$(INSTALL_MANDIR_LIBRARIES)"
+-	$(if $(wildcard build/man), \
+-	  $(INSTALL_DATA) build/man/*.3o "$(INSTALL_MANDIR_LIBRARIES)")
++	$(call INSTALL_ITEMS_OPT, build/man/*.3o, man, $(INSTALL_MANDIR_LIBRARIES))
+diff --git a/api_docgen/odoc/Makefile b/api_docgen/odoc/Makefile
+index b0f1e8a8c80294a4d59431749d5f6801eb2731cd..dfb4e9f7d8828a97c4c35b6d8ca1cc85f6344a6d 100644
+--- a/api_docgen/odoc/Makefile
++++ b/api_docgen/odoc/Makefile
+@@ -192,11 +192,10 @@ $(ALL_PAGED_DOC:%=build/%.3o.stamp):build/%.3o.stamp:build/%.odocl | build/
+ # Man pages are the only installed documentation
+ .PHONY: install
+ install:
+-	$(MKDIR) "$(INSTALL_MANDIR_LIBRARIES)"
+-	$(if $(wildcard build/man/libref), \
+-	  $(INSTALL_DATA) build/man/libref/* "$(INSTALL_MANDIR_LIBRARIES)")
+-	$(if $(wildcard build/man/compilerlibref), \
+-	  $(INSTALL_DATA) build/man/libref/* "$(INSTALL_MANDIR_LIBRARIES)")
++	$(call INSTALL_ITEMS_OPT, \
++	  build/man/libref/*, man, $(INSTALL_MANDIR_LIBRARIES))
++	$(call INSTALL_ITEMS_OPT, \
++	  build/man/compilerlibref/*, man, $(INSTALL_MANDIR_LIBRARIES))
+ 
+ # Dependencies for stdlib modules.
+ # Use the same dependencies used for compiling .cmx files.
+diff --git a/debugger/Makefile b/debugger/Makefile
+index 14c3e951040456ac3141a5cf02aebd7dddaf1c1d..08ab7d433dea742443880302a9f85d574c57d5b1 100644
+--- a/debugger/Makefile
++++ b/debugger/Makefile
+@@ -72,7 +72,7 @@ ocamldebug$(EXE): $(libraries) $(compiler_objects) ocamldebug.cmo \
+ 	$(CAMLC) $(LINKFLAGS) -o $@ -linkall $^
+ 
+ install:
+-	$(INSTALL_PROG) ocamldebug$(EXE) "$(INSTALL_BINDIR)"
++	$(call INSTALL_ITEMS, ocamldebug$(EXE), bin)
+ 
+ clean::
+ 	rm -f ocamldebug ocamldebug.exe
+diff --git a/man/Makefile b/man/Makefile
+index 49963ff07de83ec0a42836ee238d7199b149b3f7..e43a3451bc66e19fa118fb4c70cc21c8badf1c2c 100644
+--- a/man/Makefile
++++ b/man/Makefile
+@@ -23,5 +23,4 @@ MANPAGES = $(addsuffix .1,\
+ 
+ .PHONY: install
+ install:
+-	$(MKDIR) $(call QUOTE_SINGLE,$(INSTALL_MANDIR_PROGRAMS))
+-	$(INSTALL_DATA) $(MANPAGES) $(call QUOTE_SINGLE,$(INSTALL_MANDIR_PROGRAMS))
++	$(call INSTALL_ITEMS, $(MANPAGES), man, $(INSTALL_MANDIR_PROGRAMS))
+diff --git a/ocamldoc/Makefile b/ocamldoc/Makefile
+index 67743b3afef38e4074042e2bb63de79037d9783c..2a4b3813db74b94cd33a0a86938bc1381490de1a 100644
+--- a/ocamldoc/Makefile
++++ b/ocamldoc/Makefile
+@@ -240,16 +240,12 @@ DEPEND_PREREQS = $(LEXERS:.mll=.ml) \
+ 
+ .PHONY: install
+ install:
+-	$(MKDIR) "$(INSTALL_BINDIR)"
+-	$(MKDIR) "$(INSTALL_LIBDIR_OCAMLDOC)"
+-	$(INSTALL_PROG) ocamldoc$(EXE) "$(INSTALL_BINDIR)"
+-	$(INSTALL_DATA) \
+-	  ocamldoc.hva *.cmi $(OCAMLDOC_LIBCMA) \
+-	  "$(INSTALL_LIBDIR_OCAMLDOC)"
++	$(call INSTALL_ITEMS, ocamldoc$(EXE), bin)
++	$(call INSTALL_ITEMS, ocamldoc.hva *.cmi $(OCAMLDOC_LIBCMA), \
++	  lib, $(INSTALL_LIBDIR_OCAMLDOC))
+ ifeq "$(INSTALL_SOURCE_ARTIFACTS)" "true"
+-	$(INSTALL_DATA) \
+-	  $(OCAMLDOC_LIBMLIS) $(OCAMLDOC_LIBCMTS) \
+-	  "$(INSTALL_LIBDIR_OCAMLDOC)"
++	$(call INSTALL_ITEMS, $(OCAMLDOC_LIBMLIS) $(OCAMLDOC_LIBCMTS), \
++	  lib, $(INSTALL_LIBDIR_OCAMLDOC))
+ endif
+ 
+ # Note: at the moment, $(INSTALL_MANODIR) is created even if the doc has
+@@ -261,12 +257,10 @@ installopt:
+ 
+ .PHONY: installopt_really
+ installopt_really:
+-	$(MKDIR) "$(INSTALL_BINDIR)"
+-	$(MKDIR) "$(INSTALL_LIBDIR_OCAMLDOC)"
+-	$(INSTALL_PROG) ocamldoc.opt$(EXE) "$(INSTALL_BINDIR)"
+-	$(INSTALL_DATA) \
+-	  *.cmx $(OCAMLDOC_LIBA) $(OCAMLDOC_LIBCMXA) \
+-	  "$(INSTALL_LIBDIR_OCAMLDOC)"
++	$(call INSTALL_ITEMS, ocamldoc.opt$(EXE), bin)
++	$(call INSTALL_ITEMS, \
++	  *.cmx $(OCAMLDOC_LIBA) $(OCAMLDOC_LIBCMXA), \
++	  lib, $(INSTALL_LIBDIR_OCAMLDOC))
+ 
+ # TODO: also split into several rules
+ 
+diff --git a/otherlibs/Makefile.otherlibs.common b/otherlibs/Makefile.otherlibs.common
+index e309b7bd0f2811545f712e8686feb8fd6dc2d6c6..69e7e5dba9880bd64a6c3060ac276c169b827ba6 100644
+--- a/otherlibs/Makefile.otherlibs.common
++++ b/otherlibs/Makefile.otherlibs.common
+@@ -105,30 +105,23 @@ lib$(CLIBNAME).$(A): $(COBJS)
+ install::
+ ifneq "$(STUBSLIB)" ""
+ ifeq "$(SUPPORTS_SHARED_LIBRARIES)" "true"
+-	$(INSTALL_PROG) $(STUBSDLL) "$(INSTALL_STUBLIBDIR)"
++	$(call INSTALL_ITEMS, $(STUBSDLL), stublibs)
+ endif
+-	$(INSTALL_DATA) $(STUBSLIB) "$(INSTALL_LIBDIR)/"
++	$(call INSTALL_ITEMS, $(STUBSLIB), lib)
+ endif
+-
+-	$(INSTALL_DATA) \
+-	  $(LIBNAME).cma $(CMIFILES) \
+-	  "$(INSTALL_LIBDIR)/"
++	$(call INSTALL_ITEMS, $(LIBNAME).cma $(CMIFILES), lib)
+ ifeq "$(INSTALL_SOURCE_ARTIFACTS)" "true"
+-	$(INSTALL_DATA) \
+-	  $(CMIFILES:.cmi=.mli) \
+-          $(CMIFILES:.cmi=.cmti) \
+-	  "$(INSTALL_LIBDIR)/"
++	$(call INSTALL_ITEMS, $(CMIFILES:.cmi=.mli) $(CMIFILES:.cmi=.cmti), lib)
+ endif
+ ifneq "$(HEADERS)" ""
+-	$(INSTALL_DATA) $(HEADERS) "$(INSTALL_LIBDIR_CAML)/"
++	$(call INSTALL_ITEMS, $(HEADERS), lib, $(INSTALL_LIBDIR_CAML))
+ endif
+ 
+ installopt:
+-	$(INSTALL_DATA) \
+-	   $(CAMLOBJS_NAT) $(LIBNAME).cmxa $(LIBNAME).$(A) \
+-	   "$(INSTALL_LIBDIR)/"
++	$(call INSTALL_ITEMS, \
++	   $(CAMLOBJS_NAT) $(LIBNAME).cmxa $(LIBNAME).$(A), lib)
+ ifeq "$(SUPPORTS_SHARED_LIBRARIES)" "true"
+-	  $(INSTALL_PROG) $(LIBNAME).cmxs "$(INSTALL_LIBDIR)"
++	$(call INSTALL_ITEMS, $(LIBNAME).cmxs, libexec)
+ endif
+ 
+ partialclean:
+diff --git a/otherlibs/dynlink/Makefile b/otherlibs/dynlink/Makefile
+index 74a568bb7db5e53cfd2cc4c3232f61adabd94f58..f9984daee0bb83ae2da278916ac0930526587c2b 100644
+--- a/otherlibs/dynlink/Makefile
++++ b/otherlibs/dynlink/Makefile
+@@ -243,20 +243,14 @@ $(extract_crc): dynlink.cma byte/dynlink_compilerlibs.cmo extract_crc.cmo
+ 	$(OCAMLC) -o $@ $^
+ 
+ install:
+-	$(INSTALL_DATA) \
+-	  dynlink.cmi dynlink.cma \
+-	  "$(INSTALL_LIBDIR)"
++	$(call INSTALL_ITEMS, dynlink.cmi dynlink.cma, lib)
+ ifeq "$(INSTALL_SOURCE_ARTIFACTS)" "true"
+-	$(INSTALL_DATA) \
+-	  dynlink.cmti dynlink.mli \
+-	  "$(INSTALL_LIBDIR)"
++	$(call INSTALL_ITEMS, dynlink.cmti dynlink.mli, lib)
+ endif
+ 
+ installopt:
+ ifeq "$(strip $(NATDYNLINK))" "true"
+-	$(INSTALL_DATA) \
+-	  $(NATOBJS) dynlink.cmxa dynlink.$(A) \
+-	  "$(INSTALL_LIBDIR)"
++	$(call INSTALL_ITEMS, $(NATOBJS) dynlink.cmxa dynlink.$(A), lib)
+ endif
+ 
+ partialclean:
+diff --git a/otherlibs/systhreads/Makefile b/otherlibs/systhreads/Makefile
+index 03838d4d86b17949bc49b87290dbf91f85ca34f0..72d517bb94b3f74a344dbb8ccec132886342a974 100644
+--- a/otherlibs/systhreads/Makefile
++++ b/otherlibs/systhreads/Makefile
+@@ -114,26 +114,20 @@ clean: partialclean
+ 
+ install:
+ ifeq "$(SUPPORTS_SHARED_LIBRARIES)" "true"
+-	$(INSTALL_PROG) $(DLLTHREADS) "$(INSTALL_STUBLIBDIR)"
++	$(call INSTALL_ITEMS, $(DLLTHREADS), stublibs)
+ endif
+-	$(INSTALL_DATA) libthreads.$(A) "$(INSTALL_LIBDIR)"
+-	$(MKDIR) "$(INSTALL_LIBDIR_SYSTHREADS)"
+-	$(INSTALL_DATA) \
+-	  $(CMIFILES) threads.cma \
+-	  "$(INSTALL_LIBDIR_SYSTHREADS)"
++	$(call INSTALL_ITEMS, libthreads.$(A), lib)
++	$(call INSTALL_ITEMS, $(CMIFILES) threads.cma, lib, $(LIBNAME))
+ ifeq "$(INSTALL_SOURCE_ARTIFACTS)" "true"
+-	$(INSTALL_DATA) \
+-	  $(CMIFILES:.cmi=.cmti) \
+-	  "$(INSTALL_LIBDIR_SYSTHREADS)"
+-	$(INSTALL_DATA) $(MLIFILES) "$(INSTALL_LIBDIR_SYSTHREADS)"
++	$(call INSTALL_ITEMS, $(CMIFILES:.cmi=.cmti), lib, $(LIBNAME))
++	$(call INSTALL_ITEMS, $(MLIFILES), lib, $(LIBNAME))
+ endif
+-	$(INSTALL_DATA) threads.h "$(INSTALL_LIBDIR_CAML)"
++	$(call INSTALL_ITEMS, threads.h, lib, $(INSTALL_LIBDIR_CAML))
+ 
+ installopt:
+-	$(INSTALL_DATA) libthreadsnat.$(A) "$(INSTALL_LIBDIR)"
+-	$(INSTALL_DATA) \
+-	  $(THREADS_NCOBJS) threads.cmxa threads.$(A) \
+-	  "$(INSTALL_LIBDIR_SYSTHREADS)"
++	$(call INSTALL_ITEMS, libthreadsnat.$(A), lib)
++	$(call INSTALL_ITEMS, $(THREADS_NCOBJS) threads.cmxa threads.$(A), \
++	  lib, $(LIBNAME))
+ 
+ %.cmi: %.mli
+ 	$(CAMLC) -c $(COMPFLAGS) $<
+diff --git a/runtime/Makefile b/runtime/Makefile
+index 07d27d3d8ee74b5a14c5e4b8603aa16990e82086..7f907ab709c9b267f21cfdbfe3b52a4de8f47785 100644
+--- a/runtime/Makefile
++++ b/runtime/Makefile
+@@ -171,15 +171,9 @@ endif
+ 
+ define INSTALL_RUNTIME
+ install::
+-	$(INSTALL_PROG) \
+-    $(1)$(EXE) "$(INSTALL_BINDIR)/$(call MANGLE_RUNTIME_NAME,$(1))"
+-ifeq "$(SUFFIXING)" "true"
+-	cd "$(INSTALL_BINDIR)" && \
+-    $(LN) "$(TARGET)-$(1)-$(BYTECODE_RUNTIME_ID)$(EXE)" "$(1)$(EXE)"
+-	cd "$(INSTALL_BINDIR)" && \
+-    $(LN) "$(TARGET)-$(1)-$(BYTECODE_RUNTIME_ID)$(EXE)" \
+-	    "$(1)-$(ZINC_RUNTIME_ID)$(EXE)"
+-endif
++	$$(call INSTALL_ITEM, $(1)$(EXE), bin, , \
++    $(call MANGLE_RUNTIME_NAME,$(1)), $(if $(filter true, $(SUFFIXING)), \
++      $(1)$(EXE) $(1)-$(ZINC_RUNTIME_ID)$(EXE)))
+ endef
+ define INSTALL_RUNTIME_LIB
+ ifeq "$(2)" "BYTECODE"
+@@ -187,32 +181,27 @@ install::
+ else
+ installopt::
+ endif
+-	$(INSTALL_PROG) \
+-    lib$(1)_shared$(EXT_DLL) \
+-	    "$(INSTALL_LIBDIR)/$(call MANGLE_RUNTIME_DLL_NAME,$(1),$(2))"
+-ifeq "$(SUFFIXING)" "true"
+-	cd "$(INSTALL_LIBDIR)" && \
+-    $(LN) "$(call MANGLE_RUNTIME_DLL_NAME,$(1),$(2))" \
+-    "lib$(1)_shared$(EXT_DLL)"
+-endif
++	$$(call INSTALL_ITEM, lib$(1)_shared$(EXT_DLL), libexec, , \
++	   $(call MANGLE_RUNTIME_DLL_NAME,$(1),$(2)), \
++	     $(if $(filter true, $(SUFFIXING)), lib$(1)_shared$(EXT_DLL)))
+ endef
+ 
+ $(foreach runtime, $(PROGRAMS), \
+   $(eval $(call INSTALL_RUNTIME,$(runtime))))
+ 
+ install::
+-	$(INSTALL_DATA) ld.conf $(BYTECODE_STATIC_LIBRARIES) "$(INSTALL_LIBDIR)"
++	$(call INSTALL_ITEMS, ld.conf $(BYTECODE_STATIC_LIBRARIES), lib)
+ 
+ $(foreach shared_runtime, $(BYTECODE_SHARED_LIBRARIES), \
+   $(eval $(call INSTALL_RUNTIME_LIB,$(shared_runtime),BYTECODE)))
+ 
+ install::
+-	mkdir -p "$(INSTALL_LIBDIR_CAML)"
+-	$(INSTALL_DATA) caml/domain_state.tbl caml/*.h "$(INSTALL_LIBDIR_CAML)"
++	$(call INSTALL_ITEMS, caml/domain_state.tbl caml/*.h, \
++	  lib, $(INSTALL_LIBDIR_CAML))
+ 
+ .PHONY: installopt
+ installopt::
+-	$(INSTALL_DATA) $(NATIVE_STATIC_LIBRARIES) "$(INSTALL_LIBDIR)"
++	$(call INSTALL_ITEMS, $(NATIVE_STATIC_LIBRARIES), lib)
+ 
+ $(foreach shared_runtime, $(NATIVE_SHARED_LIBRARIES), \
+   $(eval $(call INSTALL_RUNTIME_LIB,$(shared_runtime),NATIVE)))
+diff --git a/stdlib/Makefile b/stdlib/Makefile
+index 42ca2d61cae3eb33f4bc751f0722cfa804875cb7..e9a87e64795a252547ce9892464e99d986f51234 100644
+--- a/stdlib/Makefile
++++ b/stdlib/Makefile
+@@ -84,26 +84,23 @@ install::
+ # bigarray.mli is only installed if the legacy bigarray library is _not_ being
+ # compiled (since its bigarray.mli will override ours)
+ install::
+-	$(INSTALL_DATA) \
+-	  stdlib.cma std_exit.cmo *.cmi camlheader_ur \
+-	  "$(INSTALL_LIBDIR)"
++	$(call INSTALL_ITEMS, stdlib.cma std_exit.cmo *.cmi camlheader_ur, lib)
+ ifeq "$(INSTALL_SOURCE_ARTIFACTS)" "true"
+-	$(INSTALL_DATA) \
++	$(call INSTALL_ITEMS, \
+ 	  *.cmt *.cmti *.ml \
+ 	  $(if $(filter bigarray, $(OTHERLIBRARIES)), \
+-	    $(filter-out bigarray.mli, $(wildcard *.mli)), *.mli) \
+-	  "$(INSTALL_LIBDIR)"
++	    $(filter-out bigarray.mli, $(wildcard *.mli)), *.mli), lib)
+ endif
+-	$(INSTALL_DATA) $(HEADER_NAME) "$(INSTALL_LIBDIR)/$(HEADER_NAME)"
++	$(call INSTALL_ITEMS, $(HEADER_NAME), lib)
+ 
+ ifeq "$(RUNTIMED)" "true"
+ install::
+-	$(INSTALL_DATA) target_camlheaderd "$(INSTALL_LIBDIR)/camlheaderd"
++	$(call INSTALL_ITEM, target_camlheaderd, lib, , camlheaderd)
+ endif
+ 
+ ifeq "$(INSTRUMENTED_RUNTIME)" "true"
+ install::
+-	$(INSTALL_DATA) target_camlheaderi "$(INSTALL_LIBDIR)/camlheaderi"
++	$(call INSTALL_ITEM, target_camlheaderi, lib, , camlheaderi)
+ endif
+ 
+ .PHONY: installopt
+@@ -121,9 +118,7 @@ installopt-default::
+   fi
+ 
+ installopt-default::
+-	$(INSTALL_DATA) \
+-	  stdlib.cmxa stdlib.$(A) std_exit.$(O) *.cmx \
+-	  "$(INSTALL_LIBDIR)"
++	$(call INSTALL_ITEMS, stdlib.cmxa stdlib.$(A) std_exit.$(O) *.cmx, lib)
+ 
+ ifeq "$(SHEBANGSCRIPTS)" "true"
+ 
+diff --git a/tools/Makefile b/tools/Makefile
+index 4fbd6e43ca19fd373c907fde058e12268be108e7..ac120fc3fe53408af158f1853fe03e2803a608fe 100644
+--- a/tools/Makefile
++++ b/tools/Makefile
+@@ -111,19 +111,13 @@ ocamloptp.opt$(EXE): $(call byte2native, $(OCAMLCP) ocamloptp.cmo)
+ opt:: profiling.cmx
+ 
+ install::
+-	$(INSTALL_DATA) \
+-	  profiling.cmi profiling.cmo \
+-	  "$(INSTALL_LIBDIR)"
++	$(call INSTALL_ITEMS, profiling.cmi profiling.cmo, lib)
+ ifeq "$(INSTALL_SOURCE_ARTIFACTS)" "true"
+-	$(INSTALL_DATA) \
+-	  profiling.cmt profiling.cmti \
+-	  "$(INSTALL_LIBDIR)"
++	$(call INSTALL_ITEMS, profiling.cmt profiling.cmti, lib)
+ endif
+ 
+ installopt::
+-	$(INSTALL_DATA) \
+-          profiling.cmx profiling.$(O) \
+-	  "$(INSTALL_LIBDIR)"
++	$(call INSTALL_ITEMS, profiling.cmx profiling.$(O), lib)
+ 
+ # To help building mixed-mode libraries (OCaml + C)
+ OCAMLMKLIB = config.cmo build_path_prefix_map.cmo misc.cmo ocamlmklib.cmo
+@@ -147,13 +141,11 @@ LIBRARY3=config.cmo build_path_prefix_map.cmo misc.cmo warnings.cmo location.cmo
+ define INSTALL_ONE_TOOL
+ install::
+ ifeq "$(INSTALL_BYTECODE_PROGRAMS)" "true"
+-	$(INSTALL_PROG) "$(1)$(EXE)" "$(INSTALL_BINDIR)/$(1).byte$(EXE)"
++	$(call INSTALL_ITEM, $(1)$(EXE), bin, , $(1).byte$(EXE), \
++	                     $(if $(wildcard $(1).opt$(EXE)),, $(1)$(EXE)))
+ endif
+ 	$(if $(wildcard $(1).opt$(EXE)), \
+-	  $(INSTALL_PROG) "$(1).opt$(EXE)" "$(INSTALL_BINDIR)")
+-	(cd "$(INSTALL_BINDIR)" && \
+-	  $(LN) "$(1).$(if $(wildcard $(1).opt$(EXE)),opt,byte)$(EXE)" \
+-	        "$(1)$(EXE)")
++	  $(call INSTALL_ITEM, $(1).opt$(EXE), bin, , , $(1)$(EXE)))
+ endef
+ 
+ $(foreach tool, $(install_files), \
+@@ -184,9 +176,9 @@ ocamlcmt$(EXE): $(OCAMLCMT)
+ ocamlcmt.opt$(EXE): $(call byte2native, $(OCAMLCMT))
+ 
+ install::
+-	$(INSTALL_PROG) \
+-	  ocamlcmt$(if $(wildcard ocamlcmt.opt$(EXE)),.opt)$(EXE) \
+-	  "$(INSTALL_BINDIR)/ocamlcmt$(EXE)"
++	$(call INSTALL_ITEM, \
++	  ocamlcmt$(if $(wildcard ocamlcmt.opt$(EXE)),.opt)$(EXE), bin, , \
++	  ocamlcmt$(EXE))
+ 
+ # The bytecode disassembler
+ 
+@@ -257,9 +249,7 @@ clean::
+ # Eventlog metadata file
+ 
+ install::
+-	$(INSTALL_DATA) \
+-	  eventlog_metadata \
+-	  "$(INSTALL_LIBDIR)"
++	$(call INSTALL_ITEMS, eventlog_metadata, lib)
+ 
+ # Copy a bytecode executable, stripping debug info
+ 
+-- 
+2.53.0.windows.2
+

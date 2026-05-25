@@ -1,0 +1,52 @@
+From 6c615154eb0c68a53daf6534f5747451180ad0a8 Mon Sep 17 00:00:00 2001
+From: David Allsopp <david.allsopp@metastack.com>
+Date: Fri, 24 Sep 2021 11:42:16 +0100
+Subject: [PATCH] Make Windows header absolute (as on Unix)
+
+(cherry picked from commit e857b3935d549365f35389994372e3643d3b85ae)
+
+diff --git a/configure b/configure
+index 003bfdba002eab6b68af5386209254133291eed2..6bc05fcea5cd81e039a98a5b87f29a291fc2b0aa 100755
+GIT binary patch
+delta 61
+zcmX?fOXcbfm4+>hPx_{JH#5pjZ|G&@+uq#I*udCcI}wDLfS4JGS%8=oh}nRceS7Uh
+Hj-#^yOrIK8
+
+delta 136
+zcmcb5L*>vdm4+>hPx@F=bBa@^CthL~<5U0wE!}c6lj(bovC2)?>|+#|p5DhOIo-gL
+zgKzuGKE~yYcvbUFKiAL5Ih|($R7?BR35-C@1jNih%mT!$K+Fcj?AxbK;5aZF0RFi#
+A8UO$Q
+
+diff --git a/configure.ac b/configure.ac
+index ce300d820a934553e0616c6b005f402607ea9949..9a55cb664599018ad892cec73283785f0abc52af 100644
+--- a/configure.ac
++++ b/configure.ac
+@@ -523,11 +523,7 @@ AC_ARG_ENABLE([runtime-search],
+     [yes],[runtime_search='enable'],
+     [always],[runtime_search='always'],
+     [AC_MSG_ERROR(m4_normalize([valid values are yes, no or always for
+-       --enable-runtime-search]))])],
+-  [AS_CASE([$host],
+-dnl Historically, the native Windows ports are assumed to be finding ocamlrun
+-dnl using a PATH search. *)
+-    [*-w64-mingw32*|*-pc-windows],[runtime_search='always'])])
++       --enable-runtime-search]))])])
+ 
+ AC_ARG_ENABLE([runtime-search-target],
+   [AS_HELP_STRING([--enable-runtime-search-target],
+@@ -537,11 +533,7 @@ AC_ARG_ENABLE([runtime-search-target],
+     [yes],[runtime_search_target='enable'],
+     [always],[runtime_search_target='always'],
+     [AC_MSG_ERROR(m4_normalize([valid values are yes, no or always for
+-       --enable-runtime-search-target]))])],
+-  [AS_CASE([$host],
+-dnl Historically, the native Windows ports are assumed to be finding ocamlrun
+-dnl using a PATH search. *)
+-    [*-w64-mingw32*|*-pc-windows],[runtime_search_target='always'])])
++       --enable-runtime-search-target]))])])
+ 
+ AS_CASE([$suffixing,$runtime_search,$runtime_search_target],
+   [true,*,*|false,,],[],
+-- 
+2.53.0.windows.2
+

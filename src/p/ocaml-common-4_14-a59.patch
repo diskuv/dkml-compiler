@@ -1,0 +1,553 @@
+From 6aeaa97578865d275a375b93c50c46c78e623b10 Mon Sep 17 00:00:00 2001
+From: David Allsopp <david.allsopp@metastack.com>
+Date: Thu, 5 Jun 2025 22:13:53 +0100
+Subject: [PATCH] Remove metadata from runtime-launch-info
+
+-launch-method encapsulates the first line of runtime-launch-info. The
+argument to -launch-method is extended slightly to encompass the second
+line, thus `-launch-method 'sh /usr/local/bin'` represents the default
+runtime-launch-info file on Unix. Additional fields are added to Config
+so that the installed compiler simply uses default values, rather than
+reading the two lines from runtime-launch-info. The build of the
+compiler itself explicitly uses `-launch-method`, which leaves only the
+executable launcher compiled from stdlib/header.c in
+runtime-launch-info.
+
+(cherry picked from commit 3370649caa1637b343dd78bbf28eab477b5eb139)
+
+diff --git a/Makefile b/Makefile
+index 10ee9fbee4066c9f241cacd2a56f809d46e3e551..0e8734ee9f6b673e437a2043f821906c0822d8b0 100644
+--- a/Makefile
++++ b/Makefile
+@@ -45,6 +45,7 @@ COMPFLAGS=-strict-sequence -principal -absname \
+           -warn-error +a \
+           -bin-annot -safe-string -strict-formats $(INCLUDES)
+ LINKFLAGS=$(OC_COMMON_LINKFLAGS)
++BYTECODE_LINKFLAGS = $(call ADD_BYTECODE_RUNTIME, $(LINKFLAGS)) $(LINKFLAGS)
+ 
+ ifeq "$(strip $(NATDYNLINKOPTS))" ""
+ OCAML_NATDYNLINKOPTS=
+@@ -165,8 +166,10 @@ else
+     CAMLC='$$(BOOT_OCAMLC)' all
+ 	$(MAKE) -C $(FLEXDLL_SOURCES) $(FLEXLINK_BUILD_ENV) \
+ 	  OCAMLRUN='$$(ROOTDIR)/boot/ocamlruns$(EXE)' NATDYNLINK=false \
+-	  OCAMLOPT=$(call QUOTE_SINGLE,$(value BOOT_OCAMLC) $(USE_RUNTIME_PRIMS) \
+-	                                                    $(USE_STDLIB)) \
++	  OCAMLOPT=$(call QUOTE_SINGLE,$(value BOOT_OCAMLC) \
++	                                 $(USE_RUNTIME_PRIMS) \
++	                                 $(BYTECODE_LAUNCHER_FLAGS) \
++	                                 $(USE_STDLIB)) \
+ 	  flexlink.exe support
+ 	mv $(FLEXDLL_SOURCES)/flexlink.exe boot/flexlink.byte$(EXE)
+ 	cp $(addprefix $(FLEXDLL_SOURCES)/, $(FLEXDLL_OBJECTS)) boot/
+@@ -631,7 +634,7 @@ clean:: partialclean
+ 
+ ocamlc$(EXE): compilerlibs/ocamlcommon.cma \
+               compilerlibs/ocamlbytecomp.cma $(BYTESTART)
+-	$(CAMLC) $(LINKFLAGS) -compat-32 -o $@ $^
++	$(CAMLC) $(BYTECODE_LINKFLAGS) -compat-32 -o $@ $^
+ 
+ partialclean::
+ 	rm -rf ocamlc$(EXE)
+@@ -640,7 +643,7 @@ partialclean::
+ 
+ ocamlopt$(EXE): compilerlibs/ocamlcommon.cma compilerlibs/ocamloptcomp.cma \
+           $(OPTSTART)
+-	$(CAMLC) $(LINKFLAGS) -o $@ $^
++	$(CAMLC) $(BYTECODE_LINKFLAGS) -o $@ $^
+ 
+ partialclean::
+ 	rm -f ocamlopt$(EXE)
+@@ -654,7 +657,7 @@ ocaml_dependencies := \
+ 
+ .INTERMEDIATE: ocaml.tmp
+ ocaml.tmp: $(ocaml_dependencies)
+-	$(CAMLC) $(LINKFLAGS) -I toplevel/byte -linkall -o $@ $^
++	$(CAMLC) $(BYTECODE_LINKFLAGS) -I toplevel/byte -linkall -o $@ $^
+ 
+ ocaml$(EXE): $(expunge) ocaml.tmp
+ 	- $(OCAMLRUN) $^ $@ $(PERVASIVES)
+@@ -772,7 +775,7 @@ $(cvt_emit): tools/cvt_emit.mll
+ 
+ $(expunge): compilerlibs/ocamlcommon.cma compilerlibs/ocamlbytecomp.cma \
+          toplevel/expunge.cmo
+-	$(CAMLC) $(LINKFLAGS) -o $@ $^
++	$(CAMLC) $(BYTECODE_LINKFLAGS) -o $@ $^
+ 
+ partialclean::
+ 	rm -f $(expunge)
+diff --git a/Makefile.build_config.in b/Makefile.build_config.in
+index 1173585a920df2706cdcab69b0533af0e6c6ca5c..6bc7976111fa7a28dd3571f6224fcfd956ab9621 100644
+--- a/Makefile.build_config.in
++++ b/Makefile.build_config.in
+@@ -36,6 +36,9 @@ COMPUTE_DEPS=@compute_deps@
+ # The C compiler vendor
+ OCAML_CC_VENDOR = @ocaml_cc_vendor@
+ 
++LAUNCH_METHOD = @launch_method@
++TARGET_LAUNCH_METHOD = @target_launch_method@
++
+ BUILD_PATH_LOGICAL = @srcdir_abs@
+ BUILD_PATH_PHYSICAL = @srcdir_abs_real@
+ BUILD_MAP_FLAGS = @build_map_flags@
+@@ -68,6 +71,7 @@ DOCDIR=@docdir@
+ TARGET_LIBDIR=@TARGET_LIBDIR@
+ TARGET_LIBDIR_IS_RELATIVE=@target_libdir_is_relative@
+ OCAML_BINDIR = @ocaml_bindir@
++TARGET_BINDIR = @TARGET_BINDIR@
+ 
+ # Platform-dependent command to create symbolic links
+ LN = @ln@
+diff --git a/Makefile.common b/Makefile.common
+index 27bd27ec6b4555d90c641a7021ee60df62839fdd..8a60e0bad2f37f83721728820c670a3ca1e83f5e 100644
+--- a/Makefile.common
++++ b/Makefile.common
+@@ -201,6 +201,33 @@ OCAMLYACCFLAGS ?=
+ 
+ SAK = $(ROOTDIR)/runtime/sak$(EXE)
+ 
++# $(ROOTDIR)/ocamlc needs -launch-method to be given explicitly as its default
++# values are those for the target (cf. --with-target-sh and TARGET_BINDIR).
++BYTECODE_LAUNCHER_FLAGS = \
++  -launch-method $(call QUOTE_SINGLE,$(LAUNCH_METHOD) $(BINDIR))
++
++# $(BOOTSTRAPPED) will be non-empty after the compiler has been bootstrapped, as
++# the -launch-method string will appear in it.
++BOOTSTRAPPED := \
++  $(shell grep -Fq 'launch-method' $(ROOTDIR)/boot/ocamlc && echo Bootstrapped)
++
++# Prior to bootstrapping, boot/ocamlc gets the correct host values from
++# boot/runtime-launch-info and doesn't yet recognise -launch-method. After
++# bootstrapping, both compilers must be passed -launch-method.
++ifeq "$(BOOTSTRAPPED)" ""
++ROOT_LINK_FLAGS := $(BYTECODE_LAUNCHER_FLAGS)
++BYTECODE_LAUNCHER_FLAGS :=
++endif
++
++MAYBE_ADD_BYTECODE_LAUNCHER_FLAGS = \
++  $(if $(filter -custom, $(1)),,\
++    -use-prims $(ROOTDIR)/runtime/primitives $(BYTECODE_LAUNCHER_FLAGS))
++
++LINK_BYTECODE_PROGRAM =\
++  $(CAMLC) $(OC_COMMON_LINKFLAGS) \
++    $(call MAYBE_ADD_BYTECODE_LAUNCHER_FLAGS, \
++      $(OC_COMMON_LINKFLAGS) $(OC_BYTECODE_LINKFLAGS)) $(OC_BYTECODE_LINKFLAGS)
++
+ # ocamlc has several mechanisms for linking a bytecode image to the runtime
+ # which executes it. The exact mechanism depends on the platform and the precise
+ # location of the runtime. The boot compiler (boot/ocamlc) therefore needs this
+diff --git a/bytecomp/bytelink.ml b/bytecomp/bytelink.ml
+index 56a1c8fb32f496438c4be737480871744e0a434a..7abb6f7eb650788faa67117549fa6781abb1d4f8 100644
+--- a/bytecomp/bytelink.ml
++++ b/bytecomp/bytelink.ml
+@@ -309,13 +309,6 @@ type launch_method =
+ | Shebang_runtime
+ | Executable
+ 
+-type runtime_launch_info = {
+-  buffer : string;
+-  bindir : string;
+-  launcher : launch_method;
+-  executable_offset : int
+-}
+-
+ (* See https://www.in-ulm.de/~mascheck/various/shebang/#origin for a deep
+    dive into shebangs.
+    - Whitespace (space or horizontal tab) delimits the interpreter from an
+@@ -328,55 +321,6 @@ let invalid_for_shebang_line path =
+   let invalid_char = function ' ' | '\t' | '\n' -> true | _ -> false in
+   String.length path > 125 || String.exists invalid_char path
+ 
+-(* The runtime-launch-info file consists of two "lines" followed by binary data.
+-   The file is _always_ LF-formatted, even on Windows. The sequence of bytes up
+-   to the first '\n' is interpreted:
+-     - "sh" - use a shebang-style launcher. If sh is needed, determine its
+-              location from [command -p -v sh]
+-     - "exe" - use the executable launcher contained in this runtime-launch-info
+-               file.
+-     - "/" ^ path - use a shebang-style launcher. If sh is needed, path is the
+-                    absolute location of sh. path must be valid for a shebang
+-                    line.
+-   The second "line" is interpreted as the next "\000\n"-terminated sequence and
+-   is the directory containing the default runtimes (ocamlrun, ocamlrund, etc.).
+-   The null terminator is used since '\n' is valid in a nefarious installation
+-   prefix but Posix forbids filenames including the nul character.
+-   The remainder of the file is then the executable launcher for bytecode
+-   programs (see stdlib/header{,nt}.c). *)
+-
+-let read_runtime_launch_info file =
+-  let buffer =
+-    try
+-      In_channel.with_open_bin file In_channel.input_all
+-    with Sys_error msg -> raise (Error (Camlheader (msg, file)))
+-  in
+-  try
+-    let bindir_start = String.index buffer '\n' + 1 in
+-    let bindir_end = String.index_from buffer bindir_start '\000' in
+-    let bindir = String.sub buffer bindir_start (bindir_end - bindir_start) in
+-    let bindir =
+-      if bindir = Filename.current_dir_name then
+-        Filename.dirname Sys.executable_name
+-      else
+-        bindir in
+-    let executable_offset = bindir_end + 2 in
+-    let launcher =
+-      let kind = String.sub buffer 0 (bindir_start - 1) in
+-      if kind = "exe" then
+-        Executable
+-      else if kind <> "" && (kind.[0] = '/' || kind = "sh") then
+-        Shebang_bin_sh kind
+-      else
+-        raise Not_found in
+-    if String.length buffer < executable_offset
+-       || buffer.[executable_offset - 1] <> '\n' then
+-      raise Not_found
+-    else
+-      {bindir; launcher; buffer; executable_offset}
+-  with Not_found ->
+-    raise (Error (Camlheader ("corrupt header", file)))
+-
+ let find_bin_sh () =
+   let output_file = Filename.temp_file "caml_bin_sh" "" in
+   let result =
+@@ -401,20 +345,16 @@ let find_bin_sh () =
+    called) *)
+ 
+ let write_header outchan =
+-  let runtime_info =
+-    let header = "camlheader" in
+-    try read_runtime_launch_info (Load_path.find header)
+-    with Not_found -> raise (Error (File_not_found header))
+-  in
+-  let runtime_info =
++  (* Determine which method will be used for launching the executable:
++     Executable: concatenate the bytecode image to the executable stub
++     Shebang_runtime: #! line with the required runtime
++     Shebang_bin_sh: #! for a shell script calling exec *)
++  let launcher, bindir =
+     match !Clflags.launch_method with
+-    | Some Executable ->
+-        {runtime_info with launcher = Executable}
+-    | Some (Shebang sh) ->
+-        {runtime_info with launcher =
+-          Shebang_bin_sh (Option.value ~default:"sh" sh)}
+-    | None ->
+-        runtime_info
++    | Config.Executable, bindir ->
++        Executable, bindir
++    | Config.Shebang sh, bindir ->
++        Shebang_bin_sh (Option.value ~default:"sh" sh), bindir
+   in
+   let runtime =
+     if String.length !Clflags.use_runtime > 0 then
+@@ -426,18 +366,14 @@ let write_header outchan =
+       if Sys.win32 then
+         runtime
+       else
+-        Filename.concat runtime_info.bindir runtime
++        Filename.concat bindir runtime
+   in
+-  (* Determine which method will be used for launching the executable:
+-     Executable: concatenate the bytecode image to the executable stub
+-     Shebang_runtime: #! line with the required runtime
+-     Shebang_bin_sh: #! for a shell script calling exec *)
+   let launcher =
+-    if runtime_info.launcher = Executable then
++    if launcher = Executable then
+       Executable
+     else
+       if invalid_for_shebang_line runtime then
+-        match runtime_info.launcher with
++        match launcher with
+         | Shebang_bin_sh sh ->
+             let sh =
+               if sh = "sh" then
+@@ -453,6 +389,18 @@ let write_header outchan =
+       else
+         Shebang_runtime
+   in
++  let write_exe_launcher data =
++    (* Compatibility with previous header format - remove post-bootstrap *)
++    let data =
++      if data = "" || not (List.mem data.[0] ['/'; 'e'; 's']) then
++        data
++      else
++        let exe_start = String.index data '\000' + 2 in
++        let len = String.length data in
++        String.sub data exe_start (len - exe_start)
++    in
++    Out_channel.output_string outchan data
++  in
+   (* Write the header *)
+   match launcher with
+   | Shebang_runtime ->
+@@ -467,9 +415,16 @@ let write_header outchan =
+       Bytesections.init_record outchan
+   | Executable ->
+       (* Use the executable stub launcher *)
+-      let pos = runtime_info.executable_offset in
+-      let len = String.length runtime_info.buffer - pos in
+-      Out_channel.output_substring outchan runtime_info.buffer pos len;
++      let header =
++        let header = "camlheader" in
++        try Load_path.find header
++        with Not_found -> raise (Error (File_not_found header))
++      in
++      let data =
++        try In_channel.with_open_bin header In_channel.input_all
++        with Sys_error msg -> raise (Error (Camlheader (msg, header)))
++      in
++      write_exe_launcher data;
+       (* The runtime name needs recording in RNTM *)
+       let toc_writer = Bytesections.init_record outchan in
+       Printf.fprintf outchan "%s\000" runtime;
+diff --git a/configure b/configure
+index 065bbe798b4a7f298f498aa0d668f9a5977bc047..5e29ae74fdaed1798b405d55ed54e56c07c9b19b 100755
+GIT binary patch
+delta 89
+zcmZ3oN9D#Il?{ynTp^A@?ye#6PM&_7YXdZxrytnMD#FK=lUSOUoDrX!T9T2UvUy3c
+l>!0b*{Tcn+O#>K#m<foPftUq|S%H`hh}pNB25`JT3jp|YAc_D0
+
+delta 58
+zcmcbyM`g(#l?{ynoBIP)m^WVwcKI`1CV<hmJu83_h?#(x8Hibcm=%cGfS7%IRshGl
+FvjEQm7W)7I
+
+diff --git a/configure.ac b/configure.ac
+index 3ea07afb6353aa0cfdc7787ec0d4c42303ec5de2..997e5164ab29e3a806d270455b790bf3dfd35a05 100644
+--- a/configure.ac
++++ b/configure.ac
+@@ -123,6 +123,8 @@ AC_SUBST([ocamlc_cppflags])
+ AC_SUBST([flexdir])
+ AC_SUBST([bootstrapping_flexdll])
+ AC_SUBST([shebangscripts])
++AC_SUBST([launch_method])
++AC_SUBST([target_launch_method])
+ AC_SUBST([AR])
+ AC_SUBST([mklib])
+ AC_SUBST([supports_shared_libraries])
+@@ -177,6 +179,7 @@ AC_SUBST([ocaml_bindir])
+ AC_SUBST([naked_pointers])
+ AC_SUBST([naked_pointers_checker])
+ AC_SUBST([ar_supports_response_files])
++AC_SUBST([TARGET_BINDIR])
+ AC_SUBST([TARGET_LIBDIR])
+ AC_SUBST([QS])
+ AC_SUBST([target_bindir])
+diff --git a/debugger/Makefile b/debugger/Makefile
+index aaae909e1bd721c98537e4d338fe4bb21f42ce63..6b7b1159343a31f8389a02b6f5e1983c393a73c0 100644
+--- a/debugger/Makefile
++++ b/debugger/Makefile
+@@ -33,6 +33,8 @@ ifeq "$(TARGET_LIBDIR_IS_RELATIVE)" "true"
+   # compiled with the correct flags
+   LINKFLAGS += $(addprefix -ccopt$(SPACE), $(BUILD_MAP_CFLAGS))
+ endif
++else
++LINKFLAGS += $(ROOT_LINK_FLAGS)
+ endif
+ CAMLDEP=$(BEST_OCAMLDEP)
+ DEPFLAGS=-slash
+diff --git a/driver/main_args.ml b/driver/main_args.ml
+index 6c2f572a5ef5220cf3ea95abe8f68f4f643fbe80..815dfbd89bb1aba1eb74997cfe873949d74382ac 100644
+--- a/driver/main_args.ml
++++ b/driver/main_args.ml
+@@ -2040,16 +2040,22 @@ third-party libraries such as Lwt, but with a different API."
+     let _output_obj () = output_c_object := true; custom_runtime := true
+     let _use_prims s = use_prims := s
+     let _use_runtime s = use_runtime := s
+-    let _launch_method = function
+-    | "exe" ->
+-        launch_method := Some Config.Executable
+-    | "sh" ->
+-        launch_method := Some (Config.Shebang None)
+-    | s when s <> "" && s.[0] = '/' ->
+-        launch_method := Some (Config.Shebang (Some s))
+-    | _ ->
+-        Compenv.fatal
+-          "-launch-method: expect sh, exe or an absolute path for <method>"
++    let _launch_method s =
++      let s, bindir =
++        try Misc.cut_at s ' '
++        with Not_found ->
++          s, Config.target_bindir
++      in
++      match s with
++      | "exe" ->
++          launch_method := (Config.Executable, bindir)
++      | "sh" ->
++          launch_method := (Config.Shebang None, bindir)
++      | s when s <> "" && s.[0] = '/' ->
++          launch_method := (Config.Shebang (Some s), bindir)
++      | _ ->
++          Compenv.fatal
++            "-launch-method: expect sh, exe or an absolute path for <method>"
+     let _v () = Compenv.print_version_and_library "compiler"
+     let _vmthread () = Compenv.fatal vmthread_removed_message
+   end
+diff --git a/ocamldoc/Makefile b/ocamldoc/Makefile
+index 229d875c62546ea2531ad03ba2f0d34a4161cef4..c8b578b3ad5d124889ec6336173a89e0e8aec04a 100644
+--- a/ocamldoc/Makefile
++++ b/ocamldoc/Makefile
+@@ -182,6 +182,8 @@ ifeq "$(TARGET_LIBDIR_IS_RELATIVE)" "true"
+   # compiled with the correct flags
+ $(OCAMLDOC): LINKFLAGS += $(addprefix -ccopt$(SPACE), $(BUILD_MAP_CFLAGS))
+ endif
++else
++$(OCAMLDOC): LINKFLAGS += $(ROOT_LINK_FLAGS)
+ endif
+ 
+ $(OCAMLDOC): $(EXECMOFILES)
+diff --git a/stdlib/Makefile b/stdlib/Makefile
+index d79e9ea137ad5353506ca85fa159178e5141a25e..0d8081bc353ea4c7436bb0482199dce29025e29b 100644
+--- a/stdlib/Makefile
++++ b/stdlib/Makefile
+@@ -140,7 +140,7 @@ target_camlheader%: tmpheader.exe
+ 
+ endif
+ 
+-target_$(HEADER_NAME): target_runtime.info tmpheader.exe
++target_$(HEADER_NAME): tmpheader.exe
+ 	@cat $^ > $@
+ 
+ $(HEADER_NAME): runtime.info tmpheader.exe
+diff --git a/tools/Makefile b/tools/Makefile
+index 88008766a746a1e1966fa7871bf997ffdfb1d767..c26a7037916953a9b2f35cc44845d163c1e7c9da 100644
+--- a/tools/Makefile
++++ b/tools/Makefile
+@@ -60,7 +60,8 @@ $(foreach program, $(programs_byte) $(programs_opt),\
+   $(eval $(call PROGRAM_SYNONYM,$(program))))
+ 
+ $(programs_byte:%=%$(EXE)):
+-	$(CAMLC) $(LINKFLAGS) -I $(ROOTDIR) -o $@ $(filter-out %.cmi,$^)
++	$(CAMLC) $(call ADD_BYTECODE_RUNTIME, $(LINKFLAGS)) $(LINKFLAGS) \
++	         -I $(ROOTDIR) -o $@ $(filter-out %.cmi,$^)
+ 
+ $(programs_opt:%=%$(EXE)):
+ 	$(CAMLOPT_CMD) $(LINKFLAGS) -I $(ROOTDIR) -o $@ $(filter-out %.cmi,$^)
+@@ -304,6 +305,10 @@ checkstack$(EXE): checkstack.$(O)
+ 
+ caml_tex := caml-tex$(EXE)
+ 
++ifeq "$(SUPPORTS_SHARED_LIBRARIES)" "true"
++$(caml_tex): LINKFLAGS += $(ROOT_LINK_FLAGS)
++endif
++
+ # caml-tex uses str.cma and unix.cma and so must be compiled with
+ # $(ROOTDIR)/ocamlc not $(ROOTDIR)/boot/ocamlc since the boot
+ # compiler does not necessarily have the correct shared library
+diff --git a/utils/Makefile b/utils/Makefile
+index 3c967701bf46b9a1783d7626edf61f10471b0231..57ad3d0b9efe04b87e4c1905704bcb04133e8c6e 100644
+--- a/utils/Makefile
++++ b/utils/Makefile
+@@ -59,6 +59,7 @@ config.ml: config.mlp $(ROOTDIR)/Makefile.config Makefile
+ 	    $(call SUBST_QUOTE,FLEXDLL_DIR) \
+ 	    $(call SUBST,HOST) \
+ 	    $(call SUBST_STRING,OCAML_BINDIR) \
++	    $(call SUBST_STRING,TARGET_BINDIR) \
+ 	    $(call SUBST_STRING,LIBDIR) \
+ 	    $(call SUBST_STRING,MKDLL) \
+ 	    $(call SUBST_STRING,MKEXE) \
+@@ -91,6 +92,7 @@ config.ml: config.mlp $(ROOTDIR)/Makefile.config Makefile
+ 	    $(call SUBST,CC_HAS_DEBUG_PREFIX_MAP) \
+ 	    $(call SUBST,AS_HAS_DEBUG_PREFIX_MAP) \
+ 	    $(call SUBST,AR_SUPPORTS_RESPONSE_FILES) \
++	    $(call SUBST_STRING,TARGET_LAUNCH_METHOD) \
+ 	    $< > $@
+ 
+ # Test for the substitution functions above
+diff --git a/utils/clflags.ml b/utils/clflags.ml
+index 51b8eefa81e38f8f1b626b9f656e9f0cfb7d646d..f9a3eecf01933a467324083603976bcb925787ec 100644
+--- a/utils/clflags.ml
++++ b/utils/clflags.ml
+@@ -80,7 +80,8 @@ and noinit = ref false                  (* -noinit *)
+ and open_modules = ref []               (* -open *)
+ and use_prims = ref ""                  (* -use-prims ... *)
+ and use_runtime = ref ""                (* -use-runtime ... *)
+-and launch_method = ref None            (* -launch-method ... *)
++and launch_method =                     (* -launch-method ... *)
++  ref (Config.launch_method, Config.target_bindir)
+ and plugin = ref false                  (* -plugin ... *)
+ and principal = ref false               (* -principal *)
+ and real_paths = ref true               (* -short-paths *)
+diff --git a/utils/clflags.mli b/utils/clflags.mli
+index 026dac6c05473eff55e5ccd4b3f7ace31e61d0eb..aa0303a121837067caaae212804976c053036003 100644
+--- a/utils/clflags.mli
++++ b/utils/clflags.mli
+@@ -109,7 +109,7 @@ val noinit : bool ref
+ val noversion : bool ref
+ val use_prims : string ref
+ val use_runtime : string ref
+-val launch_method : Config.launch_method option ref
++val launch_method : (Config.launch_method * string) ref
+ val plugin : bool ref
+ val principal : bool ref
+ val real_paths : bool ref
+diff --git a/utils/config.mli b/utils/config.mli
+index 65866f083085f0f7f7e7f4839100110daeb32a53..71b47011bff1c273a89edbb27ce5932e798bb276 100644
+--- a/utils/config.mli
++++ b/utils/config.mli
+@@ -47,6 +47,11 @@ val standard_library_relative: bool
+ 
+     @since 5.5 *)
+ 
++val target_bindir: string
++(** The directory containing the runtime binaries on the target system
++
++    @since 5.5 *)
++
+ val standard_library: string
+ (** The effective directory containing the standard libraries, taking CAMLLIB
+     and OCAMLLIB into account. *)
+@@ -300,6 +305,11 @@ type launch_method =
+                                specified is the full path to sh, otherwise the
+                                linker searches for it. *)
+ 
++val launch_method : launch_method
++(** Default launch mechanism for bytecode executables
++
++    @since 5.5 *)
++
+ (** Access to configuration values *)
+ val print_config : out_channel -> unit
+ 
+diff --git a/utils/config.mlp b/utils/config.mlp
+index 5d300c3704366f7ee27362b2b24d4874159dd89e..e9947b81892abacaece03c0c689f290554668f9b 100644
+--- a/utils/config.mlp
++++ b/utils/config.mlp
+@@ -18,6 +18,7 @@
+ let version = Sys.ocaml_version
+ 
+ let bindir = "%%OCAML_BINDIR%%"
++let target_bindir = "%%TARGET_BINDIR%%"
+ 
+ external standard_library_default : unit -> string = "%standard_library_default"
+ 
+@@ -41,6 +42,11 @@ let standard_library =
+ let standard_library_relative = relative_root_dir <> None
+ 
+ let bindir = Option.value ~default:bindir relative_root_dir
++let target_bindir =
++  if target_bindir = Filename.current_dir_name then
++    Filename.dirname Sys.executable_name
++  else
++    target_bindir
+ 
+ let ccomp_type = "%%CCOMPTYPE%%"
+ let c_compiler = "%%CC%%"
+@@ -169,6 +175,14 @@ let systhread_supported = %%SYSTHREAD_SUPPORT%%;;
+ 
+ let flexdll_dirs = [%%FLEXDLL_DIR%%];;
+ 
++let launch_method = "%%TARGET_LAUNCH_METHOD%%"
++
++let launch_method =
++  match launch_method with
++  | "exe" -> Executable
++  | "sh" -> Shebang None
++  | _ -> Shebang (Some launch_method)
++
+ let ar_supports_response_files = %%AR_SUPPORTS_RESPONSE_FILES%%;;
+ 
+ type configuration_value =
+-- 
+2.53.0.windows.2
+

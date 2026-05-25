@@ -1,0 +1,773 @@
+From 4b519da2faabc9bddde6604233a94d0a81cda28f Mon Sep 17 00:00:00 2001
+From: David Allsopp <david.allsopp@metastack.com>
+Date: Wed, 17 Aug 2022 09:08:03 +0100
+Subject: [PATCH] Compute the bytecode launcher stub in ocamlc
+
+The various camlheader files are now folded into a single
+runtime-launch-info file. On all systems, this file now contains the
+executable stub launcher (from stdlib/header{,nt}.c) as well as the
+following pieces of configuration information:
+- Whether shebang scripts are supported
+- How to find sh if the path to the interpreter is not valid for a
+  shebang
+- The location of the runtime executables (i.e. the bindir OCaml was
+  configure'd with)
+
+Since it no longer knows the name of the runtime (ocamlrun, ocamlrund,
+etc.), the executable header no longer contains a default runtime path.
+If the executable header is used, then the RNTM section must always be
+written to the bytecode image. In passing, tools/ocamlsize is updated to
+handle this and the display of default runtimes correctly.
+
+In refactoring this code, several bugs are fixed. The validity checking
+of shebangs is now correct in all cases. Previously, if OCaml was
+configure'd with a prefix longer than 125 characters, the compiler's
+tools were installed with correct shebang headers, but executables
+produced by ocamlc after installation had invalid shebang headers. In
+addition to spaces, newline and tab are now recognised as being invalid
+characters for a shebang header. Finally, ocamlc no longer assumes that
+sh resides at /bin/sh but by default uses the correct Posix mechanism of
+querying `command -p -v sh` to determine the location.
+
+Since 4.02.2, the compiler has generated a host and target set of header
+files, permitting external cross-compilation solutions. The path to
+ocamlrun on the target system can already be customised by specifying
+--with-target-bindir=<path>. This support is extended further with
+--with-target-sh which allows the location of sh on the target system
+to be specified (for when that differs from the host system on which the
+compiler is run). Furthermore, specifying --without-target-sh will cause
+the executable header to be used instead.
+
+Deviations from original:
+  - Header name remains camlheader rather than runtime-launch-info
+  - camlheaderd and camlheaderi are still installed, but they just
+    contain /usr/bin/false as the "interpreter" (i.e. they're dummy
+    files). camlheader_ur is likewise still installed, but unused.
+  - Two minor typos in stdlib/Makefile and tools/ocamlsize corrected
+
+(cherry picked from commit 8681e66c49315cd340ac3f39908160a3a9c51076)
+(cherry picked from commit f08c2574a355dd637fa5f30c0b5ebd274933d296)
+
+diff --git a/.gitignore b/.gitignore
+index f3a839fe236fc141f8283abbe72631d8b4b79f85..4090b155cab70f94f7bcc49578d11247bb5c2a36 100644
+--- a/.gitignore
++++ b/.gitignore
+@@ -205,14 +205,15 @@ _build
+ /runtime/domain_state32.inc
+ /runtime/domain_state64.inc
+ 
++/stdlib/bootheader
+ /stdlib/camlheader
+-/stdlib/target_camlheader
+-/stdlib/camlheader[di]
+-/stdlib/target_camlheader[di]
++/stdlib/target_camlheader*
+ /stdlib/camlheader_ur
++/stdlib/runtime.info
+ /stdlib/labelled-*
+ /stdlib/caml
+ /stdlib/sys.ml
++/stdlib/target_runtime.info
+ 
+ /testsuite/**/*.result
+ /testsuite/**/*.opt_result
+diff --git a/Changes b/Changes
+index 59e3f7aa22f2ef3fbd17e871bfe1dfe5da9c038d..2451dabc3dc1aa52786f8a393ef635c0b9adaf69 100644
+--- a/Changes
++++ b/Changes
+@@ -19,10 +19,11 @@ OCaml 4.14.3 (17 February 2026)
+ 
+ ### Build system:
+ 
+-- #12751: --with-target-bindir configure option implemented. This option
++* #12751: --with-target-bindir configure option implemented. This option
+   refers to the location of the runtime binaries on the target system for a
+   cross-compiler and is embedded in executables produced by ocamlc. It does
+-  not affect the bytecode executables installed as part of the build.
++  not affect the bytecode executables installed as part of the build. The old
++  mechanism `make TARGET_BINDIR=..` no longer works.
+   (David Allsopp, review by Damien Doligez, Xavier Leroy and Olivier Nicole)
+ ### Bug fixes:
+ 
+@@ -42,6 +43,11 @@ OCaml 4.14.3 (17 February 2026)
+   (Vadim Zborovskii, Nicolás Ojeda Bär, report by Vadim Zborovskii, review by
+   David Allsopp)
+ 
++* #12751: Always keep within the 128 character limit for shebang lines. Previous
++  fix in #8622 handled building the compiler with a long prefix; this patch
++  extends this to the bytecode executables emitted by that compiler.
++  (David Allsopp, review by Damien Doligez, Xavier Leroy and Olivier Nicole)
++
+ - #13430, #13434: protect memory-safety on Lazy.force races
+   (Gabriel Scherer and Vincent Laviron, report by Edwin Török,
+    review by Vincent Laviron)
+diff --git a/Makefile b/Makefile
+index 62049f8488dd44a98f65338094ade1843e227d02..42a11a0ba91e92ba0f55e773b8f9d432e92a0c05 100644
+--- a/Makefile
++++ b/Makefile
+@@ -71,7 +71,7 @@ TOPLEVELINIT=toplevel/toploop.cmo
+ # capitalized module names.
+ PERVASIVES=$(STDLIB_MODULES) outcometree topdirs toploop
+ 
+-LIBFILES=stdlib.cma std_exit.cmo *.cmi camlheader
++LIBFILES=stdlib.cma std_exit.cmo *.cmi
+ 
+ COMPLIBDIR=$(LIBDIR)/compiler-libs
+ 
+@@ -172,8 +172,8 @@ else
+ 	$(MAKE) -C runtime $(BOOT_FLEXLINK_CMD) all
+ endif # ifeq "$(BOOTSTRAPPING_FLEXDLL)" "false"
+ 	cp runtime/ocamlrun$(EXE) boot/ocamlrun$(EXE)
+-	cd boot; rm -f $(LIBFILES)
+-	cd stdlib; cp $(LIBFILES) ../boot
++	cd boot; rm -f $(LIBFILES) $(HEADER_NAME)
++	cd stdlib; cp $(LIBFILES) ../boot; cp bootheader ../boot/$(HEADER_NAME)
+ 	cd boot; $(LN) ../runtime/libcamlrun.$(A) .
+ 
+ # Recompile the core system using the bootstrap compiler
+@@ -1150,7 +1150,7 @@ distclean: clean
+ 	$(MAKE) -C manual distclean
+ 	$(MAKE) -C runtime distclean
+ 	$(MAKE) -C stdlib distclean
+-	rm -f boot/ocamlrun boot/ocamlrun.exe boot/camlheader \
++	rm -f boot/ocamlrun boot/ocamlrun.exe boot/$(HEADER_NAME) \
+ 	      boot/ocamlruns boot/ocamlruns.exe \
+ 	      boot/flexlink.byte boot/flexlink.byte.exe \
+ 	      boot/flexdll_*.o boot/flexdll_*.obj \
+diff --git a/Makefile.build_config.in b/Makefile.build_config.in
+index f0ec9cc705e4c90a18feb1d63f198c9c0e8728f7..8f9b5c3863b3a0460fedc30ae548961c848540b0 100644
+--- a/Makefile.build_config.in
++++ b/Makefile.build_config.in
+@@ -24,10 +24,6 @@ INSTALL ?= @INSTALL@ -p
+ INSTALL_DATA ?= @INSTALL_DATA@
+ INSTALL_PROG ?= @INSTALL_PROGRAM@
+ 
+-# Location of ocamlrun on the target system (path embedded in bytecode
+-# executables)
+-TARGET_BINDIR = @target_bindir@
+-
+ # Whether to install the native toplevel (ocamlnat)
+ INSTALL_OCAMLNAT = @install_ocamlnat@
+ 
+diff --git a/Makefile.common b/Makefile.common
+index 5f02c3d0c36b472b9b6d01faa4e84873b0ea93da..0cdc6cae4ab50cf73f660cbe5ee65bb3a7fa316a 100644
+--- a/Makefile.common
++++ b/Makefile.common
+@@ -165,3 +165,11 @@ OCAMLYACCFLAGS ?=
+ 	$(OCAMLYACC) $(OCAMLYACCFLAGS) $<
+ 
+ SAK = $(ROOTDIR)/runtime/sak$(EXE)
++
++# ocamlc has several mechanisms for linking a bytecode image to the runtime
++# which executes it. The exact mechanism depends on the platform and the precise
++# location of the runtime. The boot compiler (boot/ocamlc) therefore needs this
++# additional information, which comes from the stdlib build and is copied into
++# boot/ as part of coldstart. See read_runtime_launch_info in
++# bytecomp/bytelink.ml for further details.
++HEADER_NAME = camlheader
+diff --git a/Makefile.config.in b/Makefile.config.in
+index b8f9e0be0ce11a9c9861f141283f62e69e199aa3..86fee8b4f5e299db51d4ae9ecc5704940a58c3ea 100644
+--- a/Makefile.config.in
++++ b/Makefile.config.in
+@@ -59,15 +59,6 @@ MANDIR=@mandir@
+ PROGRAMS_MAN_DIR=$(MANDIR)/man1
+ LIBRARIES_MAN_DIR=$(MANDIR)/man3
+ 
+-### Do #! scripts work on your system?
+-### Beware: on some systems (e.g. SunOS 4), this will work only if
+-### the string "#!$(BINDIR)/ocamlrun" is less than 32 characters long.
+-### In doubt, set HASHBANGSCRIPTS to false.
+-SHEBANGSCRIPTS=@shebangscripts@
+-LONG_SHEBANG=@long_shebang@
+-# For compatibility
+-HASHBANGSCRIPTS:=$(SHEBANGSCRIPTS)
+-
+ ### Path to the libtool script
+ LIBTOOL = $(TOP_BUILDDIR)/libtool
+ 
+@@ -269,6 +260,10 @@ FLEXLINK=$(FLEXLINK_CMD) $(FLEXLINK_FLAGS)
+ 
+ # Deprecated variables
+ 
++SHEBANGSCRIPTS=@shebangscripts@
++HASHBANGSCRIPTS=$(SHEBANGSCRIPTS)
++LONG_SHEBANG=@long_shebang@
++
+ ## Variables renamed in OCaml 4.13
+ 
+ RUNTIMEI=$(INSTRUMENTED_RUNTIME)
+diff --git a/bytecomp/bytelink.ml b/bytecomp/bytelink.ml
+index ba6a3c39f51f75b6921635d5de5b4586fb65fde4..62c24a73759f2fa8d9560e9b6d31f775c2d233cd 100644
+--- a/bytecomp/bytelink.ml
++++ b/bytecomp/bytelink.ml
+@@ -304,6 +304,172 @@ let make_absolute file =
+   else Location.rewrite_absolute_path
+          (Filename.concat (Sys.getcwd()) file)
+ 
++type launch_method =
++| Shebang_bin_sh of string
++| Shebang_runtime
++| Executable
++
++type runtime_launch_info = {
++  buffer : string;
++  bindir : string;
++  launcher : launch_method;
++  executable_offset : int
++}
++
++(* See https://www.in-ulm.de/~mascheck/various/shebang/#origin for a deep
++   dive into shebangs.
++   - Whitespace (space or horizontal tab) delimits the interpreter from an
++     optional argument
++   - The path clearly must not contain a linefeed
++   - A maximum length of 125 (128 less the #! and the newline) is picked as a
++     portable maximum (it's actually Linux's prior to kernel v5.1), rather than
++     actually probing the maximum length in configure *)
++let invalid_for_shebang_line path =
++  let invalid_char = function ' ' | '\t' | '\n' -> true | _ -> false in
++  String.length path > 125 || String.exists invalid_char path
++
++(* The runtime-launch-info file consists of two "lines" followed by binary data.
++   The file is _always_ LF-formatted, even on Windows. The sequence of bytes up
++   to the first '\n' is interpreted:
++     - "sh" - use a shebang-style launcher. If sh is needed, determine its
++              location from [command -p -v sh]
++     - "exe" - use the executable launcher contained in this runtime-launch-info
++               file.
++     - "/" ^ path - use a shebang-style launcher. If sh is needed, path is the
++                    absolute location of sh. path must be valid for a shebang
++                    line.
++   The second "line" is interpreted as the next "\000\n"-terminated sequence and
++   is the directory containing the default runtimes (ocamlrun, ocamlrund, etc.).
++   The null terminator is used since '\n' is valid in a nefarious installation
++   prefix but Posix forbids filenames including the nul character.
++   The remainder of the file is then the executable launcher for bytecode
++   programs (see stdlib/header{,nt}.c). *)
++
++let read_runtime_launch_info file =
++  let buffer =
++    try
++      In_channel.with_open_bin file In_channel.input_all
++    with Sys_error msg -> raise (Error (Camlheader (msg, file)))
++  in
++  try
++    let bindir_start = String.index buffer '\n' + 1 in
++    let bindir_end = String.index_from buffer bindir_start '\000' in
++    let bindir = String.sub buffer bindir_start (bindir_end - bindir_start) in
++    let executable_offset = bindir_end + 2 in
++    let launcher =
++      let kind = String.sub buffer 0 (bindir_start - 1) in
++      if kind = "exe" then
++        Executable
++      else if kind <> "" && (kind.[0] = '/' || kind = "sh") then
++        Shebang_bin_sh kind
++      else
++        raise Not_found in
++    if String.length buffer < executable_offset
++       || buffer.[executable_offset - 1] <> '\n' then
++      raise Not_found
++    else
++      {bindir; launcher; buffer; executable_offset}
++  with Not_found ->
++    if String.starts_with ~prefix:"#!" buffer then
++      let runtime = String.sub buffer 2 (String.index buffer '\n' - 2) in
++      {bindir = Filename.dirname runtime; launcher = Shebang_bin_sh "sh";
++       buffer; executable_offset = 0}
++    else if String.starts_with ~prefix:"MZ" buffer then
++      {bindir = ""; launcher = Executable; buffer; executable_offset = 0}
++    else
++      raise (Error (Camlheader ("corrupt header", file)))
++
++let find_bin_sh () =
++  let output_file = Filename.temp_file "caml_bin_sh" "" in
++  let result =
++  try
++    let cmd =
++      Filename.quote_command ~stdout:output_file "command" ["-p"; "-v"; "sh"]
++    in
++    if !Clflags.verbose then
++      Printf.eprintf "+ %s\n" cmd;
++    if Sys.command cmd = 0 then
++      In_channel.with_open_text output_file input_line
++    else
++      ""
++  with Sys_error _
++     | End_of_file -> ""
++  in
++  remove_file output_file;
++  result
++
++(* Writes the executable header to outchan and writes the RNTM section, if
++   needed. Returns a toc_writer (i.e. Bytesections.init_record is always
++   called) *)
++
++let write_header outchan =
++  let use_runtime, runtime =
++    if String.length !Clflags.use_runtime > 0 then
++      (true, make_absolute !Clflags.use_runtime)
++    else
++      (false, "ocamlrun" ^ !Clflags.runtime_variant)
++  in
++  (* Write the header *)
++  let runtime_info =
++    let header = "camlheader" in
++    try read_runtime_launch_info (Load_path.find header)
++    with Not_found -> raise (Error (File_not_found header))
++  in
++  let runtime =
++    (* Historically, the native Windows ports are assumed to be finding
++       ocamlrun using a PATH search. *)
++    if use_runtime || Sys.win32 then
++      runtime
++    else
++      Filename.concat runtime_info.bindir runtime
++  in
++  (* Determine which method will be used for launching the executable:
++     Executable: concatenate the bytecode image to the executable stub
++     Shebang_runtime: #! line with the required runtime
++     Shebang_bin_sh: #! for a shell script calling exec *)
++  let launcher =
++    if runtime_info.launcher = Executable then
++      Executable
++    else
++      if invalid_for_shebang_line runtime then
++        match runtime_info.launcher with
++        | Shebang_bin_sh sh ->
++            let sh =
++              if sh = "sh" then
++                find_bin_sh ()
++              else
++                sh in
++            if sh = "" || invalid_for_shebang_line sh then
++              Executable
++            else
++              Shebang_bin_sh sh
++        | _ ->
++            Executable
++      else
++        Shebang_runtime
++  in
++  match launcher with
++  | Shebang_runtime ->
++      (* Use the runtime directly *)
++      Printf.fprintf outchan "#!%s\n" runtime;
++      Bytesections.init_record outchan
++  | Shebang_bin_sh bin_sh ->
++      (* exec the runtime using sh *)
++      Printf.fprintf outchan "\
++        #!%s\n\
++        exec %s \"$0\" \"$@\"\n" bin_sh (Filename.quote runtime);
++      Bytesections.init_record outchan
++  | Executable ->
++      (* Use the executable stub launcher *)
++      let pos = runtime_info.executable_offset in
++      let len = String.length runtime_info.buffer - pos in
++      Out_channel.output_substring outchan runtime_info.buffer pos len;
++      (* The runtime name needs recording in RNTM *)
++      let toc_writer = Bytesections.init_record outchan in
++      Printf.fprintf outchan "%s\000" runtime;
++      Bytesections.record outchan "RNTM";
++      toc_writer
++
+ (* Create a bytecode executable file *)
+ 
+ let link_bytecode ?final_name tolink exec_name standalone =
+@@ -323,37 +489,11 @@ let link_bytecode ?final_name tolink exec_name standalone =
+     ~always:(fun () -> close_out outchan)
+     ~exceptionally:(fun () -> remove_file exec_name)
+     (fun () ->
+-       if standalone && !Clflags.with_runtime then begin
+-         (* Copy the header *)
+-         let header =
+-           if String.length !Clflags.use_runtime > 0
+-           then "camlheader_ur" else "camlheader" ^ !Clflags.runtime_variant
+-         in
+-         try
+-           let inchan = open_in_bin (Load_path.find header) in
+-           copy_file inchan outchan;
+-           close_in inchan
+-         with
+-         | Not_found -> raise (Error (File_not_found header))
+-         | Sys_error msg -> raise (Error (Camlheader (header, msg)))
+-       end;
+-       Bytesections.init_record outchan;
+-       (* The path to the bytecode interpreter (in use_runtime mode) *)
+-       if String.length !Clflags.use_runtime > 0 && !Clflags.with_runtime then
+-       begin
+-         let runtime = make_absolute !Clflags.use_runtime in
+-         let runtime =
+-           (* shebang mustn't exceed 128 including the #! and \0 *)
+-           if String.length runtime > 125 then
+-             "/bin/sh\n\
+-              exec \"" ^ runtime ^ "\" \"$0\" \"$@\""
+-           else
+-             runtime
+-         in
+-         output_string outchan runtime;
+-         output_char outchan '\n';
+-         Bytesections.record outchan "RNTM"
+-       end;
++       (* Write the header and set the path to the bytecode interpreter *)
++       if standalone && !Clflags.with_runtime then
++         write_header outchan
++       else
++         Bytesections.init_record outchan;
+        (* The bytecode *)
+        let start_code = pos_out outchan in
+        Symtable.init();
+diff --git a/configure b/configure
+index 6b34090e9b6131650ae0830a8c59df362bd9cd38..12521522e21680e2b0197fbb39ddef78b22d65a4 100755
+GIT binary patch
+delta 1687
+zcmaJ?O=}ZD7$)kPbP*M#2rBhuvbs^UDfn?{i6Et*D79B15GI@1?C54zb|#uaC3uh`
+z9xN4^i$6irh+xEv|G<xnM?uB2coD>l?`AjcCjAH*n0e=!=Y8h=n0@vo-~EyA-nx0<
+z9#>vP(Xh@`MS7+#%goW&4{r*3E;gQ(9wa|MaH!&efWU=?K=Kyg9xj!~AO^qw{_f=4
+zjIBQ|WhTbf&+Bh~=CGdnkTnt;I?|sR+7>=!_or+x?q`m)MPScFlmezrNO&tgZ3@S$
+zG??;&TFGWDW}D2HY&!(8qI=z?J~3UsBht1bglXns)??0XSO%HFu?xp;9D8~ojn!#=
+zuxpGT+CqhX_0p(iPV38m_m1mdo$P*ny<;33MM}>$b-iO0^lHbrs=sy&Tj$mcOBdIS
+zYx@40aZ$fnGv?YD=$RRlN$Qw=Re6xA=JRSXYzoC2Y?2E%04iz&dy=@}?T|s82^Lbt
+zYEWGSCulVAjKn)~fh*zi`lM7;HRTyVl*d90I2CXM!BH~N4K$d8CN3LiKyu+=hH=BE
+zN+H;xLIeuwLgsT?^%vnz7&uHysB%HWMR2*#<fN$|EE|O}>9Hymbz&|Tx(1HDy+Swp
+z_`>l#%wd9>s1jwN9N&i;51FHakTYraUj58IJeUQL^e(IEpkqu_`qRptkh#27B33*h
+zSOnY!#iRn#8W^F3i}@S#b0k$w>nEvGsWF!}eU-5F>qM_$cG?V80l^Y;2A;~qN-fJI
+z@))DABN~1MZ;i@J2#aT%5tzdS5zk`8Ky`~)Nh0xl8-WDX+pR77An`=3wBx?^jTmgO
+z4b|(moI|J*nYV@v3Hf^D(kbZ2Ar&WL#k;9sk>2?~*@X}*dx*7UTLmnz0LX|pSOSSv
+zdzJx_MZ0L1N%Sw)$tiogUN4&)WJwr@d=cbq??9RkWlC4t98v7Ru#vnd$(z(*(xS@V
+zkwmZ9xtZR3FZXZvzUa9nN!RE{e(uD9K?_B%1BT)0?<a?PpZwgXR`g=5W6AXFDeOcp
+zlneF=Sr#~^rl!im-W=wU3W74y0$durE9nOXceW!{SK<%HNW9bK+`sq;`xdWO@A=Q%
+GqVXSn<T^$G
+
+delta 218
+zcmdn+Sb6F-<qcVp(^r=;N^hPLnU}cPZMWzSP8AI&Pd^vWAkFrK5=J0q0%B$$X4#%l
+z!n)9Ey4HHu<mojhSw*LBUC+utU0^*c>vZ;MtU@5J#Po;jS=FbrZeaD9?ze$eYkKJh
+zAa~{lR=?>_Hn3Vwm)gkcA<Cry0@l`Csl|!OT&X$5sX&qGjO$rNnYq$3+Y>jj0x{e6
+z#7*qorrUX6ur~{AU;T^SuZW#1-qG3B-)*{KD~HMUpgfM>%*-I2g<*`++gB8EoT%7t
+J{f48I6#zOpO?m(T
+
+diff --git a/configure.ac b/configure.ac
+index fbdf1aaade97335c7ca557a23c4bf98d2c3b9577..d7f0a80f59dad0c07b2c784c85300846965b1788 100644
+--- a/configure.ac
++++ b/configure.ac
+@@ -355,7 +355,15 @@ AC_ARG_WITH([target-bindir],
+   [AS_HELP_STRING([--with-target-bindir],
+     [location of the runtime binaries on the target system])],
+   [target_bindir=$withval],
+-  [target_bindir='$(BINDIR)'])
++  [target_bindir=''])
++
++AC_ARG_WITH([target-sh],
++  [AS_HELP_STRING([--with-target-sh],
++    [location of Posix sh on the target system])],
++  [AS_IF([test x"$withval" = 'xno'],
++    [target_launch_method='exe'],
++    [target_launch_method="$withval"])],
++  [target_launch_method=''])
+ 
+ AC_ARG_ENABLE([reserved-header-bits],
+   [AS_HELP_STRING([--enable-reserved-header-bits=BITS],
+@@ -583,25 +591,42 @@ AS_IF([test x"$enable_str_lib" != "xno"],
+ ## TODO: have two values, one for host and one for target
+ AC_SYS_INTERPRETER
+ 
++shebangscripts=false
++launch_method='exe'
+ long_shebang=false
+-AS_IF(
+-  [test "x$interpval" = "xyes"],
+-    [AS_CASE([$host],
+-      [*-cygwin|*-*-mingw32|*-pc-windows],
+-        [shebangscripts=false],
+-      [shebangscripts=true
+-       prev_exec_prefix="$exec_prefix"
+-       AS_IF([test "x$exec_prefix" = "xNONE"],[exec_prefix="$prefix"])
+-       eval "expanded_bindir=\"$bindir\""
+-       exec_prefix="$prev_exec_prefix"
+-       # Assume maximum shebang is 128 chars; less #!, /ocamlrun, an optional
+-       # 1 char suffix and the \0 leaving 115 characters
+-       AS_IF([test "${#expanded_bindir}" -gt 115],[long_shebang=true])
+-      ]
+-    )],
+-  [shebangscripts=false]
++AS_IF([test "x$interpval" = "xyes"],
++  [AS_CASE([$host],
++    [*-cygwin|*-*-mingw32*|*-pc-windows], [],
++    [shebangscripts=true
++    launch_method='sh'
++    prev_exec_prefix="$exec_prefix"
++    AS_IF([test "x$exec_prefix" = "xNONE"],[exec_prefix="$prefix"])
++    eval "expanded_bindir=\"$bindir\""
++    exec_prefix="$prev_exec_prefix"
++    # Assume maximum shebang is 128 chars; less #!, /ocamlrun, an optional
++    # 1 char suffix and the \0 leaving 115 characters
++    AS_IF([test "${#expanded_bindir}" -gt 115],[long_shebang=true])]
++  )]
+ )
+ 
++# stdlib/runtime.info and stdlib/target_runtime.info are generated by commands
++# in config.status, rather than by the .in mechanism, since the latter cannot
++# reliably process binary files.
++AC_CONFIG_COMMANDS([shebang],
++  [printf '%s\n%s\000\n' "$launch_method" "$ocaml_bindir" \
++    > stdlib/runtime.info
++  printf '%s\n%s\000\n' "$target_launch_method" "$target_bindir" \
++    > stdlib/target_runtime.info],
++dnl These declarations are put in a here-document in configure, so the command
++dnl in '$(...)' _is_ evaluated as the content is written to config.status (by
++dnl standard interpretation of a here-document). The sed commands quote any
++dnl nefarious single quotes which may appear in any of the strings.
++  [launch_method='$(echo "$launch_method" | sed -e "s/'/'\"'\"'/g")'
++  target_launch_method=\
++'$(echo "$target_launch_method" | sed -e "s/'/'\"'\"'/g")'
++  ocaml_bindir='$(echo "$ocaml_bindir" | sed -e "s/'/'\"'\"'/g")'
++  target_bindir='$(echo "$target_bindir" | sed -e "s/'/'\"'\"'/g")'])
++
+ # Are we building a cross-compiler
+ 
+ AS_IF(
+@@ -2092,4 +2117,19 @@ AS_IF([test x"$enable_stdlib_manpages" != "xno"],
+ # Do not permanently cache the result of flexdll.h
+ unset ac_cv_header_flexdll_h
+ 
++# Evaluate install directories
++AC_CONFIG_COMMANDS_PRE([
++  saved_exec_prefix="$exec_prefix"
++  saved_prefix="$prefix"
++  AS_IF([test "x$prefix" = "xNONE"],[prefix="$ac_default_prefix"])
++  AS_IF([test "x$exec_prefix" = "xNONE"],[exec_prefix="$prefix"])
++  eval "exec_prefix=\"$exec_prefix\""
++  eval "ocaml_bindir=\"$bindir\""
++  eval "ocaml_libdir=\"$libdir\""
++  AS_IF([test x"$target_bindir" = 'x'],[target_bindir="$ocaml_bindir"])
++  AS_IF([test x"$target_launch_method" = 'x'],
++    [target_launch_method="$launch_method"])
++  prefix="$saved_prefix"
++  exec_prefix="$saved_exec_prefix"])
++
+ AC_OUTPUT
+diff --git a/stdlib/Makefile b/stdlib/Makefile
+index c20ca0200ebbcf3ec302ef0e8c2873499f440279..eaf5f938315ea2ec561d46ddef3930206d468412 100644
+--- a/stdlib/Makefile
++++ b/stdlib/Makefile
+@@ -55,14 +55,15 @@ NOSTDLIB= camlinternalFormatBasics.cmo camlinternalAtomic.cmo stdlib.cmo
+ OTHERS=$(filter-out $(NOSTDLIB),$(OBJS))
+ 
+ .PHONY: all
+-all: stdlib.cma std_exit.cmo camlheader target_camlheader camlheader_ur
++all: stdlib.cma std_exit.cmo bootheader $(HEADER_NAME) target_$(HEADER_NAME) \
++     camlheader_ur
+ 
+ ifeq "$(RUNTIMED)" "true"
+-all: camlheaderd target_camlheaderd
++all: target_camlheaderd
+ endif
+ 
+ ifeq "$(INSTRUMENTED_RUNTIME)" "true"
+-all: camlheaderi target_camlheaderi
++all: target_camlheaderi
+ endif
+ 
+ .PHONY: allopt opt.opt # allopt and opt.opt are synonyms
+@@ -89,7 +90,7 @@ ifeq "$(INSTALL_SOURCE_ARTIFACTS)" "true"
+ 	  *.cmt *.cmti *.mli *.ml \
+ 	  "$(INSTALL_LIBDIR)"
+ endif
+-	$(INSTALL_DATA) target_camlheader "$(INSTALL_LIBDIR)/camlheader"
++	$(INSTALL_DATA) target_$(HEADER_NAME) "$(INSTALL_LIBDIR)/$(HEADER_NAME)"
+ 
+ ifeq "$(RUNTIMED)" "true"
+ install::
+@@ -123,89 +124,61 @@ installopt-default::
+ ifeq "$(UNIX_OR_WIN32)" "unix"
+ HEADERPROGRAM = header
+ HEADER_PATH = $(BINDIR)/
+-HEADER_TARGET_PATH = $(TARGET_BINDIR)/
+ else # Windows
+ HEADERPROGRAM = headernt
+ HEADER_PATH =
+-HEADER_TARGET_PATH =
+ endif
+ 
+-TARGETHEADERPROGRAM = target_$(HEADERPROGRAM)
+-
+-# The shebang test in configure.ac will need updating if any runtime is
+-# introduced with a suffix more than one character long (camlheader_ur doesn't
+-# matter).
+-CAMLHEADERS =\
+-  camlheader target_camlheader camlheader_ur \
+-  camlheaderd target_camlheaderd \
+-  camlheaderi target_camlheaderi
+-
+-# The % in pattern rules must always match something, hence the slightly strange
+-# patterns and $(subst ...) since `camlheader%:` wouldn't match `camlheader`
+ ifeq "$(SHEBANGSCRIPTS)" "true"
+-camlhead%: $(ROOTDIR)/Makefile.config Makefile
++bootheader: $(ROOTDIR)/Makefile.config Makefile
+ ifeq "$(LONG_SHEBANG)" "true"
+ 	echo '#!/bin/sh' > $@
+-	echo 'exec "$(BINDIR)/ocamlrun$(subst er,,$*)" "$$0" "$$@"' >> $@
++	echo 'exec "$(BINDIR)/ocamlrun" "$$0" "$$@"' >> $@
+ else
+-	echo '#!$(BINDIR)/ocamlrun$(subst er,,$*)' > $@
++	echo '#!$(BINDIR)/ocamlrun' > $@
+ endif
+ 
+-# TODO This does not take long shebangs into account (since TARGET_BINDIR is not
+-#      yet processed by configure)
+-target_%: $(ROOTDIR)/Makefile.config Makefile
+-	echo '#!$(TARGET_BINDIR)/ocamlrun$(subst camlheader,,$*)' > $@
+-
+ camlheader_ur: Makefile
+ 	echo '#!' | tr -d '\012' > $@
+ 
++target_camlheader%: Makefile
++	echo '#!/usr/bin/false' > $@
++
+ else # Hashbang scripts not supported
+ 
+-$(CAMLHEADERS): $(HEADERPROGRAM).c $(ROOTDIR)/Makefile.config Makefile
++bootheader: $(HEADERPROGRAM).c $(ROOTDIR)/Makefile.config Makefile
+ 
+ # $@.exe is deleted to ensure no Cygwin .exe mangling takes place
+-camlhead%: tmphead%.exe
++bootheader: tmpheader.exe
+ 	rm -f $@.exe
+-	mv $< $@
+-
+-# Again, pattern weirdness here means that the dot is always present so that
+-# tmpheader.exe matches.
+-tmpheader%exe: $(HEADERPROGRAM)%$(O)
+-	$(call MKEXE_USING_COMPILER,$@,$^ $(EXTRALIBS))
+-# FIXME This is wrong - mingw could invoke strip; MSVC equivalent?
+-ifneq "$(UNIX_OR_WIN32)" "win32"
+-	strip $@
+-endif
++	cp $< $@
+ 
+-$(HEADERPROGRAM)%$(O): \
+-  OC_CPPFLAGS += -DRUNTIME_NAME='"$(HEADER_PATH)ocamlrun$(subst .,,$*)"'
++camlheader_ur: tmpheader.exe
++	rm -f $@.exe
++	cp $< $@
+ 
+-$(HEADERPROGRAM)%$(O): $(HEADERPROGRAM).c
+-	$(CC) -c $(OC_CFLAGS) $(CFLAGS) $(OC_CPPFLAGS) $(CPPFLAGS) \
+-	  $(OUTPUTOBJ)$@ $^
++target_camlheader%: tmpheader.exe
++	rm -f $@.exe
++	cp $< $@
+ 
+-camlheader_ur: camlheader
+-	cp camlheader $@
++endif
+ 
+-ifeq "$(UNIX_OR_WIN32)" "unix"
+-tmptargetcamlheader%exe: $(TARGETHEADERPROGRAM)%$(O)
+-	$(call MKEXE_USING_COMPILER,$@,$^ $(EXTRALIBS))
+-	strip $@
++target_$(HEADER_NAME): target_runtime.info tmpheader.exe
++	@cat $^ > $@
+ 
+-$(TARGETHEADERPROGRAM)%$(O): $(HEADERPROGRAM).c
+-	$(CC) -c $(OC_CFLAGS) $(CFLAGS) $(OC_CPPFLAGS) $(CPPFLAGS) \
+-	      -DRUNTIME_NAME='"$(HEADER_TARGET_PATH)ocamlrun$(subst .,,$*)"' \
+-	      $(OUTPUTOBJ)$@ $^
++$(HEADER_NAME): runtime.info tmpheader.exe
++	@cat $^ > $@
+ 
+-target_%: tmptarget%.exe
+-	rm -f $@.exe
+-	mv $< $@
+-else
+-target_%: %
+-	cp $< $@
++.INTERMEDIATE: tmpheader.exe
++tmpheader.exe: $(HEADERPROGRAM).$(O)
++	$(call MKEXE_USING_COMPILER,$@,$^)
++# FIXME This is wrong - mingw could invoke strip; MSVC equivalent?
++ifneq "$(UNIX_OR_WIN32)" "win32"
++	strip $@
+ endif
+ 
+-endif # ifeq "$(SHEBANGSCRIPTS)" "true"
++$(HEADERPROGRAM)%$(O): \
++  OC_CPPFLAGS += -DRUNTIME_NAME='"$(HEADER_PATH)ocamlrun$(subst .,,$*)"'
+ 
+ stdlib.cma: $(OBJS)
+ 	$(CAMLC) -a -o $@ $^
+@@ -215,11 +188,11 @@ stdlib.cmxa: $(OBJS:.cmo=.cmx)
+ 
+ .PHONY: distclean
+ distclean: clean
+-	rm -f sys.ml
++	rm -f sys.ml runtime.info target_runtime.info
+ 
+ .PHONY: clean
+ clean::
+-	rm -f $(CAMLHEADERS)
++	rm -f bootheader $(HEADER_NAME) target_$(HEADER_NAME)* camlheader_ur
+ 
+ export AWK
+ 
+diff --git a/tools/cmpbyt.ml b/tools/cmpbyt.ml
+index 983234fe312f187c2248d80b131bdf601e7d8cf2..9d09a11330f3ce07206d80f677f3efdd4be05757 100644
+--- a/tools/cmpbyt.ml
++++ b/tools/cmpbyt.ml
+@@ -31,7 +31,7 @@ let rec cmpbytes ic1 ic2 len ofs =
+   end
+ 
+ let skip_section name =
+-  name = "DBUG"
++  name = "DBUG" || name = "RNTM"
+ 
+ let cmpbyt file1 file2 =
+   let ic1 = open_in_bin file1 in
+diff --git a/tools/ocamlsize b/tools/ocamlsize
+index 84798ce1b4dd0f55c401b7cf2435ccd91079c0fd..2ddb1959abdd7ef05301b9915887649fb35272b0 100755
+--- a/tools/ocamlsize
++++ b/tools/ocamlsize
+@@ -17,6 +17,19 @@
+ 
+ foreach $f (@ARGV) {
+     open(FILE, $f) || die("Cannot open $f");
++    read(FILE, $header, 2);
++    if ($header eq '#!') {
++      $path = <FILE>;
++      if ($path eq '/bin/sh') {
++        # exec form of the shebang header
++        $path = <FILE>;
++        if ($path =~ s/^exec '(.*)' "\$0" "\$@\"$/$1/ > 0) {
++          $path =~ s/'\\''/'/g;
++        } else {
++          undef $path;
++        }
++      }
++    };
+     seek(FILE, -16, 2);
+     $num_sections = &read_int();
+     read(FILE, $magic, 12);
+@@ -31,14 +44,16 @@ foreach $f (@ARGV) {
+         $length{$sec} = $seclength[$i];
+     }
+     print $f, ":\n" if ($#ARGV > 0);
+-    $path =
+-        $length{'RNTM'} > 0 ?
+-            &read_section('RNTM') :
+-            "(default runtime)\n";
++    if (not defined $path) {
++      $path =
++          $length{'RNTM'} > 0 ?
++              substr(&read_section('RNTM'), 0, -1) :
++              "(custom runtime)";
++    };
+     printf ("\tcode: %-7d data: %-7d symbols: %-7d debug: %-7d\n",
+             $length{'CODE'}, $length{'DATA'},
+             $length{'SYMB'}, $length{'DBUG'});
+-    printf ("\tmagic number: %s  runtime system: %s",
++    printf ("\tmagic number: %s  runtime system: %s\n",
+             $magic, $path);
+     close(FILE);
+ }
+-- 
+2.53.0.windows.2
+

@@ -1,0 +1,79 @@
+From eef2318f6fb86700c032e0eadb40f0ea14f1afae Mon Sep 17 00:00:00 2001
+From: David Allsopp <david.allsopp@metastack.com>
+Date: Thu, 17 Jul 2025 10:21:13 +0100
+Subject: [PATCH] Add additional modes to make install
+
+make [INSTALL_MODE=install] install
+  - installs the compiler, as normal
+make INSTALL_MODE=display install
+  - displays the operations needed for
+make INSTALL_MODE=list install
+  - lists the files and symbolic links which are installed
+
+(cherry picked from commit 8766ba8a5cbaf5806c71431e23a1a84123ac3e74)
+
+diff --git a/Makefile.common b/Makefile.common
+index 7f5f053c639e8f5b9a9f1fae72b337e27c9cb5f0..69f8e4ab4c9fb952f208ab954b5db34187e02cf4 100644
+--- a/Makefile.common
++++ b/Makefile.common
+@@ -167,6 +167,57 @@ INSTALL_DESPATCH_install_ITEMS = $(INSTALL_DESPATCH_install_ITEM)
+ INSTALL_DESPATCH_install_BEGIN = @
+ INSTALL_DESPATCH_install_END = @
+ 
++INSTALL_display_PREFIX = @
++
++INSTALL_DESPATCH_display_RM = @
++
++INSTALL_DESPATCH_display_MKDIR = \
++  echo $(call QUOTE_SINGLE,$\
++    -> MKDIR $(INSTALL_SECTION_$(1))$(addprefix /,$(2))) $(SH_AND)
++
++MKLINK_display = \
++  echo $(call QUOTE_SINGLE,-> LN \
++         $(abspath $(INSTALL_SECTION_$(2))$(addprefix /,$(3))/$(1)) -> \
++         $(if $(4),$(4),$(notdir $(1))))
++
++INSTALL_DESPATCH_display_ITEM = \
++  echo $(call QUOTE_SINGLE,-> INSTALL $(1) \
++         $(INSTALL_SECTION_$(2))$(addprefix /,$(3))$(addprefix /,$(4))) \
++  $(foreach link, $(5), && \
++    $(call MKLINK_display,$(if $(4),$(4),$(notdir $(1))),$(2),$(3),$(link)))
++
++INSTALL_DESPATCH_display_ITEMS = $(INSTALL_DESPATCH_display_ITEM)
++
++INSTALL_DESPATCH_display_BEGIN = @
++INSTALL_DESPATCH_display_END = @
++
++INSTALL_list_PREFIX = @
++
++INSTALL_DESPATCH_list_RM = @
++
++INSTALL_DESPATCH_list_MKDIR =
++
++MKLINK_list = \
++  echo $(call QUOTE_SINGLE,-> \
++         $(abspath $(INSTALL_SECTION_$(2))$(addprefix /,$(3))/$\
++                     $(if $(4),$(4),$(notdir $(1)))))
++
++INSTALL_DESPATCH_list_ITEM = \
++  echo $(call QUOTE_SINGLE,-> \
++         $(abspath $(INSTALL_SECTION_$(2))$(addprefix /,$(3))/$\
++                     $(if $(4),$(4),$(notdir $(1))))) \
++  $(foreach link, $(5), && \
++    $(call MKLINK_list,$(if $(4),$(4),$(notdir $(1))),$(2),$(3),$(link)))
++
++INSTALL_DESPATCH_list_ITEMS = \
++  $(foreach file, $(wildcard $(1)), \
++    echo $(call QUOTE_SINGLE,-> \
++           $(INSTALL_SECTION_$(2))$(addprefix /,$(3))/$(notdir $(file)));) \
++  true
++
++INSTALL_DESPATCH_list_BEGIN = @
++INSTALL_DESPATCH_list_END = @
++
+ FLEXDLL_SUBMODULE_PRESENT := $(wildcard $(ROOTDIR)/flexdll/Makefile)
+ 
+ # Variables used to represent the OCaml runtime system
+-- 
+2.53.0.windows.2
+

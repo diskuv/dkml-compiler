@@ -1,0 +1,75 @@
+From 9945c95b20966948dbda8ad3a2916b2c6b408ce2 Mon Sep 17 00:00:00 2001
+From: David Allsopp <david.allsopp@metastack.com>
+Date: Tue, 12 Nov 2024 11:43:57 +0000
+Subject: [PATCH] Make caml/exec.h independent
+
+Have exec.h include <stdint.h> itself. The bytecode executable header
+now only depends on exec.h.
+
+(cherry picked from commit f37343978547d0afe277107dd6d5876a60dad320)
+
+diff --git a/runtime/caml/exec.h b/runtime/caml/exec.h
+index 3955de355ebed81a964f650e594f1f73c2245fd1..66f10b6ffd12235c6014c8b1929810313491adc7 100644
+--- a/runtime/caml/exec.h
++++ b/runtime/caml/exec.h
+@@ -20,6 +20,8 @@
+ 
+ #ifdef CAML_INTERNALS
+ 
++#include <stdint.h>
++
+ /* Executable bytecode files are composed of a number of sections,
+    identified by 4-character names.  A table of contents at the
+    end of the file lists the section names along with their sizes,
+diff --git a/stdlib/header.c b/stdlib/header.c
+index e2572a024aa4731779f23bbbccc1d06340e89234..313e0abecfcc2c0109454ebeebcf59da9a84b976 100644
+--- a/stdlib/header.c
++++ b/stdlib/header.c
+@@ -13,10 +13,11 @@
+ /*                                                                        */
+ /**************************************************************************/
+ 
+-#define CAML_INTERNALS
+-
+ /* The launcher for bytecode executables (if #! is not working) */
+ 
++#define CAML_INTERNALS
++#include "caml/exec.h"
++
+ #include <stdio.h>
+ #include <stdlib.h>
+ #include <string.h>
+@@ -27,8 +28,6 @@
+ #include <fcntl.h>
+ #include <sys/types.h>
+ #include <sys/stat.h>
+-#include "caml/mlvalues.h"
+-#include "caml/exec.h"
+ 
+ #ifndef MAXPATHLEN
+ #define MAXPATHLEN 1024
+diff --git a/stdlib/headernt.c b/stdlib/headernt.c
+index f80efd17d3e8d59413657dafcf0c3ce2af3964a6..194718a93a32d715d6267ea475b64c5741e07ef2 100644
+--- a/stdlib/headernt.c
++++ b/stdlib/headernt.c
+@@ -13,14 +13,15 @@
+ /*                                                                        */
+ /**************************************************************************/
+ 
++/* The launcher for bytecode executables */
++
+ #define CAML_INTERNALS
++#include "caml/exec.h"
+ 
+ #define STRICT
+ #define WIN32_LEAN_AND_MEAN
+ 
+ #include <windows.h>
+-#include "caml/mlvalues.h"
+-#include "caml/exec.h"
+ 
+ Caml_inline unsigned long read_size(const char * const ptr)
+ {
+-- 
+2.53.0.windows.2
+

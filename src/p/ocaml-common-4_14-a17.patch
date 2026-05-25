@@ -1,0 +1,70 @@
+From 18f55298541b2431453e8765109a65f3997a87c2 Mon Sep 17 00:00:00 2001
+From: David Allsopp <david.allsopp@metastack.com>
+Date: Wed, 17 May 2023 13:57:57 +0100
+Subject: [PATCH] Set MSYS and CYGWIN permanently
+
+Slightly easier detection, and a somewhat hardened implementation.
+
+(cherry picked from commit e0467cc670b51d29942556a028313b6d260344da)
+(cherry picked from commit eaefc68a2cfd72556a74dbc2c0daa317cdf0ed0d)
+
+diff --git a/Makefile.common b/Makefile.common
+index 0cdc6cae4ab50cf73f660cbe5ee65bb3a7fa316a..9075828019cf3b211bc5a203b4f3f60fbd7c1955 100644
+--- a/Makefile.common
++++ b/Makefile.common
+@@ -173,3 +173,12 @@ SAK = $(ROOTDIR)/runtime/sak$(EXE)
+ # boot/ as part of coldstart. See read_runtime_launch_info in
+ # bytecomp/bytelink.ml for further details.
+ HEADER_NAME = camlheader
++
++ifeq "$(UNIX_OR_WIN32)" "win32"
++# Ensure that no command can create Cygwin symbolic links by ensuring that
++# symlink(2) will fail if native NTFS symlinks aren't available.
++export CYGWIN := $(strip \
++  $(filter-out winsymlinks winsymlinks:%, $(CYGWIN)) winsymlinks:nativestrict)
++export MSYS := $(strip \
++  $(filter-out winsymlinks winsymlinks:%, $(MSYS)) winsymlinks:nativestrict)
++endif
+diff --git a/aclocal.m4 b/aclocal.m4
+index 84e1a2a66139a905044b389420877e9bef88626b..3f8b17196baaa93bb3d6ea6c79d9f652f3812956 100644
+--- a/aclocal.m4
++++ b/aclocal.m4
+@@ -513,15 +513,11 @@ AC_DEFUN([OCAML_QUOTED_STRING_ID], [
+ 
+ AC_DEFUN([OCAML_CHECK_LN_ON_WINDOWS], [
+   AC_MSG_CHECKING([for a workable solution for ln -sf])
+-  ln -sf configure conftestLink
+-  AS_IF([test -z "$(cmd /c dir conftestLink 2>/dev/null | grep -F SYMLINK)"],
+-    [rm -f conftestLink
+-    CYGWIN=winsymlinks:native ln -sf configure conftestLink
+-    AS_IF([test -z "$(cmd /c dir conftestLink 2>/dev/null | grep -F SYMLINK)"],
+-      [ln='cp -pf'],
+-      [ln='CYGWIN=winsymlinks:native ln -sf']
+-    )],
+-    [ln='ln -sf']
++  AS_IF([m4_normalize(MSYS=winsymlinks:nativestrict
++                      CYGWIN=winsymlinks:nativestrict
++                      ln -sf configure conftestLink 2>/dev/null)],
++    [ln='ln -sf'],
++    [ln='cp -pf']
+   )
+   AC_MSG_RESULT([$ln])
+ ])
+diff --git a/configure b/configure
+index c0eecd0c313dd2b17017529008a23073e2445389..3fbd83579e31392d88d3c72d4095a561f1223534 100755
+GIT binary patch
+delta 149
+zcmezRTzT0u<%Sl<7N!>F7M3ln#;X)F(-eGzBZF<rGxLfob8|BDvWu<q5=%16Qj1H9
+zGLuUbrpK;kl@y0^a`F^(i_;X6^YhX&(@Tp|r}F_NC)b*DE9K<bszYSexl(hAQ@Ior
+mKtjm{3c3Yp>ReoDnbRN2F`KrZTg?i@Y(UJu{oHB}bq@d?-8M1+
+
+delta 403
+zcmZ4XO!@0`<%Sl<7N!>F7M3ln#;fXc@)UH7(-e~P^U^ZYON&y$tdi8?5}(YxY%T?b
+z%rpfMPeHdzK}kg;IX6W?KUpCqvj|0<f{~qmN@|&YUTIE_LXARtQEGvLuA4$|q_2;s
+zpSPxxwL(coYMz1>(7d8t1zm`BU`y&DwkRk#N4kf5`q`Fe<`q}w<^V;Dt@08}GRsmG
+z2)U3VH)ddUWKN!~dNR-p1!?MBsX4`|KzD<L2)R+6iz_V?Sp&rBVBzTx<(N&||F2>N
+PVm2UV-~N9Uhq?y<rqPDe
+
+-- 
+2.53.0.windows.2
+

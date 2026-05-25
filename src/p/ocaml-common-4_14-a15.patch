@@ -1,0 +1,40 @@
+From c9178aedf90338b2204301388680b287fa9df02a Mon Sep 17 00:00:00 2001
+From: David Allsopp <david.allsopp@metastack.com>
+Date: Sat, 10 Apr 2021 11:56:53 +0100
+Subject: [PATCH] Include CAML_LD_LIBRARY_PATH in ocamlrun -config
+
+(cherry picked from commit 31827948ec649423d0ff5d5f2b645a06f9ccfbb8)
+(cherry picked from commit 8af81bc481e78c4a17df0d18972f129b671e9ce8)
+
+diff --git a/Changes b/Changes
+index fb2404703a9c7b602041a1bb5e6a81b9af1bb6ee..893e10eab3fd3e8fd842ae93d7942ebfbcaf1302 100644
+--- a/Changes
++++ b/Changes
+@@ -3,6 +3,11 @@ OCaml 4.14.3 (17 February 2026)
+ 
+ ### Runtime system:
+ 
++- #13492: Parse the CAML_LD_LIBRARY_PATH environment variable for the
++  shared_libs_path item in `ocamlrun -config` in addition to displaying the
++  entries found in ld.conf.
++  (David Allsopp, review by Stephen Dolan)
++
+ ### Code generation and optimizations:
+ 
+ ### Standard library:
+diff --git a/runtime/startup_byt.c b/runtime/startup_byt.c
+index de7549748ac10752d03e00ba6f5e1ce55389495a..15b7aded01e7f9849deffbcf3c003bc3236b8087 100644
+--- a/runtime/startup_byt.c
++++ b/runtime/startup_byt.c
+@@ -427,6 +427,8 @@ static void do_print_config(void)
+ 
+   /* Parse ld.conf and print the effective search path */
+   puts("shared_libs_path:");
++  caml_decompose_path(&caml_shared_libs_path,
++                      caml_secure_getenv(T("CAML_LD_LIBRARY_PATH")));
+   caml_parse_ld_conf();
+   for (i = 0; i < caml_shared_libs_path.size; i++) {
+     dir = caml_shared_libs_path.contents[i];
+-- 
+2.53.0.windows.2
+

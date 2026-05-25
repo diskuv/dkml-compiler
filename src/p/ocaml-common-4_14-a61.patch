@@ -1,0 +1,923 @@
+From 68e4aa0859f05f91511213ee522d9baa3fd790a8 Mon Sep 17 00:00:00 2001
+From: David Allsopp <david.allsopp@metastack.com>
+Date: Wed, 13 Nov 2024 16:28:48 +0000
+Subject: [PATCH] Add -runtime-search to ocamlc
+
+-runtime-search {disable|enable|always} adds new features to the
+launcher used for bytecode executables which do not embed their own
+runtime. By default, the header continues to behave as before - the
+launcher will attempt to start the runtime using the absolute path which
+the compiler was configured with.
+
+The new search mode will then search for the runtime first in the
+directory containing the running executable and then in PATH.
+
+(cherry picked from commit 7b5eeb75ad8b2713938e2d0a5f04fa7d41725852)
+
+diff --git a/Changes b/Changes
+index c2fb04ac4874d70d8fe09286493eafcfd234bae6..415fd6d2e73733fd17ec59c287a4417639c3d5cb 100644
+--- a/Changes
++++ b/Changes
+@@ -57,7 +57,10 @@ OCaml 4.14 maintenance version
+ - #14???: New option -launch-method for ocamlc allows the method used by a
+   tendered bytecode executable to locate the interpreter to be given explicitly.
+   In particular, it makes it easier to specify the use of the executable
+-  launcher on Unix.
++  launcher on Unix. New option -runtime-search extends the bytecode executable
++  header to be able to search for the runtime interpreter in the directory
++  containing the executable and in PATH rather than relying on a single
++  hard-coded path.
+   (David Allsopp, review by ???)
+ 
+ ### Internal/compiler-libs changes:
+diff --git a/Makefile.common b/Makefile.common
+index 8a60e0bad2f37f83721728820c670a3ca1e83f5e..28af536e6ecbd93699038bf37d942de1f6cd4c3b 100644
+--- a/Makefile.common
++++ b/Makefile.common
+@@ -206,6 +206,13 @@ SAK = $(ROOTDIR)/runtime/sak$(EXE)
+ BYTECODE_LAUNCHER_FLAGS = \
+   -launch-method $(call QUOTE_SINGLE,$(LAUNCH_METHOD) $(BINDIR))
+ 
++# Historically, the native Windows ports are assumed to be finding ocamlrun
++# using a PATH search. Since boot/ocamlc has no notion of the target, Windows
++# requires -runtime-search to be passed explicitly.
++ifeq "$(UNIX_OR_WIN32)" "win32"
++BYTECODE_LAUNCHER_FLAGS += -runtime-search always
++endif
++
+ # $(BOOTSTRAPPED) will be non-empty after the compiler has been bootstrapped, as
+ # the -launch-method string will appear in it.
+ BOOTSTRAPPED := \
+diff --git a/bytecomp/bytelink.ml b/bytecomp/bytelink.ml
+index 7abb6f7eb650788faa67117549fa6781abb1d4f8..97cf74c93cec5b67db3f29bf420dd1a5a1d63104 100644
+--- a/bytecomp/bytelink.ml
++++ b/bytecomp/bytelink.ml
+@@ -340,6 +340,80 @@ let find_bin_sh () =
+   remove_file output_file;
+   result
+ 
++(* Writes the shell script version of the bytecode launcher to outchan *)
++let write_sh_launcher outchan bin_sh bindir search runtime =
++  let open struct type tag = D | A | E end in
++  let l tag fmt =
++    let output s =
++      if tag = D || tag = A && search <> Config.Absolute
++         || tag = E && search = Config.Absolute_then_search then begin
++        output_string outchan (String.trim s);
++        output_char outchan '\n'
++      end
++    in
++    Printf.ksprintf output fmt
++  in
++  let runtime = Filename.quote runtime in
++  let bin = Filename.quote (Filename.concat bindir "") in
++  let exec =
++    if search = Config.Absolute then
++      runtime
++    else
++      {|"$c"|}
++  in
++  let release =
++    Printf.sprintf "%d.%d" Sys.ocaml_release.major Sys.ocaml_release.minor
++  in
++  (* Each of the three search modes requires a slightly different shell script.
++     However, these shell scripts do have one very useful property: the script
++     for Absolute_then_search adds lines to the script for Search which adds
++     lines to the script for Absolute, but none of them change lines (apart from
++     a trivial tweak to the exec line for the Absolute script).
++     The lines below are laid out to reflect this, with the tag letters
++     D(isable) for the lines in the Absolute script, A(lways) for the lines in
++     Search script and E(nable) for the Absolute_then_search script. If a line
++     is emitted, it is first passed to String.trim, which allows indentation and
++     a column-based layout to be used.
++
++     The Absolute script just needs to exec the runtime. The two searching modes
++     do a few more calculations and will ultimately exec the contents of $c
++     (which is why exec_arg above is set to the literal string {v "$c" v}).
++
++     In the script itself:
++     - $r is the name of the runtime ('ocamlrun', 'ocamlrund', etc.)
++     - $d is calculated in the script as $(dirname "$0") - i.e. the directory
++       containing the bytecode executable itself
++     - $c will ultimately be the runtime to exec. If it is empty, then the
++       script displays an error message. In Absolute_then_search, $c will be the
++       first runtime to try (i.e. the runtime in bindir), and the bindir passed
++       must end with a separator (which is ensured by Filename.concat above)
++
++     The script tries up to three options:
++     - exec $c, if it exists (prefer the runtime in bindir)
++     - exec $d/$r, if it exists (prefer a runtime in the same directory
++       as the bytecode executable)
++     - otherwise try $(command -v "$r") (search PATH for the runtime)
++
++     If the script fails to find an interpreter, $c will always be empty
++       (since [command -v] will have returned an empty string) and an
++       error message can be displayed. *)
++  l D   {|#!%s                                                     |} bin_sh;
++  l  A  {|r=%s                                                     |} runtime;
++  l   E {|c=%s"$r"                                                 |} bin;
++  l   E {|if ! test -f "$c"; then                                  |};
++  l  A  {|  d="$(dirname "$0" 2>/dev/null)"                        |};
++  l  A  {|  test -z "$d" || d="${d%%/}/"                           |};
++  l  A  {|  c="$(command -v "$d$r")"                               |};
++  l  A  {|  test -n "$c" || c="$(command -v "$r")"                 |};
++  l   E {|fi                                                       |};
++  l  A  {|if test -z "$c"; then                                    |};
++  l  A  {|  echo 'This program requires an OCaml %s interpreter'>&2|} release;
++  l  A  {|  echo "$r not found either with $0 or in \$PATH">&2     |};
++  l  A  {|else                                                     |};
++  l D   {|  exec %s "$0" "$@"                                      |} exec;
++  l  A  {|fi                                                       |};
++  l  A  {|exit 126                                                 |}
++
+ (* Writes the executable header to outchan and writes the RNTM section, if
+    needed. Returns a toc_writer (i.e. Bytesections.init_record is always
+    called) *)
+@@ -356,23 +430,21 @@ let write_header outchan =
+     | Config.Shebang sh, bindir ->
+         Shebang_bin_sh (Option.value ~default:"sh" sh), bindir
+   in
+-  let runtime =
++  let runtime, search =
+     if String.length !Clflags.use_runtime > 0 then
+-      make_absolute !Clflags.use_runtime
++      make_absolute !Clflags.use_runtime, Config.Absolute
+     else
+       let runtime = "ocamlrun" ^ !Clflags.runtime_variant in
+-      (* Historically, the native Windows ports are assumed to be finding
+-         ocamlrun using a PATH search. *)
+-      if Sys.win32 then
+-        runtime
++      if !Clflags.search_method <> Config.Absolute then
++        runtime, !Clflags.search_method
+       else
+-        Filename.concat bindir runtime
++        Filename.concat bindir runtime, Config.Absolute
+   in
+   let launcher =
+     if launcher = Executable then
+       Executable
+     else
+-      if invalid_for_shebang_line runtime then
++      if search <> Config.Absolute || invalid_for_shebang_line runtime then
+         match launcher with
+         | Shebang_bin_sh sh ->
+             let sh =
+@@ -404,14 +476,13 @@ let write_header outchan =
+   (* Write the header *)
+   match launcher with
+   | Shebang_runtime ->
++      assert (search = Config.Absolute);
+       (* Use the runtime directly *)
+       Printf.fprintf outchan "#!%s\n" runtime;
+       Bytesections.init_record outchan
+   | Shebang_bin_sh bin_sh ->
+-      (* exec the runtime using sh *)
+-      Printf.fprintf outchan "\
+-        #!%s\n\
+-        exec %s \"$0\" \"$@\"\n" bin_sh (Filename.quote runtime);
++      (* Use the shebang launcher *)
++      write_sh_launcher outchan bin_sh bindir search runtime;
+       Bytesections.init_record outchan
+   | Executable ->
+       (* Use the executable stub launcher *)
+@@ -427,7 +498,21 @@ let write_header outchan =
+       write_exe_launcher data;
+       (* The runtime name needs recording in RNTM *)
+       let toc_writer = Bytesections.init_record outchan in
+-      Printf.fprintf outchan "%s\000" runtime;
++      (* stdlib/header.c determines which mode is needed based on whether the
++         RNTM section contains an embedded NUL character. For Absolute, the path
++         is written verbatim (no extra NUL), otherwise the directory separator
++         just before the basename is effectively turned into a NUL (for Search,
++         there is no dirname, so the string "begins" with a NUL character). *)
++      if search = Absolute then
++        output_string outchan runtime
++      else begin
++        if search = Absolute_then_search then
++          (* Ensure bindir does _not_ end up with a separator *)
++          output_string outchan
++          (Filename.(dirname (concat bindir current_dir_name)));
++        output_char outchan '\000';
++        output_string outchan runtime
++      end;
+       Bytesections.record outchan "RNTM";
+       toc_writer
+ 
+diff --git a/bytecomp/byterntm.mli b/bytecomp/byterntm.mli
+index 404acfbdec819966491681370073b721cecf138b..66cbc5fb986ddf36aeac18cbe8d33561da68f6e3 100644
+--- a/bytecomp/byterntm.mli
++++ b/bytecomp/byterntm.mli
+@@ -15,7 +15,16 @@
+ (** Parser for RNTM in bytecode executables. Parses both the RNTM section and
+     the shebang launcher produced by {!Bytelink}. *)
+ 
+-val read_runtime : in_channel -> string option
++(** Search methods used by a tendered bytecode image to find a runtime. *)
++type search_method =
++| Absolute of string
++    (** Check fixed location only *)
++| Absolute_then_search of string
++    (** Check given location first then search for the interpreter *)
++| Search
++    (** Always search for the interpreter *)
++
++val read_runtime : in_channel -> (string * search_method) option
+ (** Returns the runtime used by this tendered/standalone image. If the runtime
+     used cannot be parsed, or the image was linked using -without-runtime, then
+     [None] is returned. *)
+diff --git a/bytecomp/byterntm.mll b/bytecomp/byterntm.mll
+index a669cb931d902eb69cc0dbab3a43870470b7ea3f..18d15e83c5566c3527e04da95c0914c999272d06 100644
+--- a/bytecomp/byterntm.mll
++++ b/bytecomp/byterntm.mll
+@@ -12,31 +12,84 @@
+ (*                                                                        *)
+ (**************************************************************************)
+ 
++{
++type search_method =
++| Absolute of string
++| Absolute_then_search of string
++| Search
++
++type state = Exec | R | C of string
++}
++
+ rule analyze = parse
+-(* RNTM section or shebang directly to the runtime *)
+-  | "#!" ([^ ' ' '\n']+ as runtime) '\n'
+-  | ([^ '\000']+ as runtime) '\000' eof
+-      { Some runtime }
++(* RNTM section for -runtime-search absolute or shebang directly to the
++   runtime *)
++  | "#!" ([^ ' ' '\n']* as dir) ('/' as sep) ([^ '/' ' ' '\n']+ as runtime) '\n'
++  | ([^ '\000']* as dir) (['/' '\\' '\000'] as sep) (* Directory portion *)
++    ([^ '\\' '/' '\000']+ as runtime) eof           (* Runtime portion *)
++      { if sep = '\000' then
++          if dir = "" then
++            Some (runtime, Search)
++          else
++            Some (runtime, Absolute_then_search (Filename.concat dir ""))
++        else
++          Some (runtime, Absolute (dir ^ String.make 1 sep)) }
++
++(* Legacy RNTM (remove after bootstrap) *)
++  | (([^ '\000']* ['/' '\\']) as dir)
++    ([^ '\\' '/' '\000']+ as runtime) '\000' eof
++      { if dir = "" then
++          Some (runtime, Search)
++        else
++          Some (runtime, Absolute dir) }
+ 
+ (* Shell script launcher (if it matches, this always matches more than the above
+    regexp) *)
+-  | "#!" [^ ' ' '\n']+ "/sh\nexec '"
+-      { analyze_sh_launcher (Buffer.create 1024) lexbuf }
++  | "#!" [^ ' ' '\n']+ "/sh\n" (("exec '" | "r='") as next)
++      { let state = if next.[0] = 'r' then R else Exec in
++        analyze_sh_launcher state (Buffer.create 1024) lexbuf }
+ 
+   | _ | eof
+       { None }
+ 
+-and analyze_sh_launcher b = parse
+-(* An embedded single quote in the filename passed to exec *)
++and analyze_sh_launcher state b = parse
++(* An embedded single quote *)
+   | "'\\''"
+-      { analyze_sh_launcher (Buffer.add_char b '\''; b) lexbuf }
++      { analyze_sh_launcher state (Buffer.add_char b '\''; b) lexbuf }
+ 
+-  | [^ '\'']+ as s
+-      { analyze_sh_launcher (Buffer.add_string b s; b) lexbuf }
++  | [^ '\'' ]+ as s
++      { analyze_sh_launcher state (Buffer.add_string b s; b) lexbuf }
+ 
+-(* End of the filename parsed; return the entire string *)
++(* exec line for -runtime-search disable *)
+   | "' \"$0\" \"$@\"\n"
+-      { Some (Buffer.contents b) }
++      { if state = Exec then
++          let name = Buffer.contents b in
++          let runtime = Filename.basename name in
++          let dir =
++            String.sub name 0 (String.length name - String.length runtime)
++          in
++          Some (runtime, Absolute dir)
++        else
++          None }
++
++(* r= line for -runtime-search {always,enable} *)
++  | "'\n" ("c='" as c)?
++      { if state = R then
++          let runtime = Buffer.contents b in
++          if c = None then
++            Some (runtime, Search)
++          else
++            analyze_sh_launcher (C runtime) (Buffer.clear b; b) lexbuf
++        else
++          None }
++
++(* c= line for -runtime-search enable *)
++  | "'\"$r\"\n"
++      { match state with
++        | C runtime ->
++            Some (runtime, Absolute_then_search (Buffer.contents b))
++        | _ ->
++            None }
+ 
+   | _ | eof
+       { None }
+diff --git a/configure b/configure
+index 5e29ae74fdaed1798b405d55ed54e56c07c9b19b..cb1bbdd545dda40086ef1935c96d4510dd8554f6 100755
+GIT binary patch
+delta 105
+zcmcbyN2Ph6N<#}{3sVbo3rh>@7Pfi&*-DCXk_#%Q7qYS|NJH343QCE|@yTWJX{C9|
+t@x@RDj$ha$*kPQB@7T21LV|pp10ts%jAWN;pSzz8h}pN#-OsT*4gfP!D9Hc-
+
+delta 35
+pcmZqPr*dPDN<#}{3sVbo3rh>@7Pfi&+dU7k0Wte_&jTF0;s64@4rKrU
+
+diff --git a/configure.ac b/configure.ac
+index 997e5164ab29e3a806d270455b790bf3dfd35a05..9093d7ec959df05a76bda904a334716c1e0b4c7d 100644
+--- a/configure.ac
++++ b/configure.ac
+@@ -1464,6 +1464,9 @@ AC_CHECK_FUNC([getrusage], [AC_DEFINE([HAS_GETRUSAGE])])
+ ## times
+ AC_CHECK_FUNC([times], [AC_DEFINE([HAS_TIMES])])
+ 
++## strlcpy
++AC_CHECK_FUNC([strlcpy], [AC_DEFINE([HAS_STRLCPY], [1])])
++
+ ## secure_getenv and __secure_getenv
+ 
+ saved_CPPFLAGS="$CPPFLAGS"
+diff --git a/driver/main_args.ml b/driver/main_args.ml
+index 815dfbd89bb1aba1eb74997cfe873949d74382ac..d7a1240e7c0d0ce0042643262b632d1f9c134982 100644
+--- a/driver/main_args.ml
++++ b/driver/main_args.ml
+@@ -599,6 +599,16 @@ let mk_launch_method f =
+   \          /path/interpreter - use #!, or the given sh-compatible \
+   \            interpreter if the interpreter path cannot be used"
+ 
++let mk_search_method f =
++  "-runtime-search", Arg.Symbol (["disable"; "enable"; "always"], f),
++  Printf.sprintf
++    "  Control the way the bytecode header searches for the interpreter\n\
++    \    The following settings are supported:\n\
++    \      disable  use a fixed absolute path to the runtime\n\
++    \      enable   search for runtime only if not found at the absolute path\n\
++    \      always   always search for the runtime\n\
++    \    The default setting is 'disable'."
++
+ let mk_use_runtime f =
+   "-use-runtime", Arg.String f,
+   "<file>  Generate bytecode for the given runtime system"
+@@ -1060,6 +1070,7 @@ module type Bytecomp_options = sig
+   val _vmthread : unit -> unit
+   val _use_runtime : string -> unit
+   val _launch_method : string -> unit
++  val _search_method : string -> unit
+   val _output_complete_exe : unit -> unit
+ 
+   val _dinstr : unit -> unit
+@@ -1249,6 +1260,7 @@ struct
+     mk_use_runtime F._use_runtime;
+     mk_use_runtime_2 F._use_runtime;
+     mk_launch_method F._launch_method;
++    mk_search_method F._search_method;
+     mk_v F._v;
+     mk_verbose F._verbose;
+     mk_version F._version;
+@@ -2056,6 +2068,15 @@ third-party libraries such as Lwt, but with a different API."
+       | _ ->
+           Compenv.fatal
+             "-launch-method: expect sh, exe or an absolute path for <method>"
++    let _search_method = function
++    | "disable" ->
++        search_method := Config.Absolute
++    | "enable" ->
++        search_method := Config.Absolute_then_search
++    | "always" ->
++        search_method := Config.Search
++    | _ ->
++        assert false
+     let _v () = Compenv.print_version_and_library "compiler"
+     let _vmthread () = Compenv.fatal vmthread_removed_message
+   end
+diff --git a/driver/main_args.mli b/driver/main_args.mli
+index 152f2adab9e2a1f684ae3ec8dd66e77277c55db9..8ed9a611c3867b399f1ea1fcb3e06e39f5b6def4 100644
+--- a/driver/main_args.mli
++++ b/driver/main_args.mli
+@@ -156,6 +156,7 @@ module type Bytecomp_options = sig
+   val _vmthread : unit -> unit
+   val _use_runtime : string -> unit
+   val _launch_method : string -> unit
++  val _search_method : string -> unit
+   val _output_complete_exe : unit -> unit
+ 
+   val _dinstr : unit -> unit
+diff --git a/runtime/caml/s.h.in b/runtime/caml/s.h.in
+index 20f91ac33d97d3b626b7542c1b3add65a55222ca..443bbf2eac02d5b734061f533a6399f913cb6022 100644
+--- a/runtime/caml/s.h.in
++++ b/runtime/caml/s.h.in
+@@ -64,6 +64,8 @@
+ 
+ #undef HAS_TIMES
+ 
++#undef HAS_STRLCPY
++
+ #undef HAS_SECURE_GETENV
+ 
+ #undef HAS___SECURE_GETENV
+diff --git a/stdlib/header.c b/stdlib/header.c
+index 9e1674190aa9735cb713f16edb6d0fd295447eab..95b72d723af199c28f260996d39b7c83f2ac4d9a 100644
+--- a/stdlib/header.c
++++ b/stdlib/header.c
+@@ -26,14 +26,28 @@
+   #define NORETURN
+ #endif
+ 
++#include <errno.h>
++
+ #ifdef _WIN32
+ 
+ #define STRICT
+ #define WIN32_LEAN_AND_MEAN
+ #include <windows.h>
+ 
++typedef wchar_t char_os;
++typedef wchar_t * argv_t;
++#define T(x) L ## x
++#define Is_separator(c) (c == '\\' || c == '/')
++#define Directory_separator_character T('\\')
++#define ITOL(i) L ## #i
++#define ITOT(i) ITOL(i)
++#define PATH_NAME L"%Path%"
++
+ #if WINDOWS_UNICODE
+ #define CP CP_UTF8
++/* The characters in RNTM will be converted from UTF-8 to UTF-16. Parasitically,
++   there could be 4 bytes in RNTM for every wchar_t in the actual value. */
++#define RNTM_ENCODING_LENGTH 4
+ #else
+ #define CP CP_ACP
+ #endif
+@@ -49,6 +63,8 @@
+ 
+ typedef HANDLE file_descriptor;
+ 
++#define unsafe_copy(dst, src, dstsize) lstrcpy(dst, src)
++
+ static int read(HANDLE h, LPVOID buffer, DWORD buffer_size)
+ {
+   DWORD nread = 0;
+@@ -64,7 +80,7 @@ static BOOL WINAPI ctrl_handler(DWORD event)
+     return FALSE;
+ }
+ 
+-static void exec_file(wchar_t *file, wchar_t *cmdline)
++static int exec_file(wchar_t *file, wchar_t *cmdline)
+ {
+   wchar_t truename[MAX_PATH];
+   STARTUPINFO stinfo;
+@@ -91,7 +107,11 @@ static void exec_file(wchar_t *file, wchar_t *cmdline)
+       GetExitCodeProcess(procinfo.hProcess, &retcode);
+       CloseHandle(procinfo.hProcess);
+       ExitProcess(retcode);
++    } else {
++      return ENOEXEC;
+     }
++  } else {
++    return ENOENT;
+   }
+ }
+ 
+@@ -125,12 +145,17 @@ NORETURN static void exit_with_error(const wchar_t *wstr1,
+ 
+ #else
+ 
++#include "caml/s.h"
++
+ #include <stdio.h>
+ #include <stdlib.h>
+ #include <string.h>
+ #include <unistd.h>
+ #include <fcntl.h>
+ #include <limits.h>
++#ifdef HAS_LIBGEN_H
++#include <libgen.h>
++#endif
+ #include <sys/types.h>
+ #include <sys/stat.h>
+ 
+@@ -141,6 +166,24 @@ NORETURN static void exit_with_error(const wchar_t *wstr1,
+ 
+ typedef int file_descriptor;
+ 
++typedef char char_os;
++typedef char ** argv_t;
++#define T(x) x
++#define Is_separator(c) (c == '/')
++#define Directory_separator_character '/'
++#define ITOL(x) #x
++#define ITOT(x) ITOL(x)
++#define PATH_NAME "$PATH"
++
++#ifdef HAS_STRLCPY
++/* The macro is named unsafe_copy because although it requires a dstsize
++   argument which _may_ be passed to strlcpy, there are platforms where the
++   underlying operation is unsafe and will ignore dstsize. */
++#define unsafe_copy strlcpy
++#else
++#define unsafe_copy(dst, src, dstsize) strcpy(dst, src)
++#endif
++
+ #ifndef __CYGWIN__
+ 
+ /* Normal Unix search path function */
+@@ -233,13 +276,16 @@ NORETURN static void exit_with_error(const char *str1,
+   exit(2);
+ }
+ 
+-static void exec_file(const char *file, char * const argv[])
++static int exec_file(const char *file, char * const argv[])
+ {
+-  execvp(file, argv);
++  return (execvp(file, argv) == -1 ? errno : 0);
+ }
+ 
+ #endif /* defined(_WIN32) */
+ 
++#include "caml/version.h"
++#define SHORT_VERSION ITOT(OCAML_VERSION_MAJOR) T(".") ITOT(OCAML_VERSION_MINOR)
++
+ #define CAML_INTERNALS
+ #include "caml/exec.h"
+ 
+@@ -250,12 +296,15 @@ static uint32_t read_size(const char *ptr)
+          ((uint32_t) p[2] << 8) | p[3];
+ }
+ 
+-static char * read_runtime_path(file_descriptor fd)
++#ifndef RNTM_ENCODING_LENGTH
++#define RNTM_ENCODING_LENGTH 1
++#endif
++
++static char * read_runtime_path(file_descriptor fd, uint32_t *rntm_strlen)
+ {
+   char buffer[TRAILER_SIZE];
+-  static char runtime_path[PATH_MAX];
++  static char runtime_path[PATH_MAX * RNTM_ENCODING_LENGTH];
+   int num_sections;
+-  uint32_t path_size;
+   long ofs;
+   int i;
+ 
+@@ -264,67 +313,182 @@ static char * read_runtime_path(file_descriptor fd)
+   num_sections = read_size(buffer);
+   ofs = TRAILER_SIZE + num_sections * 8;
+   if (lseek(fd, -ofs, SEEK_END) == -1) return NULL;
+-  path_size = 0;
++  *rntm_strlen = 0;
+   for (i = 0; i < num_sections; i++) {
+     if (read(fd, buffer, 8) < 8) return NULL;
+     if (buffer[0] == 'R' && buffer[1] == 'N' &&
+         buffer[2] == 'T' && buffer[3] == 'M') {
+-      path_size = read_size(buffer + 4);
+-      ofs += path_size;
+-    } else if (path_size > 0)
++      *rntm_strlen = read_size(buffer + 4);
++      ofs += *rntm_strlen;
++    } else if (*rntm_strlen > 0)
+       ofs += read_size(buffer + 4);
+   }
+-  if (path_size == 0) return NULL;
+-  if (path_size >= PATH_MAX) return NULL;
++  if (*rntm_strlen == 0) return NULL;
++  /* The last character of runtime_path must be '\0', so RNTM must be strictly
++     less than PATH_MAX */
++  if (*rntm_strlen > PATH_MAX * RNTM_ENCODING_LENGTH) return NULL;
+   if (lseek(fd, -ofs, SEEK_END) == -1) return NULL;
+-  if (read(fd, runtime_path, path_size) != path_size) return NULL;
++  if (read(fd, runtime_path, *rntm_strlen) != *rntm_strlen) return NULL;
++
+   return runtime_path;
+ }
+ 
++/* rntm points to a buffer containing rntm_bsz characters consisting of the
++   decoded content of the RNTM section (which may include NUL characters) and an
++   additional NUL "terminator".
++   RNTM is either <runtime>[\0] or [<runtime-dirname>]\0<runtime-basename>
++   Decode rntm and search for a runtime (using argv0_dirname if non-NULL and
++   required) and exec the first runtime found passing argv. */
++NORETURN void search_and_exec_runtime(char_os *rntm, uint32_t rntm_bsz,
++                                      argv_t argv, char_os *argv0_dirname)
++{
++  /* rntm_end points to the NUL "terminator" of rntm (_not_ the last character
++     of the RNTM section */
++  const char_os *rntm_end = rntm + (rntm_bsz - 1);
++
++  char_os *rntm_bindir_end = rntm;
++
++  /* Scan for the first NUL character in rntm (there is always one) */
++  while (*rntm_bindir_end != 0)
++    rntm_bindir_end++;
++
++  /* The first character of rntm is NUL for Search mode */
++  if (*rntm != 0) {
++    int status;
++    /* boot/ocamlc writes a NUL-terminated string to RNTM. In this case,
++       rntm_bindir_end points to that NUL (which will have been included in the
++       length of RNTM recorded in the bytecode image) and immediately following
++       it is the extra NUL character required by this function.
++       Interpret this as Absolute. For Windows, where the RNTM written by
++       boot/ocamlc will have just been "ocamlrun\0", this maintains the required
++       Search behaviour! This can be removed after a bootstrap. */
++    if (rntm_bindir_end + 1 == rntm_end)
++      rntm_bindir_end++;
++    /* For Absolute mode, there is no NUL in RNTM, so rntm_bindir_end points to
++       the terminator pointed to be rntm_end. For Absolute_then_search, there is
++       a NUL in the middle of the RNTM "string", which rntm_bindir_end points
++       at. Change that to a directory separator, so that rntm now points to a
++       NUL-terminated full path we can attempt to exec. */
++    if (rntm_bindir_end != rntm_end)
++      *rntm_bindir_end = Directory_separator_character;
++    status = exec_file(rntm, argv);
++    /* exec failed. For Absolute mode, there's nothing else to be tried. For
++       Absolute_then_search, if the failure was for any other reason than ENOENT
++       then there is also nothing else to be tried. */
++    if (rntm_bindir_end == rntm_end || status != ENOENT)
++      exit_with_error(T("Cannot exec "), rntm, NULL);
++  }
++
++  /* Shift rntm to point to <runtime-basename> */
++  rntm = rntm_bindir_end + 1;
++  if (rntm < rntm_end) {
++    /* Searching takes place first in the directory containing this executable,
++       if it's known. */
++    if (argv0_dirname != NULL) {
++      char_os root[PATH_MAX];
++      char_os *root_basename = root;
++      unsafe_copy(root, argv0_dirname, PATH_MAX);
++
++      /* Ensure root ends with a directory separator. root_basename points to
++         the character at which to place <runtime-basename> */
++      while (*root_basename != 0)
++        root_basename++;
++      if (root_basename > root && !Is_separator(*(root_basename - 1)))
++        *root_basename++ = Directory_separator_character;
++
++      /* If there isn't enough space to copy rntm to root then simply skip this
++         check (e.g. an executable called b.exe in a very long directory name).
++         (root_basename - root) is strlen_os(root) and likewise
++         (rntm_end - rntm) is strlen_os(rntm). */
++      if ((rntm_end - rntm) <= PATH_MAX - (root_basename - root) - 1) {
++        unsafe_copy(root_basename, rntm, PATH_MAX - (root_basename - root));
++        if (exec_file(root, argv) != ENOENT)
++          exit_with_error(T("Cannot exec "), root, NULL);
++      }
++    }
++
++    /* Otherwise, search in PATH */
++    if (exec_file(rntm, argv) != ENOENT)
++      exit_with_error(T("Cannot exec "), rntm, NULL);
++  }
++
++  /* If we get here, we've failed... */
++  exit_with_error(T("This program requires OCaml ") SHORT_VERSION T("\n")
++                  T("Interpreter ("), (rntm_bindir_end + 1),
++                  T(") not found with the program or in " PATH_NAME));
++}
++
+ #ifdef _WIN32
+ 
+ NORETURN void __cdecl wmainCRTStartup(void)
+ {
++  wchar_t module[MAX_PATH];
+   wchar_t truename[MAX_PATH];
++  uint32_t rntm_strlen = 0, rntm_bsz = 0;
+   char *runtime_path;
+-  wchar_t wruntime_path[MAX_PATH];
++  wchar_t wruntime_path[MAX_PATH], *dirname;
+   HANDLE h;
+ 
+-  if (GetModuleFileName(NULL, truename, sizeof(truename)/sizeof(wchar_t)) == 0)
++  if (GetModuleFileName(NULL, module, sizeof(module)/sizeof(wchar_t)) == 0)
+     exit_with_error(L"Out of memory", NULL, NULL);
+ 
+-  h = CreateFile(truename, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE,
++  h = CreateFile(module, GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE,
+                  NULL, OPEN_EXISTING, 0, NULL);
+-  if (h == INVALID_HANDLE_VALUE ||
+-      (runtime_path = read_runtime_path(h)) == NULL ||
+-      !MultiByteToWideChar(CP, 0, runtime_path, -1, wruntime_path,
+-                           sizeof(wruntime_path)/sizeof(wchar_t)))
++
++
++  /* read_runtime_path returns the actual size of RNTM, but the buffer returned
++     is guaranteed to have a null character following the final character of
++     RNTM. */
++  if (h == INVALID_HANDLE_VALUE
++      || (runtime_path = read_runtime_path(h, &rntm_strlen)) == NULL
++      || (rntm_bsz =
++            MultiByteToWideChar(CP, 0, runtime_path, rntm_strlen + 1,
++                                wruntime_path,
++                                sizeof(wruntime_path)/sizeof(wchar_t))) == 0
++      || GetFullPathName(module, sizeof(truename)/sizeof(wchar_t), truename,
++                         &dirname) >= sizeof(truename)/sizeof(wchar_t))
+     exit_with_error(NULL, truename,
+                     L" not found or is not a bytecode executable file");
+   CloseHandle(h);
+-  exec_file(wruntime_path, GetCommandLine());
+ 
+-  exit_with_error(L"Cannot exec ", wruntime_path, NULL);
++  if (dirname) {
++    /* GetFullPathName leaves dirname pointing to the first character of the
++       basename, so setting that to NUL means the string pointed to by truename
++       is the dirname of the currently running executable with a trailing
++       separator (although search_and_exec_runtime will check that anyway) */
++    *dirname = 0;
++    dirname = truename;
++  }
++
++  search_and_exec_runtime(wruntime_path, rntm_bsz, GetCommandLine(), dirname);
+ }
+ 
+ #else
+ 
+ int main(int argc, char *argv[])
+ {
+-  char *truename, *runtime_path;
++  char *truename, *runtime_path, *argv0_dirname;
++  uint32_t rntm_strlen = 0;
+   int fd;
+ 
+   truename = searchpath(argv[0]);
+   fd = open(truename, O_RDONLY | O_BINARY);
+-  if (fd == -1 || (runtime_path = read_runtime_path(fd)) == NULL)
++  if (fd == -1 || (runtime_path = read_runtime_path(fd, &rntm_strlen)) == NULL)
+     exit_with_error(NULL, truename,
+                     " not found or is not a bytecode executable file");
+   close(fd);
+ 
+-  argv[0] = truename;
+-  exec_file(runtime_path, argv);
++#ifdef HAS_LIBGEN_H
++  argv0_dirname = dirname(strdup(truename));
++#else
++  argv0_dirname = NULL;
++#endif
+ 
+-  exit_with_error("Cannot exec ", runtime_path, NULL);
++  argv[0] = truename;
++  /* read_runtime_path returns the actual size of RNTM, but the buffer returned
++     is guaranteed to have a null character following the final character of
++     RNTM. */
++  search_and_exec_runtime(runtime_path, rntm_strlen + 1, argv, argv0_dirname);
+ }
+ 
+ #endif /* defined(_WIN32) */
+diff --git a/tools/objinfo.ml b/tools/objinfo.ml
+index 274c36b12d1b64f38718b92534f8139940d05ec4..bfe395774d1e71e4ace85acaf7daceb05fe6b029 100644
+--- a/tools/objinfo.ml
++++ b/tools/objinfo.ml
+@@ -219,8 +219,14 @@ let p_list title print = function
+       p_title title;
+       List.iter print l
+ 
+-let p_runtime =
+-  printf "Runtime:\n\t%s\n"
++let p_runtime (runtime, search) =
++  let runtime =
++    match search with
++    | Byterntm.Search -> runtime
++    | Byterntm.Absolute dir -> dir ^ runtime
++    | Byterntm.Absolute_then_search dir -> Printf.sprintf "[%s]%s" dir runtime
++  in
++  printf "Runtime:\n\t%s\n" runtime
+ 
+ let dump_byte ic =
+   Bytesections.read_toc ic;
+diff --git a/tools/ocamlsize b/tools/ocamlsize
+index b9314125a9ec716eee60a1c1e8a3218f3d607606..44793b877091be8434dd85e5ff6d12456dcbca35 100755
+--- a/tools/ocamlsize
++++ b/tools/ocamlsize
+@@ -19,12 +19,25 @@ foreach $f (@ARGV) {
+     open(FILE, $f) || die("Cannot open $f");
+     read(FILE, $header, 2);
+     if ($header eq '#!') {
+-      $path = <FILE>;
++      chomp($path = <FILE>);
+       if ($path =~ m/\/sh$/) {
+-        # exec form of the shebang header
+-        $path = <FILE>;
++        # shell-script form of the shebang header
++        chomp($path = <FILE>);
++        # exec form - used for -runtime-search absolute when the path to the
++        # runtime isn't valid as a #! line.
+         if ($path =~ s/^exec '(.*)' "\$0" "\$@\"$/$1/ > 0) {
+           $path =~ s/'\\''/'/g;
++        # Both -runtime-search enable and -runtime-search always define a
++        # variable r with the name of the runtime (see bytecomp/bytelink.ml)
++        } elsif ($path =~ s/^r='(.*)'$/$1/ > 0) {
++          $path =~ s/'\\''/'/g;
++          chomp($dir = <FILE>);
++          # In -runtime-search enable, there will also be a path to the runtime
++          # defined the variable c.
++          if ($dir =~ s/^c='(.*)'"\$r"$/$1/ > 0) {
++            $dir =~ s/'\\''/'/g;
++            $path = "[$dir]$path";
++          }
+         } else {
+           undef $path;
+         }
+@@ -45,10 +58,19 @@ foreach $f (@ARGV) {
+     }
+     print $f, ":\n" if ($#ARGV > 0);
+     if (not defined $path) {
+-      $path =
+-          $length{'RNTM'} > 0 ?
+-              substr(&read_section('RNTM'), 0, -1) :
+-              "(custom runtime)";
++      if ($length{'RNTM'} > 0) {
++        $path = &read_section('RNTM');
++        # RNTM is "\0ocamlrun" for -runtime-search always
++        if ($path !~ s/^\0//) {
++          # RNTM is "/path/to/ocamlrun" for -runtime-search disable and
++          # "/path/to\0ocamlrun" for -runtime-search enable. Transform the
++          # embedded "\0" into a directory separator and display the directory
++          # in square brackets (as above for the sh-case)
++          $path =~ s/^([^\/\\]*)([\\\/])([^\0]*)\0(.*)$/[$1$2$3$2]$4/
++        }
++      } else {
++        $path = '(custom runtime)';
++      }
+     };
+     printf ("\tcode: %-7d data: %-7d symbols: %-7d debug: %-7d\n",
+             $length{'CODE'}, $length{'DATA'},
+diff --git a/utils/clflags.ml b/utils/clflags.ml
+index f9a3eecf01933a467324083603976bcb925787ec..3479b25c59b7660e4538a949bcb3d3110352ba57 100644
+--- a/utils/clflags.ml
++++ b/utils/clflags.ml
+@@ -82,6 +82,13 @@ and use_prims = ref ""                  (* -use-prims ... *)
+ and use_runtime = ref ""                (* -use-runtime ... *)
+ and launch_method =                     (* -launch-method ... *)
+   ref (Config.launch_method, Config.target_bindir)
++and search_method =                     (* -search-method ... *)
++  if Config.target_win32 then
++    (* Historically, the native Windows ports are assumed to be finding ocamlrun
++       using a PATH search. *)
++    ref Config.Search
++  else
++    ref Config.Absolute
+ and plugin = ref false                  (* -plugin ... *)
+ and principal = ref false               (* -principal *)
+ and real_paths = ref true               (* -short-paths *)
+diff --git a/utils/clflags.mli b/utils/clflags.mli
+index aa0303a121837067caaae212804976c053036003..1c37adbbc5837d5feb4c649e0d87014f1bd9804c 100644
+--- a/utils/clflags.mli
++++ b/utils/clflags.mli
+@@ -110,6 +110,7 @@ val noversion : bool ref
+ val use_prims : string ref
+ val use_runtime : string ref
+ val launch_method : (Config.launch_method * string) ref
++val search_method : Config.search_method ref
+ val plugin : bool ref
+ val principal : bool ref
+ val real_paths : bool ref
+diff --git a/utils/config.mli b/utils/config.mli
+index 71b47011bff1c273a89edbb27ce5932e798bb276..0d0e128fab36d360f38e6d0bec32473d42af1b9f 100644
+--- a/utils/config.mli
++++ b/utils/config.mli
+@@ -310,6 +310,15 @@ val launch_method : launch_method
+ 
+     @since 5.5 *)
+ 
++(** Mechanisms used by tendered bytecode executables to locate the interpreter
++
++    @since 5.5 *)
++type search_method =
++| Absolute             (** Check fixed absolute location only *)
++| Absolute_then_search (** Check fixed absolute location, but perform a search
++                           if that fails *)
++| Search               (** Always search for the interpreter *)
++
+ (** Access to configuration values *)
+ val print_config : out_channel -> unit
+ 
+diff --git a/utils/config.mlp b/utils/config.mlp
+index e9947b81892abacaece03c0c689f290554668f9b..64a1e8988b5125891015f5ba62e95b2cb5a88203 100644
+--- a/utils/config.mlp
++++ b/utils/config.mlp
+@@ -131,6 +131,7 @@ and cmt_magic_number = "Caml1999T031"
+ and linear_magic_number = "Caml1999L031"
+ 
+ type launch_method = Executable | Shebang of string option
++type search_method = Absolute | Absolute_then_search | Search
+ 
+ let interface_suffix = ref ".mli"
+ 
+-- 
+2.53.0.windows.2
+
