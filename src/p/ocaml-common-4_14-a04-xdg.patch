@@ -83,7 +83,7 @@ index ef90a2cf95..cf018b6d13 100644
 +used in its place) or "HOME/.ocamlinit" (on Windows, "USERPROFILE/.ocamlinit"
 +is used instead).
  }%top
- 
+
  \notop{%
 diff --git a/toplevel/toploop.ml b/toplevel/toploop.ml
 index 62a5b0023e..cb868629a3 100644

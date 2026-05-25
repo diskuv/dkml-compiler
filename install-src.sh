@@ -44,6 +44,12 @@ install -v \
     src/p/ocaml-common-4_14-a08-declspecdllimport.patch \
     src/p/ocaml-common-4_14-a09-debuggasx86.patch \
     src/p/ocaml-common-4_14-a10-bx32.patch \
+    src/p/ocaml-common-4_14-a11-relocatable-version-build.patch \
+    src/p/ocaml-common-4_14-a12-relocatable-launcher.patch \
+    src/p/ocaml-common-4_14-a13-relocatable-stdlib.patch \
+    src/p/ocaml-common-4_14-a14-relocatable-runtime-search.patch \
+    src/p/ocaml-common-4_14-a15-relocatable-install.patch \
+    src/p/ocaml-common-4_14-a16-bigarray-msvc18.patch \
     src/p/ocaml-common-4_14_0-a01-fmatest.patch \
     src/p/ocamldebug_gcc_clang-common-4_14-a01-compileflags.patch \
     src/p/ocaml-cross-4_12-a01.patch \

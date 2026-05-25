@@ -66,6 +66,18 @@ COPY /Y /B src\p\ocaml-common-4_14-a09-debuggasx86.patch %TARGETDIR%\src\p
 IF %ERRORLEVEL% NEQ 0 (ECHO Error during COPY &EXIT /B 1)
 COPY /Y /B src\p\ocaml-common-4_14-a10-bx32.patch %TARGETDIR%\src\p
 IF %ERRORLEVEL% NEQ 0 (ECHO Error during COPY &EXIT /B 1)
+COPY /Y /B src\p\ocaml-common-4_14-a11-relocatable-version-build.patch %TARGETDIR%\src\p
+IF %ERRORLEVEL% NEQ 0 (ECHO Error during COPY &EXIT /B 1)
+COPY /Y /B src\p\ocaml-common-4_14-a12-relocatable-launcher.patch %TARGETDIR%\src\p
+IF %ERRORLEVEL% NEQ 0 (ECHO Error during COPY &EXIT /B 1)
+COPY /Y /B src\p\ocaml-common-4_14-a13-relocatable-stdlib.patch %TARGETDIR%\src\p
+IF %ERRORLEVEL% NEQ 0 (ECHO Error during COPY &EXIT /B 1)
+COPY /Y /B src\p\ocaml-common-4_14-a14-relocatable-runtime-search.patch %TARGETDIR%\src\p
+IF %ERRORLEVEL% NEQ 0 (ECHO Error during COPY &EXIT /B 1)
+COPY /Y /B src\p\ocaml-common-4_14-a15-relocatable-install.patch %TARGETDIR%\src\p
+IF %ERRORLEVEL% NEQ 0 (ECHO Error during COPY &EXIT /B 1)
+COPY /Y /B src\p\ocaml-common-4_14-a16-bigarray-msvc18.patch %TARGETDIR%\src\p
+IF %ERRORLEVEL% NEQ 0 (ECHO Error during COPY &EXIT /B 1)
 COPY /Y /B src\p\ocaml-common-4_14_0-a01-fmatest.patch %TARGETDIR%\src\p
 IF %ERRORLEVEL% NEQ 0 (ECHO Error during COPY &EXIT /B 1)
 COPY /Y /B src\p\ocamldebug_gcc_clang-common-4_14-a01-compileflags.patch %TARGETDIR%\src\p
