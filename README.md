@@ -16,6 +16,22 @@ version of the OCaml 4.x compiler on a non-Windows machine. The central Opam
 repository only introduced the DkML distribution in OCaml 5.x generally and
 OCaml 4.14 for Windows specifically.
 
+- [dkml-compiler](#dkml-compiler)
+  - [Quick Start](#quick-start)
+    - [Android Cross-Compiler](#android-cross-compiler)
+  - [Directory Structure](#directory-structure)
+    - [Build Directories](#build-directories)
+    - [Opam Directories](#opam-directories)
+  - [Options](#options)
+    - [ocaml-option-bytecode-only](#ocaml-option-bytecode-only)
+    - [ocaml-option-address-sanitizer](#ocaml-option-address-sanitizer)
+    - [ocaml-option-leak-sanitizer](#ocaml-option-leak-sanitizer)
+  - [Patches](#patches)
+  - [Developing](#developing)
+    - [Patching](#patching)
+  - [Optimization](#optimization)
+  - [Status](#status)
+
 ## Quick Start
 
 ### Android Cross-Compiler
@@ -153,6 +169,14 @@ sudo sysctl vm.mmap_rnd_bits=28
 The clang/gcc Leak Sanitizer.
 
 To avoid stalls seen in WSL 2 (6.6.87.2-microsoft-standard-WSL2) Debian 11.6 it is not used during the `./configure` phase but when executables are being created in the `make` phase.
+
+## Patches
+
+Each patch in `src/p/` has its own documentation.
+
+The `aNN` series is from dra27's relocatable <https://github.com/dra27/ocaml/tree/backport-4.14> branch.
+
+The `bNN` series are OCaml 4 bugfixes and individual backports from OCaml 5.
 
 ## Developing
 
