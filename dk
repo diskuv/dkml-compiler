@@ -303,6 +303,22 @@ autodetect_buildhost_arch() {
 # A function that will try to print an ISO8601 timestamp, but will fallback to
 # the system default. Always uses UTC timezone.
 try_iso8601_timestamp() {
+    try_iso8601_timestamp_OLDTZ=${TZ-}
+    TZ=UTC0
+    if printf -v try_iso8601_timestamp_RESULT '%(%Y-%m-%dT%H:%M:%SZ)T' -1 2>/dev/null; then
+        if [ -n "${try_iso8601_timestamp_OLDTZ+x}" ]; then
+            TZ=$try_iso8601_timestamp_OLDTZ
+        else
+            unset TZ
+        fi
+        printf '%s\n' "$try_iso8601_timestamp_RESULT"
+        return 0
+    fi
+    if [ -n "${try_iso8601_timestamp_OLDTZ+x}" ]; then
+        TZ=$try_iso8601_timestamp_OLDTZ
+    else
+        unset TZ
+    fi
     date -u -Iseconds 2>/dev/null || TZ=UTC date
 }
 
