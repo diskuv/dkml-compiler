@@ -580,7 +580,9 @@ if cmake_flag_on "${DKML_COMPILE_CM_MSVC:-}"; then
     # Reason 2 - Override ./configures's hardcoded /O2 ... /MD (which conflict sometimes, especially /MDd set above)
     # ==> Override /O2 ... /MD
 
-    CFLAGS_MSVC="${autodetect_compiler_CFLAGS}"    
+    # VS 2026 / MSVC 19.50 warns on mixed enum comparisons in OCaml 4.14's
+    # bigarray runtime code; keep the older warning baseline so -WX remains usable.
+    CFLAGS_MSVC="${autodetect_compiler_CFLAGS:+$autodetect_compiler_CFLAGS }/Wv:18"
     autodetect_compiler_CFLAGS=
 fi
 

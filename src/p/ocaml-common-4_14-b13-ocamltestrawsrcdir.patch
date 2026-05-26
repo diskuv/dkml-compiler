@@ -1,0 +1,13 @@
+diff --git a/ocamltest/ocamltest_config.ml.in b/ocamltest/ocamltest_config.ml.in
+index 245c8d4..b627155 100644
+--- a/ocamltest/ocamltest_config.ml.in
++++ b/ocamltest/ocamltest_config.ml.in
+@@ -45,7 +45,7 @@ let system = "%%SYSTEM%%"
+ 
+ let c_preprocessor = "%%CPP%%"
+ 
+-let ocamlsrcdir = "%%ocamlsrcdir%%"
++let ocamlsrcdir = {|%%ocamlsrcdir%%|}
+ 
+ let flambda = %%FLAMBDA%%
+ 

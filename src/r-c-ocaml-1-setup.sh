@@ -566,11 +566,23 @@ set_patches() {
     esac
 
     PATCHES=()
+    should_apply_patch() {
+        case "$(basename "$1")" in
+            ocaml-common-4_14-b06-linearclosures.patch)
+                if [ "$set_patches_CATEGORY" = "ocaml" ] && [ "$set_patches_VER" = "4.14.3" ]; then
+                    return 1
+                fi
+                ;;
+        esac
+        return 0
+    }
     for set_patches_STEM in "${VERSION_STEMS[@]}"; do
         # Find, sort and accumulate common patches that belong to the stem.
         find "vendor/dkml-compiler/src/p" -type f -name "$set_patches_CATEGORY-common-$set_patches_STEM-*.patch" | LC_ALL=C sort > "$WORK/p"
         while IFS= read -r line; do
-            PATCHES+=("$DKMLDIR/$line")
+            if should_apply_patch "$line"; then
+                PATCHES+=("$DKMLDIR/$line")
+            fi
             ALL_PATCH_FILES+=("$line")
         done < "$WORK/p"
         #   Markdown
@@ -581,7 +593,9 @@ set_patches() {
         # Find, sort and accumulate host/cross patches that belong to the stem.
         find "vendor/dkml-compiler/src/p" -type f -name "$set_patches_CATEGORY-$set_patches_HOSTCROSS-$set_patches_STEM-*.patch" | LC_ALL=C sort > "$WORK/p"
         while IFS= read -r line; do
-            PATCHES+=("$DKMLDIR/$line")
+            if should_apply_patch "$line"; then
+                PATCHES+=("$DKMLDIR/$line")
+            fi
             ALL_PATCH_FILES+=("$line")
         done < "$WORK/p"
         #   Markdown
@@ -647,6 +661,10 @@ verify_applied_patches() {
 
     verify_applied_patches_EXPECTED="$WORK/expected-patch-subjects"
     verify_applied_patches_ACTUAL="$WORK/actual-patch-subjects"
+    verify_applied_patches_SRCDIR_MIXED="$verify_applied_patches_SRCDIR"
+    if [ -x /usr/bin/cygpath ]; then
+        verify_applied_patches_SRCDIR_MIXED=$(/usr/bin/cygpath -aw "$verify_applied_patches_SRCDIR_MIXED")
+    fi
     : > "$verify_applied_patches_EXPECTED"
     : > "$verify_applied_patches_ACTUAL"
 
@@ -658,7 +676,7 @@ verify_applied_patches() {
             "$patchbase" >> "$verify_applied_patches_EXPECTED"
     done
 
-    git -C "$verify_applied_patches_SRCDIR" \
+    git -C "$verify_applied_patches_SRCDIR_MIXED" \
         log --reverse -n "$verify_applied_patches_COUNT" --format=%s HEAD \
         > "$verify_applied_patches_ACTUAL"
 
