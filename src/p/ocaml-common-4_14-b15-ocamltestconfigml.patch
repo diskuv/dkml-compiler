@@ -1,0 +1,37 @@
+diff --git a/configure b/configure
+index 317df60..03a384e 100755
+--- a/configure
++++ b/configure
+@@ -3048,7 +3048,7 @@ ac_subst_vars='am__EXEEXT_FALSE
+  suffixing
+  ar_supports_response_files
+  flexdll_chain
+-ac_config_files="$ac_config_files testsuite/tools/toolchain.ml ocamltest/ocamltest_config.mlp Makefile.build_config Makefile.config stdlib/sys.ml manual/src/version.tex manual/src/html_processing/src/common.ml tools/eventlog_metadata"
++ac_config_files="$ac_config_files testsuite/tools/toolchain.ml ocamltest/ocamltest_config.ml Makefile.build_config Makefile.config stdlib/sys.ml manual/src/version.tex manual/src/html_processing/src/common.ml tools/eventlog_metadata"
+ 
+ ac_config_headers="$ac_config_headers runtime/caml/m.h runtime/caml/s.h runtime/caml/version.h"
+ 
+@@ -19523,8 +19523,8 @@ do
+     "testsuite/tools/toolchain.ml") CONFIG_FILES="$CONFIG_FILES testsuite/tools/toolchain.ml" ;;
+     "Makefile.build_config") CONFIG_FILES="$CONFIG_FILES Makefile.build_config" ;;
+     "Makefile.config") CONFIG_FILES="$CONFIG_FILES Makefile.config" ;;
+-    "ocamltest/ocamltest_config.mlp") CONFIG_FILES="$CONFIG_FILES ocamltest/ocamltest_config.mlp" ;;
+-    "ocamltest/ocamltest_config.mlp.in") CONFIG_FILES="$CONFIG_FILES ocamltest/ocamltest_config.mlp.in" ;;
++    "ocamltest/ocamltest_config.ml") CONFIG_FILES="$CONFIG_FILES ocamltest/ocamltest_config.ml" ;;
++    "ocamltest/ocamltest_config.ml.in") CONFIG_FILES="$CONFIG_FILES ocamltest/ocamltest_config.ml.in" ;;
+     "stdlib/sys.ml") CONFIG_FILES="$CONFIG_FILES stdlib/sys.ml" ;;
+     "manual/src/version.tex") CONFIG_FILES="$CONFIG_FILES manual/src/version.tex" ;;
+     "manual/src/html_processing/src/common.ml") CONFIG_FILES="$CONFIG_FILES manual/src/html_processing/src/common.ml" ;;
+diff --git a/configure.ac b/configure.ac
+index bd96ad1..8d42c50 100644
+--- a/configure.ac
++++ b/configure.ac
+@@ -178,7 +178,7 @@ AC_CONFIG_FILES([stdlib/sys.ml])
+ AC_CONFIG_FILES([manual/src/version.tex])
+ AC_CONFIG_FILES([manual/src/html_processing/src/common.ml])
+ AC_CONFIG_FILES([tools/eventlog_metadata])
+-AC_CONFIG_FILES([ocamltest/ocamltest_config.mlp])
++AC_CONFIG_FILES([ocamltest/ocamltest_config.ml])
+ AC_CONFIG_HEADERS([runtime/caml/m.h])
+ AC_CONFIG_HEADERS([runtime/caml/s.h])
+ AC_CONFIG_HEADERS([runtime/caml/version.h])
