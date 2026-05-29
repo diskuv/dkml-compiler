@@ -1,0 +1,59 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: David Allsopp <david.allsopp@metastack.com>
+Date: Mon, 25 May 2026 12:00:00 -0700
+Subject: [PATCH] Wrap manual/ config outputs in existence check
+
+The configure script should only generate manual/ output files when the
+manual/ directory is present.  Without the existence check the configure
+step fails in SDK builds that omit the manual subdirectory.
+
+Patches a01-a89 together bring the configure script (via their own
+configure.ac and configure diffs) to within 2 hunks of the dra27
+relocatable final commit (8b8971e).  This patch applies those last two
+hunks so the script matches the dra27 final exactly.
+
+Upstream: https://github.com/dra27/ocaml/commits/8b8971e46f5c09aedb5f8d43a6e2701fecc8f98d
+diff --git a/configure b/configure
+index 6bc05fc..bfa4b50 100644
+--- a/configure
++++ b/configure
+@@ -3042,10 +3042,6 @@ ac_config_files="$ac_config_files Makefile.config"
+ 
+ ac_config_files="$ac_config_files stdlib/sys.ml"
+ 
+-ac_config_files="$ac_config_files manual/src/version.tex"
+-
+-ac_config_files="$ac_config_files manual/src/html_processing/src/common.ml"
+-
+ ac_config_files="$ac_config_files tools/eventlog_metadata"
+ 
+ ac_config_files="$ac_config_files ocamltest/ocamltest_config.mlp"
+@@ -3056,6 +3052,12 @@ ac_config_headers="$ac_config_headers runtime/caml/s.h"
+ 
+ ac_config_headers="$ac_config_headers runtime/caml/version.h"
+ 
++if test -d manual; then :
++  ac_config_files="$ac_config_files manual/src/version.tex"
++
++  ac_config_files="$ac_config_files manual/src/html_processing/src/common.ml"
++
++fi
+ 
+ # Definitions related to the version of OCaml
+ $as_echo "#define OCAML_VERSION_MAJOR 4" >>confdefs.h
+@@ -19516,13 +19518,13 @@ do
+     "Makefile.build_config") CONFIG_FILES="$CONFIG_FILES Makefile.build_config" ;;
+     "Makefile.config") CONFIG_FILES="$CONFIG_FILES Makefile.config" ;;
+     "stdlib/sys.ml") CONFIG_FILES="$CONFIG_FILES stdlib/sys.ml" ;;
+-    "manual/src/version.tex") CONFIG_FILES="$CONFIG_FILES manual/src/version.tex" ;;
+-    "manual/src/html_processing/src/common.ml") CONFIG_FILES="$CONFIG_FILES manual/src/html_processing/src/common.ml" ;;
+     "tools/eventlog_metadata") CONFIG_FILES="$CONFIG_FILES tools/eventlog_metadata" ;;
+     "ocamltest/ocamltest_config.mlp") CONFIG_FILES="$CONFIG_FILES ocamltest/ocamltest_config.mlp" ;;
+     "runtime/caml/m.h") CONFIG_HEADERS="$CONFIG_HEADERS runtime/caml/m.h" ;;
+     "runtime/caml/s.h") CONFIG_HEADERS="$CONFIG_HEADERS runtime/caml/s.h" ;;
+     "runtime/caml/version.h") CONFIG_HEADERS="$CONFIG_HEADERS runtime/caml/version.h" ;;
++    "manual/src/version.tex") CONFIG_FILES="$CONFIG_FILES manual/src/version.tex" ;;
++    "manual/src/html_processing/src/common.ml") CONFIG_FILES="$CONFIG_FILES manual/src/html_processing/src/common.ml" ;;
+     "libtool") CONFIG_COMMANDS="$CONFIG_COMMANDS libtool" ;;
+     "runtime/ld.conf") CONFIG_COMMANDS="$CONFIG_COMMANDS runtime/ld.conf" ;;
+ 

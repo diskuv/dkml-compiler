@@ -3,19 +3,22 @@ From: Jonah Beckford <9566106-jonahbeckford@users.noreply.gitlab.com>
 Date: Mon, 25 May 2026 11:37:01 -0700
 Subject: [PATCH] b05
 
-
 diff --git a/configure b/configure
-index 6bc05fcea5cd81e039a98a5b87f29a291fc2b0aa..ae354f8ae8fa321b38a466363bc9f3882bcf5bb5 100755
-GIT binary patch
-delta 138
-zcmcb5L*?{Mm4+6^7N!>F7M3lnFRm$MrYS@#=;kRXsZ=|=`8c`<$NL6{IoB#F#9Awq
-zWTfUzufM`7ZkU&!lb@cipzB_#tAMIdK_xjkzC5ugFEcN_Scyvk2vT#3Q^DG%|G37g
-X#*~)XE_t05h}nRceY@m!4x3N_7(6fM
-
-delta 52
-zcmX?oQ|0Onm4+6^7N!>F7M3lnFRo2LbDLFQy8Lxkj_LW=S>@WNTxSJhHXvr-KIJ-x
-Gc_;vI=@&Kt
-
+index bfa4b50..4017464 100644
+--- a/configure
++++ b/configure
+@@ -13088,7 +13088,11 @@ $as_echo "$as_me: WARNING: Consider using GCC version 4.2 or above." >&2;};
+       internal_cflags="$cc_warnings -fno-common \
+ -fexcess-precision=standard" ;; #(
+   msvc-*) :
+-    common_cflags="-nologo -O2 -Gy- -MD $cc_warnings"
++    if [ -n "${CFLAGS_MSVC}" ]; then
++      common_cflags="-nologo -Gy- ${CFLAGS_MSVC} $cc_warnings"
++    else
++      common_cflags="-nologo -O2 -Gy- -MD $cc_warnings"
++    fi
+       common_cppflags="-D_CRT_SECURE_NO_DEPRECATE"
+       internal_cppflags='-DUNICODE -D_UNICODE'
+ 
 -- 
 2.53.0.windows.2
-

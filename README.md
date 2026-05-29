@@ -174,7 +174,21 @@ To avoid stalls seen in WSL 2 (6.6.87.2-microsoft-standard-WSL2) Debian 11.6 it 
 
 Each patch in `src/p/` has its own documentation.
 
-The `aNN` series is from dra27's relocatable <https://github.com/dra27/ocaml/tree/backport-4.14> branch.
+The `aNN` series are the relocatability patches from dra27's
+<https://github.com/dra27/ocaml/tree/backport-4.14> branch (build-system
+improvements, MinGW/Windows portability fixes, runtime-search support, etc.).
+Patches `a01`–`a89` update source files including `configure.ac`, but do not
+include the pre-generated `configure` script.
+
+`a90` is a special squashed patch that updates the pre-generated `configure`
+script to match the dra27 fork at commit
+`8b8971e46f5c09aedb5f8d43a6e2701fecc8f98d`.  OCaml's build system uses the
+pre-generated `configure` directly without re-running autoconf, so the
+relocatability options added to `configure.ac` by `a01`–`a89` —
+`--enable-runtime-search`, `--with-relative-libdir`, etc. — would otherwise be
+silently ignored at configure time.
+
+See `src/p/ocaml-common-4_14-a90.md` for verification details.
 
 The `bNN` series are OCaml 4 bugfixes and individual backports from OCaml 5.
 

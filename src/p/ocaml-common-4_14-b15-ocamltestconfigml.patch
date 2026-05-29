@@ -1,7 +1,7 @@
 diff --git a/configure b/configure
 --- a/configure
 +++ b/configure
-@@ -3047,7 +3047,7 @@ ac_config_files="$ac_config_files manual/src/html_processing/src/common.ml"
+@@ -3044,7 +3044,7 @@ ac_config_files="$ac_config_files stdlib/sys.ml"
  
  ac_config_files="$ac_config_files tools/eventlog_metadata"
  
@@ -10,10 +10,9 @@ diff --git a/configure b/configure
  
  ac_config_headers="$ac_config_headers runtime/caml/m.h"
  
-@@ -19522,7 +19522,7 @@ do
+@@ -19519,7 +19519,7 @@ do
+     "Makefile.config") CONFIG_FILES="$CONFIG_FILES Makefile.config" ;;
      "stdlib/sys.ml") CONFIG_FILES="$CONFIG_FILES stdlib/sys.ml" ;;
-     "manual/src/version.tex") CONFIG_FILES="$CONFIG_FILES manual/src/version.tex" ;;
-     "manual/src/html_processing/src/common.ml") CONFIG_FILES="$CONFIG_FILES manual/src/html_processing/src/common.ml" ;;
      "tools/eventlog_metadata") CONFIG_FILES="$CONFIG_FILES tools/eventlog_metadata" ;;
 -    "ocamltest/ocamltest_config.mlp") CONFIG_FILES="$CONFIG_FILES ocamltest/ocamltest_config.mlp" ;;
 +    "ocamltest/ocamltest_config.ml") CONFIG_FILES="$CONFIG_FILES ocamltest/ocamltest_config.ml" ;;
