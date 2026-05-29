@@ -98,7 +98,7 @@ detect_msvs() {
   if create_detect_msvs_script "$detect_msvs_ABI" "$WORK/msvs-detect" ; then
     # Get MSVS_* aligned to the DKML compiler
     log_script "$WORK"/msvs-detect
-    bash "$WORK"/msvs-detect > "$WORK"/msvs-detect.out
+    sh "$WORK"/msvs-detect > "$WORK"/msvs-detect.out
     log_script "$WORK"/msvs-detect.out
 
     #   shellcheck disable=SC1091
