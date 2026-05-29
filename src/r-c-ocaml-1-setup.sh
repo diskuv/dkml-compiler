@@ -1081,9 +1081,11 @@ if [ -n "$TARGETABIS" ]; then
 fi
 _install_with_args() {
     _iwa_script=$1
-    shift
+    _iwa_file1=${2:-}
+    _iwa_file2=${3:-}
     set -- "$_iwa_script"
-    for _iwa_file do
+    for _iwa_file in "$_iwa_file1" "$_iwa_file2"; do
+        [ -n "$_iwa_file" ] || continue
         while IFS= read -r _iwa_arg; do
             set -- "$@" "$_iwa_arg"
         done < "$_iwa_file"
