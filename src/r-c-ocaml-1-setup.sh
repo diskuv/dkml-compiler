@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 # ----------------------------
 # Copyright 2021 Diskuv, Inc.
 #
@@ -31,49 +31,47 @@ set -euf
 # ------------------
 # BEGIN Command line processing
 
-BINARIES=(
-    flexlink
-    ocaml
-    ocamlc.byte
-    ocamlc
-    ocamlc.opt
-    ocamlcmt
-    ocamlcp.byte
-    ocamlcp
-    ocamlcp.opt
-    ocamldebug
-    ocamldep.byte
-    ocamldep
-    ocamldep.opt
-    ocamldoc
-    ocamldoc.opt
-    ocamllex.byte
-    ocamllex
-    ocamllex.opt
-    ocamlmklib.byte
-    ocamlmklib
-    ocamlmklib.opt
-    ocamlmktop.byte
-    ocamlmktop
-    ocamlmktop.opt
-    ocamlnat
-    ocamlobjinfo.byte
-    ocamlobjinfo
-    ocamlobjinfo.opt
-    ocamlopt.byte
-    ocamlopt
-    ocamlopt.opt
-    ocamloptp.byte
-    ocamloptp
-    ocamloptp.opt
-    ocamlprof.byte
-    ocamlprof
-    ocamlprof.opt
-    ocamlrun
-    ocamlrund
-    ocamlruni
-    ocamlyacc
-)
+BINARIES='flexlink
+ocaml
+ocamlc.byte
+ocamlc
+ocamlc.opt
+ocamlcmt
+ocamlcp.byte
+ocamlcp
+ocamlcp.opt
+ocamldebug
+ocamldep.byte
+ocamldep
+ocamldep.opt
+ocamldoc
+ocamldoc.opt
+ocamllex.byte
+ocamllex
+ocamllex.opt
+ocamlmklib.byte
+ocamlmklib
+ocamlmklib.opt
+ocamlmktop.byte
+ocamlmktop
+ocamlmktop.opt
+ocamlnat
+ocamlobjinfo.byte
+ocamlobjinfo
+ocamlobjinfo.opt
+ocamlopt.byte
+ocamlopt
+ocamlopt.opt
+ocamloptp.byte
+ocamloptp
+ocamloptp.opt
+ocamlprof.byte
+ocamlprof
+ocamlprof.opt
+ocamlrun
+ocamlrund
+ocamlruni
+ocamlyacc'
 # Since installtime/windows/Machine/Machine.psm1 has minimum VS14 we only select that version
 # or greater. We'll ignore '10.0' (Windows SDK 10) which may bundle Visual Studio 2015, 2017 or 2019.
 # Also we do _not_ use the environment (ie. no '@' in MSVS_PREFERENCE) since that isn't reproducible,
@@ -83,7 +81,7 @@ OPT_MSVS_PREFERENCE='VS16.*;VS15.*;VS14.0' # KEEP IN SYNC with 2-build.sh
 HOST_SUBDIR=.
 HOSTSRC_SUBDIR=src/ocaml
 CROSS_SUBDIR=opt/mlcross
-PATCH_CATEGORIES=(ocaml)
+PATCH_CATEGORIES=ocaml
 
 usage() {
     {
@@ -92,7 +90,7 @@ usage() {
         printf "%s\n" "        -h                       Display this help message."
         printf "\n"
         printf "%s\n" "Artifacts include (flexlink only on Windows, ocamlnat only on 4.14+):"
-        for binary in "${BINARIES[@]}"; do
+        for binary in $BINARIES; do
             printf "    %s\n" "$binary"
         done
         printf "\n"
@@ -194,20 +192,100 @@ usage() {
     } >&2
 }
 
-SETUP_ARGS=()
-BUILD_HOST_ARGS=()
-BUILD_CROSS_ARGS=()
-TRIM_ARGS=()
-PATCH_CATEGORIES=(ocaml)
+SETUP_ARGS_PRE=
+BUILD_HOST_ARGS_PRE=
+BUILD_CROSS_ARGS_PRE=
+TRIM_ARGS_PRE=
+PATCH_CATEGORIES=ocaml
+
+append_setup_args_pre() {
+    while [ "$#" -gt 0 ]; do
+        if [ -n "$SETUP_ARGS_PRE" ]; then
+            SETUP_ARGS_PRE=$SETUP_ARGS_PRE"
+$1"
+        else
+            SETUP_ARGS_PRE=$1
+        fi
+        shift
+    done
+}
+
+append_build_host_args_pre() {
+    while [ "$#" -gt 0 ]; do
+        if [ -n "$BUILD_HOST_ARGS_PRE" ]; then
+            BUILD_HOST_ARGS_PRE=$BUILD_HOST_ARGS_PRE"
+$1"
+        else
+            BUILD_HOST_ARGS_PRE=$1
+        fi
+        shift
+    done
+}
+
+append_build_cross_args_pre() {
+    while [ "$#" -gt 0 ]; do
+        if [ -n "$BUILD_CROSS_ARGS_PRE" ]; then
+            BUILD_CROSS_ARGS_PRE=$BUILD_CROSS_ARGS_PRE"
+$1"
+        else
+            BUILD_CROSS_ARGS_PRE=$1
+        fi
+        shift
+    done
+}
+
+append_trim_args_pre() {
+    while [ "$#" -gt 0 ]; do
+        if [ -n "$TRIM_ARGS_PRE" ]; then
+            TRIM_ARGS_PRE=$TRIM_ARGS_PRE"
+$1"
+        else
+            TRIM_ARGS_PRE=$1
+        fi
+        shift
+    done
+}
+
+append_word_list() {
+    if [ -n "$1" ]; then
+        printf '%s %s' "$1" "$2"
+    else
+        printf '%s' "$2"
+    fi
+}
+
+write_args_file() {
+    write_args_file_DATA=$1
+    write_args_file_FILE=$2
+    : > "$write_args_file_FILE"
+    if [ -n "$write_args_file_DATA" ]; then
+        printf '%s\n' "$write_args_file_DATA" > "$write_args_file_FILE"
+    fi
+}
+
+append_args_to_file() {
+    append_args_to_file_FILE=$1
+    shift
+    while [ "$#" -gt 0 ]; do
+        printf '%s\n' "$1" >> "$append_args_to_file_FILE"
+        shift
+    done
+}
+
+list_file_as_words() {
+    if [ -f "$1" ]; then
+        tr '\n' ' ' < "$1"
+    fi
+}
 
 # Make repeatable environment variable specs
 if [ -n "${DKML_HOST_OCAML_CONFIGURE:-}" ]; then
-    SETUP_ARGS+=( -m "$DKML_HOST_OCAML_CONFIGURE" )
-    BUILD_HOST_ARGS+=( -m "$DKML_HOST_OCAML_CONFIGURE" )
+    append_setup_args_pre -m "$DKML_HOST_OCAML_CONFIGURE"
+    append_build_host_args_pre -m "$DKML_HOST_OCAML_CONFIGURE"
 fi
 if [ -n "${DKML_TARGET_OCAML_CONFIGURE:-}" ]; then
-    SETUP_ARGS+=( -n "$DKML_TARGET_OCAML_CONFIGURE" )
-    BUILD_CROSS_ARGS+=( -n "$DKML_TARGET_OCAML_CONFIGURE" )
+    append_setup_args_pre -n "$DKML_TARGET_OCAML_CONFIGURE"
+    append_build_cross_args_pre -n "$DKML_TARGET_OCAML_CONFIGURE"
 fi
 
 DKMLDIR=
@@ -226,9 +304,9 @@ while getopts ":d:v:u:t:a:BXb:c:e:k:l:m:n:rf:p:g:o:wxzALP:h" opt; do
             usage
             exit 0
         ;;
-        w ) SETUP_ARGS+=( -w )
-            BUILD_HOST_ARGS+=( -w )
-            BUILD_CROSS_ARGS+=( -w ) ;;
+        w ) append_setup_args_pre -w
+            append_build_host_args_pre -w
+            append_build_cross_args_pre -w ;;
         d )
             DKMLDIR="$OPTARG"
             if [ ! -e "$DKMLDIR/.dkmlroot" ]; then
@@ -244,34 +322,34 @@ while getopts ":d:v:u:t:a:BXb:c:e:k:l:m:n:rf:p:g:o:wxzALP:h" opt; do
         ;;
         v )
             GIT_COMMITID_TAG_OR_DIR="$OPTARG"
-            SETUP_ARGS+=( -v "$GIT_COMMITID_TAG_OR_DIR" )
+            append_setup_args_pre -v "$GIT_COMMITID_TAG_OR_DIR"
         ;;
         u )
             printf "WARNING: r-c-ocaml-1-setup.sh -u COMMIT is deprecated. Use -v option instead\n" >&2
         ;;
         t )
             TARGETDIR="$OPTARG"
-            SETUP_ARGS+=( -t . )
-            BUILD_HOST_ARGS+=( -t . )
-            BUILD_CROSS_ARGS+=( -t . )
-            TRIM_ARGS+=( -t . )
+            append_setup_args_pre -t .
+            append_build_host_args_pre -t .
+            append_build_cross_args_pre -t .
+            append_trim_args_pre -t .
         ;;
         a )
             TARGETABIS="$OPTARG"
         ;;
         B )
-            SETUP_ARGS+=( -B )
-            BUILD_HOST_ARGS+=( -B )
-            BUILD_CROSS_ARGS+=( -B )
+            append_setup_args_pre -B
+            append_build_host_args_pre -B
+            append_build_cross_args_pre -B
         ;;
         X )
-            SETUP_ARGS+=( -X )
-            BUILD_HOST_ARGS+=( -X )
-            BUILD_CROSS_ARGS+=( -X )
+            append_setup_args_pre -X
+            append_build_host_args_pre -X
+            append_build_cross_args_pre -X
         ;;
         b )
             MSVS_PREFERENCE="$OPTARG"
-            SETUP_ARGS+=( -b "$OPTARG" )
+            append_setup_args_pre -b "$OPTARG"
         ;;
         c)  OCAMLC_OPT_EXE="$OPTARG" ;;
         e )
@@ -281,51 +359,51 @@ while getopts ":d:v:u:t:a:BXb:c:e:k:l:m:n:rf:p:g:o:wxzALP:h" opt; do
         p ) HOST_SUBDIR=$OPTARG ;;
         g ) CROSS_SUBDIR=$OPTARG ;;
         l )
-            SETUP_ARGS+=( -l "$OPTARG" )
-            BUILD_HOST_ARGS+=( -l "$OPTARG" )
-            BUILD_CROSS_ARGS+=( -l "$OPTARG" )
+            append_setup_args_pre -l "$OPTARG"
+            append_build_host_args_pre -l "$OPTARG"
+            append_build_cross_args_pre -l "$OPTARG"
         ;;
         k )
             HOSTABISCRIPT=$OPTARG
-            SETUP_ARGS+=( -k "$OPTARG" )
-            BUILD_HOST_ARGS+=( -k "$OPTARG" )
+            append_setup_args_pre -k "$OPTARG"
+            append_build_host_args_pre -k "$OPTARG"
         ;;
         m )
-            SETUP_ARGS+=( -m "$OPTARG" )
-            BUILD_HOST_ARGS+=( -m "$OPTARG" )
+            append_setup_args_pre -m "$OPTARG"
+            append_build_host_args_pre -m "$OPTARG"
         ;;
         n )
-            SETUP_ARGS+=( -n "$OPTARG" )
-            BUILD_CROSS_ARGS+=( -n "$OPTARG" )
+            append_setup_args_pre -n "$OPTARG"
+            append_build_cross_args_pre -n "$OPTARG"
         ;;
         r )
-            SETUP_ARGS+=( -r )
-            BUILD_HOST_ARGS+=( -r )
+            append_setup_args_pre -r
+            append_build_host_args_pre -r
             RUNTIMEONLY=ON
         ;;
         o )
-            SETUP_ARGS+=( -o "$OPTARG" )
+            append_setup_args_pre -o "$OPTARG"
             TEMPLATEDIR=$OPTARG
         ;;
         x )
-            SETUP_ARGS+=( -x )
-            TRIM_ARGS+=( -x )
+            append_setup_args_pre -x
+            append_trim_args_pre -x
         ;;
         z )
-            SETUP_ARGS+=( -z )
-            TRIM_ARGS+=( -z )
+            append_setup_args_pre -z
+            append_trim_args_pre -z
         ;;
         A )
-            SETUP_ARGS+=( -A )
-            BUILD_HOST_ARGS+=( -A )
-            BUILD_CROSS_ARGS+=( -A )
+            append_setup_args_pre -A
+            append_build_host_args_pre -A
+            append_build_cross_args_pre -A
             ;;
         L )
-            SETUP_ARGS+=( -L )
-            BUILD_HOST_ARGS+=( -L )
-            BUILD_CROSS_ARGS+=( -L )
+            append_setup_args_pre -L
+            append_build_host_args_pre -L
+            append_build_cross_args_pre -L
             ;;
-        P ) PATCH_CATEGORIES+=( "$OPTARG" ) ;;
+        P ) PATCH_CATEGORIES=$(append_word_list "$PATCH_CATEGORIES" "$OPTARG") ;;
         \? )
             printf "%s\n" "This is not an option: -$OPTARG" >&2
             usage
@@ -341,7 +419,7 @@ if [ -z "$DKMLDIR" ] || [ -z "$GIT_COMMITID_TAG_OR_DIR" ] || [ -z "$TARGETDIR" ]
     exit 1
 fi
 if [ "$RUNTIMEONLY" = ON ] && [ -n "$TARGETABIS" ]; then
-    printf "-r and -a TARGETABIS cannot be used at the same time\n" >&2
+    printf '%s\n' "-r and -a TARGETABIS cannot be used at the same time" >&2
     usage
     exit 1
 fi
@@ -356,6 +434,21 @@ STATEDIR=
 
 # shellcheck disable=SC1091
 . "$DKMLDIR/vendor/drc/unix/_common_tool.sh"
+
+SETUP_ARGS_FILE=$WORK/setup_args
+BUILD_HOST_ARGS_FILE=$WORK/build_host_args
+BUILD_CROSS_ARGS_FILE=$WORK/build_cross_args
+TRIM_ARGS_FILE=$WORK/trim_args
+COMMON_ARGS_FILE=$WORK/common_args
+PATCHES_FILE=$WORK/current-patches
+ALL_PATCH_FILES_FILE=$WORK/all-patch-files
+write_args_file "$SETUP_ARGS_PRE" "$SETUP_ARGS_FILE"
+write_args_file "$BUILD_HOST_ARGS_PRE" "$BUILD_HOST_ARGS_FILE"
+write_args_file "$BUILD_CROSS_ARGS_PRE" "$BUILD_CROSS_ARGS_FILE"
+write_args_file "$TRIM_ARGS_PRE" "$TRIM_ARGS_FILE"
+: > "$COMMON_ARGS_FILE"
+: > "$PATCHES_FILE"
+: > "$ALL_PATCH_FILES_FILE"
 
 disambiguate_filesystem_paths
 
@@ -429,10 +522,10 @@ if [ -d "$GIT_COMMITID_TAG_OR_DIR" ]; then
     fi
 fi
 
-SETUP_ARGS+=( -p "$HOST_SUBDIR" -f "$HOSTSRC_SUBDIR" -g "$CROSS_SUBDIR" )
-BUILD_HOST_ARGS+=( -p "$HOST_SUBDIR" -f "$HOSTSRC_SUBDIR" )
-BUILD_CROSS_ARGS+=( -f "$HOSTSRC_SUBDIR" -g "$CROSS_SUBDIR" )
-TRIM_ARGS+=( -f "$HOSTSRC_SUBDIR" -g "$CROSS_SUBDIR"  )
+append_args_to_file "$SETUP_ARGS_FILE" -p "$HOST_SUBDIR" -f "$HOSTSRC_SUBDIR" -g "$CROSS_SUBDIR"
+append_args_to_file "$BUILD_HOST_ARGS_FILE" -p "$HOST_SUBDIR" -f "$HOSTSRC_SUBDIR"
+append_args_to_file "$BUILD_CROSS_ARGS_FILE" -f "$HOSTSRC_SUBDIR" -g "$CROSS_SUBDIR"
+append_args_to_file "$TRIM_ARGS_FILE" -f "$HOSTSRC_SUBDIR" -g "$CROSS_SUBDIR"
 
 # To be portable whether we build scripts in a container or not, we
 # change the directory to always be in the DKMLDIR (just like a container
@@ -451,8 +544,8 @@ fi
 # Handle: -c OCAMLC_OPT_EXE
 if [ -n "$OCAMLC_OPT_EXE" ]; then
     if [ -e "$OCAMLC_OPT_EXE" ]; then
-        SETUP_ARGS+=( -c "$OCAMLC_OPT_EXE" )
-        BUILD_HOST_ARGS+=( -c "$OCAMLC_OPT_EXE" )
+        append_args_to_file "$SETUP_ARGS_FILE" -c "$OCAMLC_OPT_EXE"
+        append_args_to_file "$BUILD_HOST_ARGS_FILE" -c "$OCAMLC_OPT_EXE"
     else
         OCAMLC_OPT_EXE=
     fi
@@ -465,9 +558,9 @@ autodetect_buildhost_arch
 if [ -z "$DKMLHOSTABI" ]; then
     DKMLHOSTABI="$BUILDHOST_ARCH"
 fi
-SETUP_ARGS+=( -b "'$MSVS_PREFERENCE'" -e "$DKMLHOSTABI" )
-BUILD_HOST_ARGS+=( -b "'$MSVS_PREFERENCE'" -e "$DKMLHOSTABI" )
-BUILD_CROSS_ARGS+=( -e "$DKMLHOSTABI" )
+append_args_to_file "$SETUP_ARGS_FILE" -b "'$MSVS_PREFERENCE'" -e "$DKMLHOSTABI"
+append_args_to_file "$BUILD_HOST_ARGS_FILE" -b "'$MSVS_PREFERENCE'" -e "$DKMLHOSTABI"
+append_args_to_file "$BUILD_CROSS_ARGS_FILE" -e "$DKMLHOSTABI"
 
 # ---------------------
 
@@ -486,39 +579,39 @@ compiler_clear_environment
 # ---------------------
 # Patching functions
 
-# Sets the array VERSION_STEMS
+# Sets the word list VERSION_STEMS
 #   Stems must be underscores since they are separated by dashes
 set_ocaml_version_stems() {
     set_version_stems_VER=$1
     shift
-    VERSION_STEMS=()
+    VERSION_STEMS=
     case "$set_version_stems_VER" in
-        4.*) VERSION_STEMS+=("4") ;;
-        5.*) VERSION_STEMS+=("5") ;;
+        4.*) VERSION_STEMS=$(append_word_list "$VERSION_STEMS" "4") ;;
+        5.*) VERSION_STEMS=$(append_word_list "$VERSION_STEMS" "5") ;;
         *)
             echo "FATAL: Unsupported stemming case 1 for ocaml version $set_version_stems_VER" >&2
             exit 123
             ;;
     esac
     case "$set_version_stems_VER" in
-        4.11.*) VERSION_STEMS+=("4_11") ;;
-        4.12.*) VERSION_STEMS+=("4_12") ;;
-        4.13.*) VERSION_STEMS+=("4_13") ;;
-        4.14.*) VERSION_STEMS+=("4_14") ;;
-        5.00.*) VERSION_STEMS+=("5_00") ;;
-        5.01.*) VERSION_STEMS+=("5_01") ;;
-        5.1.*) VERSION_STEMS+=("5_1") ;;
-        5.2.*) VERSION_STEMS+=("5_2") ;;
+        4.11.*) VERSION_STEMS=$(append_word_list "$VERSION_STEMS" "4_11") ;;
+        4.12.*) VERSION_STEMS=$(append_word_list "$VERSION_STEMS" "4_12") ;;
+        4.13.*) VERSION_STEMS=$(append_word_list "$VERSION_STEMS" "4_13") ;;
+        4.14.*) VERSION_STEMS=$(append_word_list "$VERSION_STEMS" "4_14") ;;
+        5.00.*) VERSION_STEMS=$(append_word_list "$VERSION_STEMS" "5_00") ;;
+        5.01.*) VERSION_STEMS=$(append_word_list "$VERSION_STEMS" "5_01") ;;
+        5.1.*) VERSION_STEMS=$(append_word_list "$VERSION_STEMS" "5_1") ;;
+        5.2.*) VERSION_STEMS=$(append_word_list "$VERSION_STEMS" "5_2") ;;
         *)
             echo "FATAL: Unsupported stemming case 2 for ocaml version $set_version_stems_VER" >&2
             exit 123
             ;;
     esac
     case "$set_version_stems_VER" in
-        4.14.0) VERSION_STEMS+=("4_14_0") ;;
-        4.14.1) VERSION_STEMS+=("4_14_1") ;;
-        4.14.2) VERSION_STEMS+=("4_14_2") ;;
-        4.14.3) VERSION_STEMS+=("4_14_3") ;;
+        4.14.0) VERSION_STEMS=$(append_word_list "$VERSION_STEMS" "4_14_0") ;;
+        4.14.1) VERSION_STEMS=$(append_word_list "$VERSION_STEMS" "4_14_1") ;;
+        4.14.2) VERSION_STEMS=$(append_word_list "$VERSION_STEMS" "4_14_2") ;;
+        4.14.3) VERSION_STEMS=$(append_word_list "$VERSION_STEMS" "4_14_3") ;;
         *)
             echo "FATAL: Unsupported stemming case 3 for ocaml version $set_version_stems_VER" >&2
             exit 123
@@ -528,28 +621,27 @@ set_ocaml_version_stems() {
 set_flexdll_version_stems() {
     set_version_stems_VER=$1
     shift
-    VERSION_STEMS=()
+    VERSION_STEMS=
     case "$set_version_stems_VER" in
-        0.*) VERSION_STEMS+=("0") ;;
+        0.*) VERSION_STEMS=$(append_word_list "$VERSION_STEMS" "0") ;;
         *)
             echo "FATAL: Unsupported stemming case 1 for flexdll version $set_version_stems_VER" >&2
             exit 123
             ;;
     esac
     case "$set_version_stems_VER" in
-        0.39) VERSION_STEMS+=("0_39") ;;
-        0.42) VERSION_STEMS+=("0_42") ;;
-        0.43) VERSION_STEMS+=("0_43") ;;
-        0.44) VERSION_STEMS+=("0_44") ;;
+        0.39) VERSION_STEMS=$(append_word_list "$VERSION_STEMS" "0_39") ;;
+        0.42) VERSION_STEMS=$(append_word_list "$VERSION_STEMS" "0_42") ;;
+        0.43) VERSION_STEMS=$(append_word_list "$VERSION_STEMS" "0_43") ;;
+        0.44) VERSION_STEMS=$(append_word_list "$VERSION_STEMS" "0_44") ;;
         *)
             echo "FATAL: Unsupported stemming case 2 for flexdll version $set_version_stems_VER" >&2
             exit 123
             ;;
     esac
 }
-# Sets the array PATCHES and accumulates dkmldir/ relative paths, including
-# any Markdown .md files, in array ALL_PATCH_FILES.
-ALL_PATCH_FILES=()
+# Sets the PATCHES file and accumulates dkmldir/ relative paths, including
+# any Markdown .md files, in ALL_PATCH_FILES_FILE.
 set_patches() {
     set_patches_CATEGORY=$1
     shift
@@ -565,7 +657,7 @@ set_patches() {
         *)       set_ocaml_version_stems "$set_patches_VER";;
     esac
 
-    PATCHES=()
+    : > "$PATCHES_FILE"
     should_apply_patch() {
         case "$(basename "$1")" in
             ocaml-common-4_14-b06-linearclosures.patch)
@@ -576,32 +668,32 @@ set_patches() {
         esac
         return 0
     }
-    for set_patches_STEM in "${VERSION_STEMS[@]}"; do
+    for set_patches_STEM in $VERSION_STEMS; do
         # Find, sort and accumulate common patches that belong to the stem.
         find "vendor/dkml-compiler/src/p" -type f -name "$set_patches_CATEGORY-common-$set_patches_STEM-*.patch" | LC_ALL=C sort > "$WORK/p"
         while IFS= read -r line; do
             if should_apply_patch "$line"; then
-                PATCHES+=("$DKMLDIR/$line")
+                printf '%s\n' "$DKMLDIR/$line" >> "$PATCHES_FILE"
             fi
-            ALL_PATCH_FILES+=("$line")
+            printf '%s\n' "$line" >> "$ALL_PATCH_FILES_FILE"
         done < "$WORK/p"
         #   Markdown
         find "vendor/dkml-compiler/src/p" -type f -name "$set_patches_CATEGORY-common-$set_patches_STEM-*.md" | LC_ALL=C sort > "$WORK/p"
         while IFS= read -r line; do
-            ALL_PATCH_FILES+=("$line")
+            printf '%s\n' "$line" >> "$ALL_PATCH_FILES_FILE"
         done < "$WORK/p"
         # Find, sort and accumulate host/cross patches that belong to the stem.
         find "vendor/dkml-compiler/src/p" -type f -name "$set_patches_CATEGORY-$set_patches_HOSTCROSS-$set_patches_STEM-*.patch" | LC_ALL=C sort > "$WORK/p"
         while IFS= read -r line; do
             if should_apply_patch "$line"; then
-                PATCHES+=("$DKMLDIR/$line")
+                printf '%s\n' "$DKMLDIR/$line" >> "$PATCHES_FILE"
             fi
-            ALL_PATCH_FILES+=("$line")
+            printf '%s\n' "$line" >> "$ALL_PATCH_FILES_FILE"
         done < "$WORK/p"
         #   Markdown
         find "vendor/dkml-compiler/src/p" -type f -name "$set_patches_CATEGORY-$set_patches_HOSTCROSS-$set_patches_STEM-*.md" | LC_ALL=C sort > "$WORK/p"
         while IFS= read -r line; do
-            ALL_PATCH_FILES+=("$line")
+            printf '%s\n' "$line" >> "$ALL_PATCH_FILES_FILE"
         done < "$WORK/p"
     done
 }
@@ -652,9 +744,7 @@ verify_applied_patches() {
     verify_applied_patches_HOSTCROSS=$1
     shift
 
-    set +u # Fix bash bug with empty arrays
-    verify_applied_patches_COUNT=${#PATCHES[@]}
-    set -u
+    verify_applied_patches_COUNT=$(wc -l < "$PATCHES_FILE" | awk '{print $1}')
     if [ "$verify_applied_patches_COUNT" -eq 0 ]; then
         return 0
     fi
@@ -668,13 +758,13 @@ verify_applied_patches() {
     : > "$verify_applied_patches_EXPECTED"
     : > "$verify_applied_patches_ACTUAL"
 
-    for patchfile in "${PATCHES[@]}"; do
+    while IFS= read -r patchfile; do
         patchbase=$(basename "$patchfile")
         printf "Diskuv %s %s patch %s\n" \
             "$verify_applied_patches_CATEGORY" \
             "$verify_applied_patches_HOSTCROSS" \
             "$patchbase" >> "$verify_applied_patches_EXPECTED"
-    done
+    done < "$PATCHES_FILE"
 
     git -C "$verify_applied_patches_SRCDIR_MIXED" \
         log --reverse -n "$verify_applied_patches_COUNT" --format=%s HEAD \
@@ -689,7 +779,7 @@ verify_applied_patches() {
         exit 1
     fi
 
-    echo "verified_patches($verify_applied_patches_CATEGORY $verify_applied_patches_HOSTCROSS) = ${PATCHES[*]}" >&2
+    echo "verified_patches($verify_applied_patches_CATEGORY $verify_applied_patches_HOSTCROSS) = $(list_file_as_words "$PATCHES_FILE")" >&2
 }
 
 apply_patches() {
@@ -703,13 +793,11 @@ apply_patches() {
     shift
 
     set_patches "$apply_patches_CATEGORY" "$apply_patches_VER" "$apply_patches_HOSTCROSS"
-    set +u # Fix bash bug with empty arrays
-    echo "patches($apply_patches_CATEGORY $apply_patches_HOSTCROSS) = ${PATCHES[*]}" >&2
-    for patchfile in "${PATCHES[@]}"; do
+    echo "patches($apply_patches_CATEGORY $apply_patches_HOSTCROSS) = $(list_file_as_words "$PATCHES_FILE")" >&2
+    while IFS= read -r patchfile; do
         apply_patch "$patchfile" "$apply_patches_SRCDIR" "$apply_patches_CATEGORY" "$apply_patches_HOSTCROSS"
-    done
+    done < "$PATCHES_FILE"
     verify_applied_patches "$apply_patches_SRCDIR" "$apply_patches_CATEGORY" "$apply_patches_HOSTCROSS"
-    set -u
 }
 
 # ---------------------
@@ -724,7 +812,7 @@ clean_ocaml_install() {
     # This can be a clean install for an upgrade of an existing OCaml installation;
     # that means we can't just blow away entire directories unless we know for
     # sure it is specific to OCaml
-    for binary in "${BINARIES[@]}"; do
+    for binary in $BINARIES; do
         log_trace rm -f "${clean_ocaml_install_DIR:?}/bin/$binary.exe"
         log_trace rm -f "${clean_ocaml_install_DIR:?}/bin/$binary"
     done
@@ -898,11 +986,11 @@ if [ -e "$OCAMLSRC_UNIX"/flexdll/Makefile ]; then
 fi
 
 # Pass versions to build scripts
-BUILD_HOST_ARGS+=( -s "$_OCAMLVER" )
-BUILD_CROSS_ARGS+=( -s "$_OCAMLVER" )
+append_args_to_file "$BUILD_HOST_ARGS_FILE" -s "$_OCAMLVER"
+append_args_to_file "$BUILD_CROSS_ARGS_FILE" -s "$_OCAMLVER"
 
 # Find and apply patches to the host ABI
-for cat in "${PATCH_CATEGORIES[@]}"; do
+for cat in $PATCH_CATEGORIES; do
     apply_patches "$OCAMLSRC_UNIX"  "$cat"   "$_OCAMLVER"    host
 done
 if [ -e "$OCAMLSRC_UNIX"/flexdll/Makefile ] && is_unixy_windows_build_machine; then
@@ -911,7 +999,7 @@ fi
 
 if [ -z "$TARGETABIS" ]; then
     # Quick. Only support host builds.
-    BUILD_HOST_ARGS+=( -q ON )
+    append_args_to_file "$BUILD_HOST_ARGS_FILE" -q ON
 else
     if [ -n "$TEMPLATEDIR" ]; then
         install -d "$TARGETDIR_UNIX/$CROSS_SUBDIR"
@@ -929,9 +1017,9 @@ else
             _srcabidir_unix="$TARGETDIR_UNIX/$CROSS_SUBDIR/$_targetabi/$HOSTSRC_SUBDIR"
             get_ocaml_source "$GIT_COMMITID_TAG_OR_DIR" "$_srcabidir_unix" "$TARGETDIR_MIXED/$CROSS_SUBDIR/$_targetabi/$HOSTSRC_SUBDIR" "$_targetabi"
             # Find and apply patches to the target ABI
-            for cat in "${PATCH_CATEGORIES[@]}"; do
+            for cat in $PATCH_CATEGORIES; do
                 apply_patches "$_srcabidir_unix"            "$cat"   "$_OCAMLVER"    cross
-            done            
+            done
             if [ -e "$_srcabidir_unix"/flexdll/Makefile ] && is_unixy_windows_build_machine; then
                 apply_patches "$_srcabidir_unix/flexdll"    flexdll  "$_FLEXDLLVER"  cross
             fi
@@ -953,7 +1041,8 @@ if [ "$DESTDIR" = "$THISDIR" ]; then
     DKMLDIR=.
 fi
 # shellcheck disable=SC2016
-COMMON_ARGS=(-d "$SHARE_REPRODUCIBLE_BUILD_RELPATH/$BOOTSTRAPNAME")
+: > "$COMMON_ARGS_FILE"
+append_args_to_file "$COMMON_ARGS_FILE" -d "$SHARE_REPRODUCIBLE_BUILD_RELPATH/$BOOTSTRAPNAME"
 install_reproducible_common
 install_reproducible_readme           vendor/dkml-compiler/src/r-c-ocaml-README.md
 install_reproducible_file             vendor/dkml-compiler/src/r-c-ocaml-check_linker.sh
@@ -965,9 +1054,9 @@ fi
 if [ -n "$OCAMLC_OPT_EXE" ]; then
     install_reproducible_file         "$OCAMLC_OPT_EXE"
 fi
-for patchfile in "${ALL_PATCH_FILES[@]}"; do
+while IFS= read -r patchfile; do
     install_reproducible_file         "$patchfile"
-done
+done < "$ALL_PATCH_FILES_FILE"
 if [ -n "$TARGETABIS" ]; then
     _accumulator=
     # Loop over each target abi script file; each file separated by semicolons, and each term with an equals
@@ -987,11 +1076,22 @@ if [ -n "$TARGETABIS" ]; then
         fi
         install_reproducible_generated_file "$_abiscript" vendor/dkml-compiler/src/r-c-ocaml-targetabi-"$_targetabi".sh
     done < "$WORK"/tabi
-    SETUP_ARGS+=( -a "$_accumulator" )
-    BUILD_CROSS_ARGS+=( -a "$_accumulator" )
+    append_args_to_file "$SETUP_ARGS_FILE" -a "$_accumulator"
+    append_args_to_file "$BUILD_CROSS_ARGS_FILE" -a "$_accumulator"
 fi
+_install_with_args() {
+    _iwa_script=$1
+    shift
+    set -- "$_iwa_script"
+    for _iwa_file do
+        while IFS= read -r _iwa_arg; do
+            set -- "$@" "$_iwa_arg"
+        done < "$_iwa_file"
+    done
+    install_reproducible_script_with_args "$@"
+}
 install_reproducible_system_packages  vendor/dkml-compiler/src/r-c-ocaml-0-system.sh
-install_reproducible_script_with_args vendor/dkml-compiler/src/r-c-ocaml-1-setup.sh "${COMMON_ARGS[@]}" "${SETUP_ARGS[@]}"
-install_reproducible_script_with_args vendor/dkml-compiler/src/r-c-ocaml-2-build_host.sh "${COMMON_ARGS[@]}" "${BUILD_HOST_ARGS[@]}"
-install_reproducible_script_with_args vendor/dkml-compiler/src/r-c-ocaml-3-build_cross.sh "${COMMON_ARGS[@]}" "${BUILD_CROSS_ARGS[@]}"
-install_reproducible_script_with_args vendor/dkml-compiler/src/r-c-ocaml-9-trim.sh "${COMMON_ARGS[@]}" "${TRIM_ARGS[@]}"
+_install_with_args vendor/dkml-compiler/src/r-c-ocaml-1-setup.sh "$COMMON_ARGS_FILE" "$SETUP_ARGS_FILE"
+_install_with_args vendor/dkml-compiler/src/r-c-ocaml-2-build_host.sh "$COMMON_ARGS_FILE" "$BUILD_HOST_ARGS_FILE"
+_install_with_args vendor/dkml-compiler/src/r-c-ocaml-3-build_cross.sh "$COMMON_ARGS_FILE" "$BUILD_CROSS_ARGS_FILE"
+_install_with_args vendor/dkml-compiler/src/r-c-ocaml-9-trim.sh "$COMMON_ARGS_FILE" "$TRIM_ARGS_FILE"
