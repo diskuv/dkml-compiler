@@ -1,14 +1,23 @@
 # a90
 
-Squashed diff of the pre-generated `configure` script from vanilla OCaml 4.14.3
-to the [dra27 relocatable fork](https://github.com/dra27/ocaml/tree/8b8971e46f5c09aedb5f8d43a6e2701fecc8f98d) at commit
-`8b8971e46f5c09aedb5f8d43a6e2701fecc8f98d`.
+Diff of the pre-generated `configure` script from the
+[dra27 relocatable base commit](https://github.com/dra27/ocaml/commit/5fe7f0fbcb)
+(`5fe7f0fbcb` — OCaml 4.14.3+relocatable version bump) to the
+[dra27 relocatable fork final commit](https://github.com/dra27/ocaml/tree/8b8971e46f5c09aedb5f8d43a6e2701fecc8f98d)
+(`8b8971e46f5c09aedb5f8d43a6e2701fecc8f98d`).
 
 OCaml's build system uses the pre-generated `configure` script directly without
 re-running `autoconf`.  Patches `a01`–`a89` update `configure.ac` but not
 `configure`, so the relocatability options they introduce
 (`--enable-runtime-search`, `--with-relative-libdir`, etc.) would otherwise be
 silently ignored at configure time.  This patch closes that gap.
+
+**Why the base is `5fe7f0fbcb` (not vanilla 4.14.3):**
+Patch `a01` is a cherry-pick of `5fe7f0fbcb`, the dra27 "base version" commit.
+It updates the version string `4.14.3` → `4.14.3+relocatable` in both
+`configure.ac` and `configure` using a binary delta.  Generating `a90` from
+vanilla 4.14.3 would cause a conflict with the version-string hunk already
+applied by `a01`, so `a90` must start from the post-`a01` state.
 
 ## Verification
 
