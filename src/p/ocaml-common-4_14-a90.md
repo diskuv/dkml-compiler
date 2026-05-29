@@ -1,7 +1,7 @@
 # a90
 
 Squashed diff of the pre-generated `configure` script from vanilla OCaml 4.14.3
-to the dra27 relocatable fork at commit
+to the [dra27 relocatable fork](https://github.com/dra27/ocaml/tree/8b8971e46f5c09aedb5f8d43a6e2701fecc8f98d) at commit
 `8b8971e46f5c09aedb5f8d43a6e2701fecc8f98d`.
 
 OCaml's build system uses the pre-generated `configure` script directly without
