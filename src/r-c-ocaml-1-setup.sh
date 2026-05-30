@@ -315,9 +315,9 @@ while getopts ":d:v:u:t:a:BXb:c:e:k:l:m:n:rf:p:g:o:wxzALP:h" opt; do
                 exit 1
             fi
             # Make into absolute path
-            DKMLDIR_1=$(hermetic_util dirname "$DKMLDIR")
+            DKMLDIR_1=$(dirname "$DKMLDIR")
             DKMLDIR_1=$(cd "$DKMLDIR_1" && pwd)
-            DKMLDIR_2=$(hermetic_util basename "$DKMLDIR")
+            DKMLDIR_2=$(basename "$DKMLDIR")
             DKMLDIR="$DKMLDIR_1/$DKMLDIR_2"
         ;;
         v )
@@ -660,7 +660,7 @@ set_patches() {
 
     : > "$PATCHES_FILE"
     should_apply_patch() {
-        case "$(hermetic_util basename "$1")" in
+        case "$(basename "$1")" in
             ocaml-common-4_14-b06-linearclosures.patch)
                 if [ "$set_patches_CATEGORY" = "ocaml" ] && [ "$set_patches_VER" = "4.14.3" ]; then
                     return 1
@@ -709,7 +709,7 @@ apply_patch() {
     apply_patch_HOSTCROSS=$1
     shift
 
-    apply_patch_PATCHBASENAME=$(hermetic_util basename "$apply_patch_PATCHFILE")
+    apply_patch_PATCHBASENAME=$(basename "$apply_patch_PATCHFILE")
     apply_patch_SRCDIR_MIXED="$apply_patch_SRCDIR"
     apply_patch_PATCHFILE_MIXED="$apply_patch_PATCHFILE"
     if [ -x /usr/bin/cygpath ]; then
@@ -760,7 +760,7 @@ verify_applied_patches() {
     : > "$verify_applied_patches_ACTUAL"
 
     while IFS= read -r patchfile; do
-        patchbase=$(hermetic_util basename "$patchfile")
+        patchbase=$(basename "$patchfile")
         printf "Diskuv %s %s patch %s\n" \
             "$verify_applied_patches_CATEGORY" \
             "$verify_applied_patches_HOSTCROSS" \
@@ -1037,7 +1037,7 @@ fi
 export BOOTSTRAPNAME=100co
 export DEPLOYDIR_UNIX="$TARGETDIR_UNIX"
 DESTDIR=$TARGETDIR_UNIX/$SHARE_REPRODUCIBLE_BUILD_RELPATH/$BOOTSTRAPNAME
-THISDIR=$(hermetic_util pwd)
+THISDIR=$(pwd)
 if [ "$DESTDIR" = "$THISDIR" ]; then
     printf "Already deployed the reproducible scripts. Replacing them as needed\n"
     DKMLDIR=.

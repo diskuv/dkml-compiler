@@ -58,7 +58,7 @@ dump_logs_on_error() {
 log_script() {
   log_script_FILE=$1
   shift
-  log_script_BASENAME=$(hermetic_util basename "$log_script_FILE")
+  log_script_BASENAME=$(basename "$log_script_FILE")
   if [ "${DKML_BUILD_TRACE:-OFF}" = ON ]; then
     printf '@+ %s\n' "$log_script_FILE" >&2
     hermetic_util sed 's/^/@'"$log_script_BASENAME"'+| /' "$log_script_FILE" | hermetic_util awk '{print}' >&2
@@ -389,7 +389,7 @@ genWrapper() {
   genWrapper_EXECUTABLE=$1
   shift
 
-  genWrapper_DIRNAME=$(hermetic_util dirname "$genWrapper_NAME")
+  genWrapper_DIRNAME=$(dirname "$genWrapper_NAME")
   hermetic_util mkdir -p "$genWrapper_DIRNAME"
 
   if [ -x /usr/bin/cygpath ]; then
