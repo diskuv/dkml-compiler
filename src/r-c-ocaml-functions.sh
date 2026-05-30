@@ -46,22 +46,22 @@ ocaml_configure_no_ocaml_leak_environment="OCAML_TOPLEVEL_PATH= OCAMLLIB="
 dump_logs_on_error() {
   if [ -e utils/config.ml ]; then
     printf '@ERR+ utils/config.ml\n' >&2
-    "$DKMLSYS_SED" 's/^/@config.ml+| /' utils/config.ml | "$DKMLSYS_AWK" '{print}' >&2
+    hermetic_util sed 's/^/@config.ml+| /' utils/config.ml | hermetic_util awk '{print}' >&2
   fi
   #   config.log is huge. Only dump if ./configure failed
   if [ -e config.log ] && ! [ -e Makefile.config ]; then
     printf '@ERR+ config.log\n' >&2
-    "$DKMLSYS_SED" 's/^/@config.log+| /' config.log | "$DKMLSYS_AWK" '{print}' >&2
+    hermetic_util sed 's/^/@config.log+| /' config.log | hermetic_util awk '{print}' >&2
   fi
 }
 
 log_script() {
   log_script_FILE=$1
   shift
-  log_script_BASENAME=$(basename "$log_script_FILE")
+  log_script_BASENAME=$(hermetic_util basename "$log_script_FILE")
   if [ "${DKML_BUILD_TRACE:-OFF}" = ON ]; then
     printf '@+ %s\n' "$log_script_FILE" >&2
-    "$DKMLSYS_SED" 's/^/@'"$log_script_BASENAME"'+| /' "$log_script_FILE" | "$DKMLSYS_AWK" '{print}' >&2
+    hermetic_util sed 's/^/@'"$log_script_BASENAME"'+| /' "$log_script_FILE" | hermetic_util awk '{print}' >&2
   fi
 }
 
@@ -190,7 +190,7 @@ ocaml_configure_windows() {
   # Set MSVS_*
   detect_msvs "$ocaml_configure_windows_ABI"
 
-  case "$(uname -m)" in
+  case "$(hermetic_util uname -m)" in
     'i686')
       ocaml_configure_windows_BUILD=i686-pc-cygwin
     ;;
@@ -200,7 +200,7 @@ ocaml_configure_windows() {
   esac
 
   # 4.13+ have --with-flexdll ./configure option. Autoselect it.
-  ocaml_configure_windows_OCAMLVER=$(awk 'NR==1{print}' VERSION)
+  ocaml_configure_windows_OCAMLVER=$(hermetic_util awk 'NR==1{print}' VERSION)
   ocaml_configure_windows_MAKEFLEXDLL=OFF
   case "$ocaml_configure_windows_OCAMLVER" in
     4.00.*|4.01.*|4.02.*|4.03.*|4.04.*|4.05.*|4.06.*|4.07.*|4.08.*|4.09.*|4.10.*|4.11.*|4.12.*)
@@ -237,8 +237,8 @@ ocaml_configure_windows() {
                 $ocaml_configure_windows_EXTRA_OPTS
   if [ ! -e flexdll ]; then # OCaml 4.13.x has a git submodule for flexdll
     tar -xzf flexdll.tar.gz
-    rm -rf flexdll
-    mv flexdll-* flexdll
+    hermetic_util rm -rf flexdll
+    hermetic_util mv flexdll-* flexdll
   fi
 
   if [ "$ocaml_configure_windows_MAKEFLEXDLL" = ON ]; then
@@ -355,9 +355,9 @@ ocaml_configure() {
   ocaml_configure_EXTRA_OPTS=$(printf "%s %s" "$ocaml_configure_EXTRA_OPTS" "$ocaml_configure_EXTRA_ABI_OPTS")
 
   # To save a lot of troubleshooting time, we'll dump details into the PREFIX
-  $DKMLSYS_INSTALL -d "$ocaml_configure_PREFIX/share/dkml/detect"
+  hermetic_util mkdir -p "$ocaml_configure_PREFIX/share/dkml/detect"
   echo "$ocaml_configure_ABI" > "$ocaml_configure_PREFIX/share/dkml/detect/abi.txt"
-  (set | grep "^DKML_COMPILE_" || true) > "$ocaml_configure_PREFIX/share/dkml/detect/compile-vars.txt"
+  (set | hermetic_util grep "^DKML_COMPILE_" || true) > "$ocaml_configure_PREFIX/share/dkml/detect/compile-vars.txt"
 
   # ./configure and define make functions
   # -------------------------------------
@@ -389,8 +389,8 @@ genWrapper() {
   genWrapper_EXECUTABLE=$1
   shift
 
-  genWrapper_DIRNAME=$(dirname "$genWrapper_NAME")
-  install -d "$genWrapper_DIRNAME"
+  genWrapper_DIRNAME=$(hermetic_util dirname "$genWrapper_NAME")
+  hermetic_util mkdir -p "$genWrapper_DIRNAME"
 
   if [ -x /usr/bin/cygpath ]; then
     genWrapper_EXECUTABLE=$(/usr/bin/cygpath -am "$genWrapper_EXECUTABLE")
@@ -405,8 +405,8 @@ genWrapper() {
     escape_args_for_shell "$@"                     # <genWrapperArgs>
     printf " %s\n" '"$@"'                          # "$@"
   } >"$genWrapper_NAME".tmp
-  $DKMLSYS_CHMOD +x "$genWrapper_NAME".tmp
-  $DKMLSYS_MV "$genWrapper_NAME".tmp "$genWrapper_NAME"
+  hermetic_util chmod +x "$genWrapper_NAME".tmp
+  hermetic_util mv "$genWrapper_NAME".tmp "$genWrapper_NAME"
   log_script "$genWrapper_NAME"
 }
 
@@ -445,9 +445,9 @@ init_hostvars() {
   init_hostvars_MAKEFILE_CONFIG="$OCAMLSRC_MIXED/Makefile.config"
 
   # shellcheck disable=SC2016
-  NATDYNLINK=$(    grep "NATDYNLINK="     "$init_hostvars_MAKEFILE_CONFIG" | $DKMLSYS_AWK -F '=' '{print $2}')
+  NATDYNLINK=$(hermetic_util grep "NATDYNLINK="     "$init_hostvars_MAKEFILE_CONFIG" | hermetic_util awk -F '=' '{print $2}')
   # shellcheck disable=SC2016
-  NATDYNLINKOPTS=$(grep "NATDYNLINKOPTS=" "$init_hostvars_MAKEFILE_CONFIG" | $DKMLSYS_AWK -F '=' '{print $2}')
+  NATDYNLINKOPTS=$(hermetic_util grep "NATDYNLINKOPTS=" "$init_hostvars_MAKEFILE_CONFIG" | hermetic_util awk -F '=' '{print $2}')
   export NATDYNLINK NATDYNLINKOPTS
 
   # Find OCAMLRUN to run bytecode
@@ -468,8 +468,8 @@ init_hostvars() {
     "$OCAMLRUN" "$OCAMLSRC_MIXED/ocamlc" -config-var ext_exe > "$OCAMLSRC_MIXED/tmp.ocamlc.ext_exe.$$"
   fi
   # shellcheck disable=SC2016
-  HOST_EXE_EXT=$(cat "$OCAMLSRC_MIXED/tmp.ocamlc.ext_exe.$$")
-  rm -f "$OCAMLSRC_MIXED/tmp.ocamlc.ext_exe.$$"
+  HOST_EXE_EXT=$(hermetic_util cat "$OCAMLSRC_MIXED/tmp.ocamlc.ext_exe.$$")
+  hermetic_util rm -f "$OCAMLSRC_MIXED/tmp.ocamlc.ext_exe.$$"
   export HOST_EXE_EXT
 
   export OCAMLLEX="$OCAMLRUN $OCAMLSRC_MIXED/lex/ocamllex$HOST_EXE_EXT"
@@ -497,16 +497,16 @@ init_hostvars() {
     # * We can assume that the build directory is easier for a non-admin user to
     #   change to a directory without spaces.
     init_hostvars_ENV=$(/usr/bin/cygpath -am "$OCAMLSRC_MIXED/support/env.exe")
-    $DKMLSYS_INSTALL -d "$OCAMLSRC_MIXED/support"
-    $DKMLSYS_INSTALL "$DKMLSYS_ENV" "$init_hostvars_ENV"
+    hermetic_util mkdir -p "$OCAMLSRC_MIXED/support"
+    hermetic_util install "$DKMLSYS_ENV" "$init_hostvars_ENV"
     export HOST_SPACELESS_ENV_MIXED_EXE="$init_hostvars_ENV"
-    if printf "%s" "$HOST_SPACELESS_ENV_MIXED_EXE" | "$DKMLSYS_GREP" -q '[[:space:]]'; then
+    if printf "%s" "$HOST_SPACELESS_ENV_MIXED_EXE" | hermetic_util grep -q '[[:space:]]'; then
       printf "FATAL: %s lives in a location with whitespace. Change the build directory!\n" "$HOST_SPACELESS_ENV_MIXED_EXE" >&2
       exit 107
     fi
   else
     export HOST_SPACELESS_ENV_MIXED_EXE="$DKMLSYS_ENV"
-    if printf "%s" "$HOST_SPACELESS_ENV_MIXED_EXE" | "$DKMLSYS_GREP" -q '[[:space:]]'; then
+    if printf "%s" "$HOST_SPACELESS_ENV_MIXED_EXE" | hermetic_util grep -q '[[:space:]]'; then
       printf "FATAL: %s lives in a location with whitespace. Use a PATH with a different 'env' executable!\n" "$HOST_SPACELESS_ENV_MIXED_EXE" >&2
       exit 107
     fi
@@ -566,7 +566,7 @@ make_host() {
 
 remove_compiled_objects_from_curdir() {
   # Exclude the testsuite which has checked-in .cmm and .cmi.invalid files, and exclude .cmd files.
-  log_trace find . -type d \( -path ./testsuite/tests \) -prune -o -name '*.cmd' -prune -o -name '*.cm*' -exec rm {} \;
+  hermetic_util find . -type d \( -path ./testsuite/tests \) -prune -o -name '*.cmd' -prune -o -name '*.cm*' -exec rm {} \;
 }
 
 print_m_h_extensions() {

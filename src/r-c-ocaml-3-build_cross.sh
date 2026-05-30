@@ -140,7 +140,7 @@ while getopts ":s:d:t:a:BXn:e:f:g:l:wALh" opt; do
       usage
       exit 1
     fi
-    DKMLDIR=$(cd "$DKMLDIR" && pwd) # absolute path
+    DKMLDIR=$(cd "$DKMLDIR" && hermetic_util pwd) # absolute path
     ;;
   t)
     TARGETDIR="$OPTARG"
@@ -286,7 +286,7 @@ ocaml_android_triplet() {
     case "$DKML_COMPILE_CM_CMAKE_C_COMPILER_TARGET" in
     arm*-none-linux-android* | aarch64*-none-linux-android* | i686*-none-linux-android* | x86_64*-none-linux-android*)
       # armv7-none-linux-androideabi16 -> armv7-none-linux-androideabi
-      printf "%s" "$DKML_COMPILE_CM_CMAKE_C_COMPILER_TARGET" | $DKMLSYS_SED 's/[0-9]*$//'
+      printf "%s" "$DKML_COMPILE_CM_CMAKE_C_COMPILER_TARGET" | hermetic_util sed 's/[0-9]*$//'
       return
       ;;
     esac
@@ -353,15 +353,15 @@ build_world() {
 
   # Make C compiler script for target ABI. Any compile spec (especially from CMake) will be
   # applied.
-  install -d "$build_world_BUILD_ROOT"/support
+  hermetic_util mkdir -p "$build_world_BUILD_ROOT"/support
   #   Exports OCAML_HOST_TRIPLET and DKML_TARGET_SYSROOT
   DKML_HOST_ABI="$DKMLHOSTABI" DKML_TARGET_ABI="$build_world_TARGET_ABI" \
     autodetect_compiler \
     --post-transform "$build_world_POSTTRANSFORM" \
     "$build_world_BUILD_ROOT"/support/with-target-c-compiler.sh
   #   To save a lot of troubleshooting time, we'll dump details
-  $DKMLSYS_INSTALL -d "$build_world_PREFIX/share/dkml/detect"
-  $DKMLSYS_INSTALL "$build_world_POSTTRANSFORM" "$build_world_PREFIX/share/dkml/detect/post-transform.sh"
+  hermetic_util mkdir -p "$build_world_PREFIX/share/dkml/detect"
+  hermetic_util install "$build_world_POSTTRANSFORM" "$build_world_PREFIX/share/dkml/detect/post-transform.sh"
 
   # Target wrappers
   if [ "$BYTECODEONLY" = OFF ]; then
@@ -383,7 +383,7 @@ build_world() {
 
   # clean (otherwise you will 'make inconsistent assumptions' errors with a mix of host + target binaries)
   #   note: If re-running after -R 500, we need access to delete files during clean. So chmod.
-  log_trace "$DKMLSYS_CHMOD" -R ug+w    stdlib/
+  hermetic_util chmod -R ug+w    stdlib/
   make clean
 
   # provide --host for use in `checking whether we are cross compiling` ./configure step
@@ -536,7 +536,7 @@ build_world() {
     printf "+ INFO: Recompiling target stdlib in pass 2\n" >&2
     log_trace make_target "$build_world_TARGET_ABI" "$build_world_BUILD_ROOT" -C stdlib all
   fi
-  log_trace "$DKMLSYS_CHMOD" -R 500 stdlib/
+  hermetic_util chmod -R 500 stdlib/
 
   printf "+ INFO: Compiling target libraries in pass 2\n" >&2
   log_trace make_target "$build_world_TARGET_ABI" "$build_world_BUILD_ROOT" otherlibraries
@@ -562,35 +562,35 @@ build_world() {
   esac
   if [ "$BYTECODEONLY" = OFF ]; then
     #   stop warning about native binary older than bytecode binary
-    log_trace touch "lex/ocamllex.opt${build_world_TARGET_EXE_EXT}"
+    hermetic_util touch "lex/ocamllex.opt${build_world_TARGET_EXE_EXT}"
     log_trace make_target "$build_world_TARGET_ABI" "$build_world_BUILD_ROOT" driver/main.cmx driver/optmain.cmx \
       compilerlibs/ocamlcommon.cmxa \
       compilerlibs/ocamlbytecomp.cmxa \
       compilerlibs/ocamloptcomp.cmxa
   else
     #   stop warning about native binary older than bytecode binary
-    log_trace touch "lex/ocamllex${build_world_TARGET_EXE_EXT}"
+    hermetic_util touch "lex/ocamllex${build_world_TARGET_EXE_EXT}"
     log_trace make_target "$build_world_TARGET_ABI" "$build_world_BUILD_ROOT" driver/main.cmo \
       compilerlibs/ocamlcommon.cma \
       compilerlibs/ocamlbytecomp.cma
   fi
 
   ## Install
-  log_trace "$DKMLSYS_CHMOD" -R ug+w    stdlib/ # Restore file permissions
-  "$DKMLSYS_INSTALL" -v -d "$build_world_PREFIX/bin" "$build_world_PREFIX/lib/ocaml"
-  "$DKMLSYS_INSTALL" -v "runtime/ocamlrun$build_world_TARGET_EXE_EXT" "$build_world_PREFIX/bin/"
+  hermetic_util chmod -R ug+w    stdlib/ # Restore file permissions
+  hermetic_util mkdir -p "$build_world_PREFIX/bin" "$build_world_PREFIX/lib/ocaml"
+  hermetic_util install -v "runtime/ocamlrun$build_world_TARGET_EXE_EXT" "$build_world_PREFIX/bin/"
   log_trace make_host -final            install
   log_trace make_host -final            -C debugger install
 
   # Some binaries may not be compiled (depends on the version), and should just be
   # the host standard binaries.
   if [ -x "$OCAMLSRC_MIXED/runtime/ocamlrund$build_world_TARGET_EXE_EXT" ]; then
-    "$DKMLSYS_INSTALL" -v "$OCAMLSRC_MIXED/runtime/ocamlrund$build_world_TARGET_EXE_EXT" "$build_world_PREFIX/bin/"
+    hermetic_util install -v "$OCAMLSRC_MIXED/runtime/ocamlrund$build_world_TARGET_EXE_EXT" "$build_world_PREFIX/bin/"
   fi
   if [ -x "$OCAMLSRC_MIXED/runtime/ocamlruni$build_world_TARGET_EXE_EXT" ]; then
-    "$DKMLSYS_INSTALL" -v "$OCAMLSRC_MIXED/runtime/ocamlruni$build_world_TARGET_EXE_EXT" "$build_world_PREFIX/bin/"
+    hermetic_util install -v "$OCAMLSRC_MIXED/runtime/ocamlruni$build_world_TARGET_EXE_EXT" "$build_world_PREFIX/bin/"
   fi
-  "$DKMLSYS_INSTALL" -v "$OCAMLSRC_MIXED/yacc/ocamlyacc$build_world_TARGET_EXE_EXT" "$build_world_PREFIX/bin/"
+  hermetic_util install -v "$OCAMLSRC_MIXED/yacc/ocamlyacc$build_world_TARGET_EXE_EXT" "$build_world_PREFIX/bin/"
 
   # Cross-compilation of [dkml-component-staging-opam64] broke when opam upgraded to [dose3.7.0.0]:
   #   File "src_ext/dose3/src/common/dune", line 16, characters 0-255:
@@ -611,7 +611,7 @@ build_world() {
   # location of the host compiler. Compiling it with the host compiler is not enough ...
   # the ocaml executable will still be hardcoded to use the stdlib of `mlcross/darwin_arm64`.
   # Just re-use the host standard ocaml.
-  "$DKMLSYS_INSTALL" -v "$OCAMLSRC_MIXED/ocaml$build_world_TARGET_EXE_EXT" "$build_world_PREFIX/bin/"
+  hermetic_util install -v "$OCAMLSRC_MIXED/ocaml$build_world_TARGET_EXE_EXT" "$build_world_PREFIX/bin/"
 }
 
 add_text() {
@@ -634,7 +634,7 @@ add_findlib_conf() {
     # ex. <switch>/share/dkml-base-compiler/mlcross/android_arm64v8a
     add_findlib_conf_CROSSTARGET=$1; shift
 
-    install -d "$TARGETDIR_UNIX/lib/findlib.conf.d"
+    hermetic_util mkdir -p "$TARGETDIR_UNIX/lib/findlib.conf.d"
     add_findlib_conf_CONF="$TARGETDIR_UNIX/lib/findlib.conf.d/$add_findlib_conf_ABI.conf"
 
     # Ex. path(android_arm32v7a)="C:\\source\\windows_x86_64\\lib"
@@ -642,7 +642,7 @@ add_findlib_conf() {
     bin_buildhost="$add_findlib_conf_CROSSTARGET/bin"
     lib_buildhost="$add_findlib_conf_CROSSTARGET/lib"
     sysroot_lib_buildhost="$TARGETDIR_UNIX/$add_findlib_conf_ABI-sysroot/lib"
-    install -d "$sysroot_lib_buildhost" # needed for realpath to work, even if won't be populated until conf-dkml-cross-toolchain
+    hermetic_util mkdir -p "$sysroot_lib_buildhost" # needed for realpath to work, even if won't be populated until conf-dkml-cross-toolchain
     _dirsep="/"
     _findsep=":"
     _exe=""
@@ -691,11 +691,11 @@ add_findlib_conf() {
 }
 
 # Loop over each target abi script file; each file separated by semicolons, and each term with an equals
-printf "%s\n" "$TARGETABIS" | sed 's/;/\n/g' | sed 's/^\s*//; s/\s*$//' > "$WORK"/target-abis
+printf "%s\n" "$TARGETABIS" | hermetic_util sed 's/;/\n/g' | hermetic_util sed 's/^\s*//; s/\s*$//' > "$WORK"/target-abis
 log_script "$WORK"/target-abis
 while IFS= read -r _abientry; do
-  _targetabi=$(printf "%s" "$_abientry" | sed 's/=.*//')
-  _abiscript=$(printf "%s" "$_abientry" | sed 's/^[^=]*=//')
+  _targetabi=$(printf "%s" "$_abientry" | hermetic_util sed 's/=.*//')
+  _abiscript=$(printf "%s" "$_abientry" | hermetic_util sed 's/^[^=]*=//')
 
   case "$_abiscript" in
   /* | ?:*) # /a/b/c or C:\Windows

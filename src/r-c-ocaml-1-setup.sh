@@ -315,9 +315,9 @@ while getopts ":d:v:u:t:a:BXb:c:e:k:l:m:n:rf:p:g:o:wxzALP:h" opt; do
                 exit 1
             fi
             # Make into absolute path
-            DKMLDIR_1=$(dirname "$DKMLDIR")
+            DKMLDIR_1=$(hermetic_util dirname "$DKMLDIR")
             DKMLDIR_1=$(cd "$DKMLDIR_1" && pwd)
-            DKMLDIR_2=$(basename "$DKMLDIR")
+            DKMLDIR_2=$(hermetic_util basename "$DKMLDIR")
             DKMLDIR="$DKMLDIR_1/$DKMLDIR_2"
         ;;
         v )
@@ -435,6 +435,7 @@ STATEDIR=
 # shellcheck disable=SC1091
 . "$DKMLDIR/vendor/drc/unix/_common_tool.sh"
 
+hermetic_util mkdir -p "$WORK"
 SETUP_ARGS_FILE=$WORK/setup_args
 BUILD_HOST_ARGS_FILE=$WORK/build_host_args
 BUILD_CROSS_ARGS_FILE=$WORK/build_cross_args
@@ -453,7 +454,7 @@ write_args_file "$TRIM_ARGS_PRE" "$TRIM_ARGS_FILE"
 disambiguate_filesystem_paths
 
 # Bootstrapping vars
-TARGETDIR_UNIX=$(install -d "$TARGETDIR" && cd "$TARGETDIR" && pwd) # better than cygpath: handles TARGETDIR=. without trailing slash, and works on Unix/Windows
+TARGETDIR_UNIX=$(hermetic_util mkdir -p "$TARGETDIR" && cd "$TARGETDIR" && pwd) # better than cygpath: handles TARGETDIR=. without trailing slash, and works on Unix/Windows
 if [ -x /usr/bin/cygpath ]; then
     TARGETDIR_MIXED=$(/usr/bin/cygpath -am "$TARGETDIR_UNIX")
 else
@@ -659,7 +660,7 @@ set_patches() {
 
     : > "$PATCHES_FILE"
     should_apply_patch() {
-        case "$(basename "$1")" in
+        case "$(hermetic_util basename "$1")" in
             ocaml-common-4_14-b06-linearclosures.patch)
                 if [ "$set_patches_CATEGORY" = "ocaml" ] && [ "$set_patches_VER" = "4.14.3" ]; then
                     return 1
@@ -670,7 +671,7 @@ set_patches() {
     }
     for set_patches_STEM in $VERSION_STEMS; do
         # Find, sort and accumulate common patches that belong to the stem.
-        find "vendor/dkml-compiler/src/p" -type f -name "$set_patches_CATEGORY-common-$set_patches_STEM-*.patch" | LC_ALL=C sort > "$WORK/p"
+        hermetic_util find "vendor/dkml-compiler/src/p" -type f -name "$set_patches_CATEGORY-common-$set_patches_STEM-*.patch" | LC_ALL=C hermetic_util sort > "$WORK/p"
         while IFS= read -r line; do
             if should_apply_patch "$line"; then
                 printf '%s\n' "$DKMLDIR/$line" >> "$PATCHES_FILE"
@@ -678,12 +679,12 @@ set_patches() {
             printf '%s\n' "$line" >> "$ALL_PATCH_FILES_FILE"
         done < "$WORK/p"
         #   Markdown
-        find "vendor/dkml-compiler/src/p" -type f -name "$set_patches_CATEGORY-common-$set_patches_STEM-*.md" | LC_ALL=C sort > "$WORK/p"
+        hermetic_util find "vendor/dkml-compiler/src/p" -type f -name "$set_patches_CATEGORY-common-$set_patches_STEM-*.md" | LC_ALL=C hermetic_util sort > "$WORK/p"
         while IFS= read -r line; do
             printf '%s\n' "$line" >> "$ALL_PATCH_FILES_FILE"
         done < "$WORK/p"
         # Find, sort and accumulate host/cross patches that belong to the stem.
-        find "vendor/dkml-compiler/src/p" -type f -name "$set_patches_CATEGORY-$set_patches_HOSTCROSS-$set_patches_STEM-*.patch" | LC_ALL=C sort > "$WORK/p"
+        hermetic_util find "vendor/dkml-compiler/src/p" -type f -name "$set_patches_CATEGORY-$set_patches_HOSTCROSS-$set_patches_STEM-*.patch" | LC_ALL=C hermetic_util sort > "$WORK/p"
         while IFS= read -r line; do
             if should_apply_patch "$line"; then
                 printf '%s\n' "$DKMLDIR/$line" >> "$PATCHES_FILE"
@@ -691,7 +692,7 @@ set_patches() {
             printf '%s\n' "$line" >> "$ALL_PATCH_FILES_FILE"
         done < "$WORK/p"
         #   Markdown
-        find "vendor/dkml-compiler/src/p" -type f -name "$set_patches_CATEGORY-$set_patches_HOSTCROSS-$set_patches_STEM-*.md" | LC_ALL=C sort > "$WORK/p"
+        hermetic_util find "vendor/dkml-compiler/src/p" -type f -name "$set_patches_CATEGORY-$set_patches_HOSTCROSS-$set_patches_STEM-*.md" | LC_ALL=C hermetic_util sort > "$WORK/p"
         while IFS= read -r line; do
             printf '%s\n' "$line" >> "$ALL_PATCH_FILES_FILE"
         done < "$WORK/p"
@@ -708,7 +709,7 @@ apply_patch() {
     apply_patch_HOSTCROSS=$1
     shift
 
-    apply_patch_PATCHBASENAME=$(basename "$apply_patch_PATCHFILE")
+    apply_patch_PATCHBASENAME=$(hermetic_util basename "$apply_patch_PATCHFILE")
     apply_patch_SRCDIR_MIXED="$apply_patch_SRCDIR"
     apply_patch_PATCHFILE_MIXED="$apply_patch_PATCHFILE"
     if [ -x /usr/bin/cygpath ]; then
@@ -744,7 +745,7 @@ verify_applied_patches() {
     verify_applied_patches_HOSTCROSS=$1
     shift
 
-    verify_applied_patches_COUNT=$(wc -l < "$PATCHES_FILE" | awk '{print $1}')
+    verify_applied_patches_COUNT=$(hermetic_util wc -l < "$PATCHES_FILE" | hermetic_util awk '{print $1}')
     if [ "$verify_applied_patches_COUNT" -eq 0 ]; then
         return 0
     fi
@@ -759,7 +760,7 @@ verify_applied_patches() {
     : > "$verify_applied_patches_ACTUAL"
 
     while IFS= read -r patchfile; do
-        patchbase=$(basename "$patchfile")
+        patchbase=$(hermetic_util basename "$patchfile")
         printf "Diskuv %s %s patch %s\n" \
             "$verify_applied_patches_CATEGORY" \
             "$verify_applied_patches_HOSTCROSS" \
@@ -770,12 +771,12 @@ verify_applied_patches() {
         log --reverse -n "$verify_applied_patches_COUNT" --format=%s HEAD \
         > "$verify_applied_patches_ACTUAL"
 
-    if ! cmp -s "$verify_applied_patches_EXPECTED" "$verify_applied_patches_ACTUAL"; then
+    if ! hermetic_util cmp -s "$verify_applied_patches_EXPECTED" "$verify_applied_patches_ACTUAL"; then
         echo "FATAL: Applied patch subjects did not match the expected patch list for $verify_applied_patches_CATEGORY $verify_applied_patches_HOSTCROSS" >&2
         echo "Expected subjects:" >&2
-        cat "$verify_applied_patches_EXPECTED" >&2
+        hermetic_util cat "$verify_applied_patches_EXPECTED" >&2
         echo "Actual subjects:" >&2
-        cat "$verify_applied_patches_ACTUAL" >&2
+        hermetic_util cat "$verify_applied_patches_ACTUAL" >&2
         exit 1
     fi
 
@@ -813,10 +814,10 @@ clean_ocaml_install() {
     # that means we can't just blow away entire directories unless we know for
     # sure it is specific to OCaml
     for binary in $BINARIES; do
-        log_trace rm -f "${clean_ocaml_install_DIR:?}/bin/$binary.exe"
-        log_trace rm -f "${clean_ocaml_install_DIR:?}/bin/$binary"
+        hermetic_util rm -f "${clean_ocaml_install_DIR:?}/bin/$binary.exe"
+        hermetic_util rm -f "${clean_ocaml_install_DIR:?}/bin/$binary"
     done
-    log_trace rm -rf "${clean_ocaml_install_DIR:?}/lib/ocaml"
+    hermetic_util rm -rf "${clean_ocaml_install_DIR:?}/lib/ocaml"
 }
 
 # [is_git_corrupt_or_missing <source code mixed Unix/Dos path>]
@@ -873,12 +874,12 @@ get_ocaml_source() {
         # Want idempotency, so remove source code if not present, or git is missing (that means
         # we have no idea whether commits have been applied) or git is corrupt
         if [ ! -e "$get_ocaml_source_SRCUNIX/Makefile" ] || is_git_corrupt_or_missing "$get_ocaml_source_SRCMIXED"; then
-            log_trace install -d "$get_ocaml_source_SRCUNIX"
-            log_trace rm -rf "$get_ocaml_source_SRCUNIX" # clean any partial downloads
-            log_trace cp -rp "$get_ocaml_source_COMMIT_TAG_OR_DIR" "$get_ocaml_source_SRCUNIX"
+            hermetic_util mkdir -p "$get_ocaml_source_SRCUNIX"
+            hermetic_util rm -rf "$get_ocaml_source_SRCUNIX" # clean any partial downloads
+            hermetic_util cp -rp "$get_ocaml_source_COMMIT_TAG_OR_DIR" "$get_ocaml_source_SRCUNIX"
             #   we do not want complicated submodules for a local directory copy
-            log_trace rm -f "$get_ocaml_source_SRCUNIX/.gitmodules"
-            log_trace rm -rf "$get_ocaml_source_SRCUNIX/flexdll/.git"
+            hermetic_util rm -f "$get_ocaml_source_SRCUNIX/.gitmodules"
+            hermetic_util rm -rf "$get_ocaml_source_SRCUNIX/flexdll/.git"
         fi
 
         # Ensure git patchable
@@ -894,10 +895,10 @@ get_ocaml_source() {
         get_ocaml_source_COMMIT=$get_ocaml_source_COMMIT_TAG_OR_DIR
 
         if [ ! -e "$get_ocaml_source_SRCUNIX/Makefile" ] || is_git_corrupt_or_missing "$get_ocaml_source_SRCMIXED"; then
-            log_trace rm -rf "$get_ocaml_source_SRCUNIX" # clean any partial downloads
+            hermetic_util rm -rf "$get_ocaml_source_SRCUNIX" # clean any partial downloads
             # do NOT --recurse-submodules because we don't want submodules (ex. flexdll/) that are in HEAD but
             # are not in $get_ocaml_source_COMMIT
-            log_trace install -d "$get_ocaml_source_SRCUNIX"
+            hermetic_util mkdir -p "$get_ocaml_source_SRCUNIX"
             #   Instead of git clone we use git fetch --depth 1 so we do a shallow clone of the commit
             log_trace git -C "$get_ocaml_source_SRCMIXED" -c init.defaultBranch=master init
             log_trace git -C "$get_ocaml_source_SRCMIXED" config core.fsmonitor false # unneeded, and avoid "error: daemon terminated"
@@ -913,7 +914,7 @@ get_ocaml_source() {
             log_trace git -C "$get_ocaml_source_SRCMIXED" stash
             if [ ! "$git_head" = "$get_ocaml_source_COMMIT" ]; then
                 # allow tag to move (for development and for emergency fixes), if the user chose a tag rather than a commit
-                if git -C "$get_ocaml_source_SRCMIXED" tag -l "$get_ocaml_source_COMMIT" | awk 'BEGIN{nonempty=0} NF>0{nonempty+=1} END{exit nonempty==0}'; then git -C "$get_ocaml_source_SRCMIXED" tag -d "$get_ocaml_source_COMMIT"; fi
+                if git -C "$get_ocaml_source_SRCMIXED" tag -l "$get_ocaml_source_COMMIT" | hermetic_util awk 'BEGIN{nonempty=0} NF>0{nonempty+=1} END{exit nonempty==0}'; then git -C "$get_ocaml_source_SRCMIXED" tag -d "$get_ocaml_source_COMMIT"; fi
 
                 log_trace git -C "$get_ocaml_source_SRCMIXED" fetch --tags
                 log_trace git -C "$get_ocaml_source_SRCMIXED" -c advice.detachedHead=false checkout "$get_ocaml_source_COMMIT"
@@ -923,7 +924,7 @@ get_ocaml_source() {
         log_trace git -C "$get_ocaml_source_SRCMIXED" submodule update --init --recursive
 
         # Remove any chmods we did in the previous build
-        log_trace "$DKMLSYS_CHMOD" -R u+w "$get_ocaml_source_SRCMIXED"
+        hermetic_util chmod -R u+w "$get_ocaml_source_SRCMIXED"
 
         # OCaml compilation is _not_ idempotent. Example:
         #     config.status: creating Makefile.build_config
@@ -968,21 +969,22 @@ get_ocaml_source() {
 
 clean_ocaml_install "$TARGETDIR_UNIX"
 if [ -n "$TEMPLATEDIR" ]; then
-    install -d "$OCAMLSRC_UNIX"
-    rm -rf "$OCAMLSRC_UNIX"
-    cp -rp "$TEMPLATEDIR/$HOSTSRC_SUBDIR" "$OCAMLSRC_UNIX"
+    hermetic_util mkdir -p "$OCAMLSRC_UNIX"
+    hermetic_util rm -rf "$OCAMLSRC_UNIX"
+    hermetic_util cp -rp "$TEMPLATEDIR/$HOSTSRC_SUBDIR" "$OCAMLSRC_UNIX"
 else
     get_ocaml_source "$GIT_COMMITID_TAG_OR_DIR" "$OCAMLSRC_UNIX" "$OCAMLSRC_MIXED" "$BUILDHOST_ARCH"
 fi
 
 # Add get_sak.mk to runtime/
-install vendor/dkml-compiler/src/r-c-ocaml-get_sak.make "$OCAMLSRC_UNIX"/runtime/get_sak.make
+hermetic_util cp vendor/dkml-compiler/src/r-c-ocaml-get_sak.make "$OCAMLSRC_UNIX"/runtime/get_sak.make
 
 # Get source code versions from the source code
-_OCAMLVER=$(awk 'NR==1{print}' "$OCAMLSRC_UNIX"/VERSION)
+_OCAMLVER=$(hermetic_util awk 'NR==1{print}' "$OCAMLSRC_UNIX"/VERSION)
 #   flexdll is only required for Windows; other OS-es can skip having it
 if [ -e "$OCAMLSRC_UNIX"/flexdll/Makefile ]; then
-    _FLEXDLLVER=$(awk '$1=="VERSION"{print $NF; exit 0}' "$OCAMLSRC_UNIX"/flexdll/Makefile)
+    # shellcheck disable=SC2016
+    _FLEXDLLVER=$(hermetic_util awk '$1=="VERSION"{print $NF; exit 0}' "$OCAMLSRC_UNIX"/flexdll/Makefile)
 fi
 
 # Pass versions to build scripts
@@ -1002,15 +1004,15 @@ if [ -z "$TARGETABIS" ]; then
     append_args_to_file "$BUILD_HOST_ARGS_FILE" -q ON
 else
     if [ -n "$TEMPLATEDIR" ]; then
-        install -d "$TARGETDIR_UNIX/$CROSS_SUBDIR"
-        rm -rf "${TARGETDIR_UNIX:?}/$CROSS_SUBDIR"
-        cp -rp "$TEMPLATEDIR/$CROSS_SUBDIR" "$TARGETDIR_UNIX/$CROSS_SUBDIR"
+        hermetic_util mkdir -p "$TARGETDIR_UNIX/$CROSS_SUBDIR"
+        hermetic_util rm -rf "${TARGETDIR_UNIX:?}/$CROSS_SUBDIR"
+        hermetic_util cp -rp "$TEMPLATEDIR/$CROSS_SUBDIR" "$TARGETDIR_UNIX/$CROSS_SUBDIR"
     else
         # Loop over each target abi script file; each file separated by semicolons, and each term with an equals
-        printf "%s\n" "$TARGETABIS" | sed 's/;/\n/g' | sed 's/^\s*//; s/\s*$//' > "$WORK"/tabi
+        printf "%s\n" "$TARGETABIS" | hermetic_util sed 's/;/\n/g' | hermetic_util sed 's/^\s*//; s/\s*$//' > "$WORK"/tabi
         while IFS= read -r _abientry
         do
-            _targetabi=$(printf "%s" "$_abientry" | sed 's/=.*//')
+            _targetabi=$(printf "%s" "$_abientry" | hermetic_util sed 's/=.*//')
             # clean install
             clean_ocaml_install "$TARGETDIR_UNIX/$CROSS_SUBDIR/$_targetabi"
             # git clone
@@ -1035,7 +1037,7 @@ fi
 export BOOTSTRAPNAME=100co
 export DEPLOYDIR_UNIX="$TARGETDIR_UNIX"
 DESTDIR=$TARGETDIR_UNIX/$SHARE_REPRODUCIBLE_BUILD_RELPATH/$BOOTSTRAPNAME
-THISDIR=$(pwd)
+THISDIR=$(hermetic_util pwd)
 if [ "$DESTDIR" = "$THISDIR" ]; then
     printf "Already deployed the reproducible scripts. Replacing them as needed\n"
     DKMLDIR=.
@@ -1060,11 +1062,11 @@ done < "$ALL_PATCH_FILES_FILE"
 if [ -n "$TARGETABIS" ]; then
     _accumulator=
     # Loop over each target abi script file; each file separated by semicolons, and each term with an equals
-    printf "%s\n" "$TARGETABIS" | sed 's/;/\n/g' | sed 's/^\s*//; s/\s*$//' > "$WORK"/tabi
+    printf "%s\n" "$TARGETABIS" | hermetic_util sed 's/;/\n/g' | hermetic_util sed 's/^\s*//; s/\s*$//' > "$WORK"/tabi
     while IFS= read -r _abientry
     do
-        _targetabi=$(printf "%s" "$_abientry" | sed 's/=.*//')
-        _abiscript=$(printf "%s" "$_abientry" | sed 's/^[^=]*=//')
+        _targetabi=$(printf "%s" "$_abientry" | hermetic_util sed 's/=.*//')
+        _abiscript=$(printf "%s" "$_abientry" | hermetic_util sed 's/^[^=]*=//')
 
         # Since we want the ABI scripts to be reproducible, we install them in a reproducible place and set
         # the reproducible arguments (-a) to point to that reproducible place.

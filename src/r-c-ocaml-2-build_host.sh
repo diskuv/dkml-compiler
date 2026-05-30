@@ -219,7 +219,7 @@ fi
 
 # Make C compiler script for host ABI. Allow passthrough of C compiler from caller, otherwise
 # use the system (SYS) compiler.
-install -d "$OCAMLSRC_MIXED"/support
+hermetic_util mkdir -p "$OCAMLSRC_MIXED"/support
 HOST_DKML_COMPILE_SPEC=${DKML_COMPILE_SPEC:-1}
 HOST_DKML_COMPILE_TYPE=${DKML_COMPILE_TYPE:-SYS}
 #   Exports OCAML_HOST_TRIPLET and DKML_TARGET_SYSROOT
@@ -265,7 +265,7 @@ print_makefile_config_extensions "$SANITIZE_ADDRESS" "$SANITIZE_LEAK" >> Makefil
 
 # Skip bootstrapping if ocamlc.opt is present
 if [ -n "$OCAMLC_OPT_EXE" ]; then
-    log_trace install "$OCAMLC_OPT_EXE" "boot/ocamlc.opt$host_ext"
+    hermetic_util install "$OCAMLC_OPT_EXE" "boot/ocamlc.opt$host_ext"
 fi
 
 # Capture SAK_ variables for use in cross-compiler.
@@ -318,26 +318,26 @@ runtime/sak encode-C-literal "runtime/sak was built correctly"
 log_trace ocaml_make "$DKMLHOSTABI" -C runtime -f get_sak.make sak.source.sh 1=__1__ 2=__2__
 if [ "${DKML_BUILD_TRACE:-OFF}" = ON ] && [ "${DKML_BUILD_TRACE_LEVEL:-0}" -ge 2 ] ; then
     printf '@+ runtime/sak.source.sh\n' >&2
-    cat runtime/sak.source.sh >&2
+    hermetic_util cat runtime/sak.source.sh >&2
 fi
 
 # fix readonly perms we'll set later (if we've re-used the files because
 # of a cache)
-log_trace "$DKMLSYS_CHMOD" -R ug+w      stdlib/
+hermetic_util chmod -R ug+w      stdlib/
 
 # Make non-boot ./ocamlc and ./ocamlopt compiler
 if [ "$BYTECODEONLY" = OFF ] && [ "$OCAML_CONFIGURE_NEEDS_MAKE_FLEXDLL" = ON ]; then
     printf "+ INFO: Compiling flexlink\n" >&2
     #   trigger `flexlink` target, especially its making of boot/ocamlrun.exe
-    log_trace touch flexdll/Makefile
-    log_trace rm -f flexdll/flexlink.exe
+    hermetic_util touch flexdll/Makefile
+    hermetic_util rm -f flexdll/flexlink.exe
     log_trace ocaml_make "$DKMLHOSTABI" flexdll
 fi
 printf "+ INFO: Doing coldstart\n" >&2
 log_trace ocaml_make "$DKMLHOSTABI"     coldstart
 printf "+ INFO: Doing core\n" >&2
 log_trace ocaml_make "$DKMLHOSTABI"     coreall            # Also produces ./ocaml
-log_trace install -d "$OCAMLHOST_UNIX/bin" "$OCAMLHOST_UNIX/lib/ocaml" "$OCAMLHOST_UNIX/lib/ocaml/stublibs"
+hermetic_util mkdir -p "$OCAMLHOST_UNIX/bin" "$OCAMLHOST_UNIX/lib/ocaml" "$OCAMLHOST_UNIX/lib/ocaml/stublibs"
 if [ "$RUNTIMEONLY" = ON ]; then
     printf "+ INFO: Installing runtime and stdlib\n" >&2
     log_trace ocaml_make "$DKMLHOSTABI" -C runtime install
@@ -401,8 +401,8 @@ build_with_support_for_cross_compiling() {
                 printf "exec '%s/boot/ocamlrun' '%s' \"\$@\"\n" "$OCAMLSRC_UNIX" "$OCAMLSRC_HOST"'\flexdll\flexlink.exe'
             fi
         } >"$OCAMLSRC_UNIX"/support/ocamlrun-flexlink.sh.tmp
-        $DKMLSYS_CHMOD +x "$OCAMLSRC_UNIX"/support/ocamlrun-flexlink.sh.tmp
-        $DKMLSYS_MV "$OCAMLSRC_UNIX"/support/ocamlrun-flexlink.sh.tmp "$OCAMLSRC_UNIX"/support/ocamlrun-flexlink.sh
+        hermetic_util chmod +x "$OCAMLSRC_UNIX"/support/ocamlrun-flexlink.sh.tmp
+        hermetic_util mv "$OCAMLSRC_UNIX"/support/ocamlrun-flexlink.sh.tmp "$OCAMLSRC_UNIX"/support/ocamlrun-flexlink.sh
         log_script "$OCAMLSRC_UNIX"/support/ocamlrun-flexlink.sh
 
         #   Then we call it using env.exe since ocamlrun-flexlink.sh can be called from
@@ -415,8 +415,8 @@ build_with_support_for_cross_compiling() {
     else
         printf "#!%s\nexec \"\$@\"\n" "$DKML_POSIX_SHELL" >"$OCAMLSRC_UNIX"/support/with-linking-on-host.sh.tmp
     fi
-    $DKMLSYS_CHMOD +x "$OCAMLSRC_UNIX"/support/with-linking-on-host.sh.tmp
-    $DKMLSYS_MV "$OCAMLSRC_UNIX"/support/with-linking-on-host.sh.tmp "$OCAMLSRC_UNIX"/support/with-linking-on-host.sh
+    hermetic_util chmod +x "$OCAMLSRC_UNIX"/support/with-linking-on-host.sh.tmp
+    hermetic_util mv "$OCAMLSRC_UNIX"/support/with-linking-on-host.sh.tmp "$OCAMLSRC_UNIX"/support/with-linking-on-host.sh
     log_script "$OCAMLSRC_UNIX"/support/with-linking-on-host.sh
 
     # Host wrappers
@@ -511,7 +511,7 @@ build_with_support_for_cross_compiling() {
     #   Permission Denied immediately at exact location where stdlib is being
     #   rebuilt. If we've done our job right in this section, stdlib will not
     #   be rebuilt at all.
-    log_trace "$DKMLSYS_CHMOD" -R 500       stdlib/
+    hermetic_util chmod -R 500       stdlib/
 
     # Use new compiler to rebuild, with the exact same wrapper that can be used if cross-compiling
     if [ "${DKML_BUILD_TRACE:-OFF}" = ON ] && [ "${DKML_BUILD_TRACE_LEVEL:-0}" -ge 3 ] ; then
@@ -532,7 +532,7 @@ build_with_support_for_cross_compiling() {
     fi
 
     # Restore file permissions
-    log_trace "$DKMLSYS_CHMOD" -R ug+w      stdlib/
+    hermetic_util chmod -R ug+w      stdlib/
 
     # Install
     printf "+ INFO: Installing\n" >&2
@@ -571,8 +571,8 @@ esac
 #    It is in the build directory boot/.
 #    Confer: https://github.com/ocaml/flexdll/blob/f5ccd9730d0766d0eb002cbe35a183f627044291/reloc.ml#L1407-L1428
 if [ "$BYTECODEONLY" = OFF ] && [ -n "$FLEXLINK_CHAIN" ]; then
-    log_trace install "boot/flexdll_initer_${FLEXLINK_CHAIN}${FLEXLINK_EXT}"   "$OCAMLHOST_UNIX"/bin/
-    log_trace install "boot/flexdll_${FLEXLINK_CHAIN}${FLEXLINK_EXT}"          "$OCAMLHOST_UNIX"/bin/
+    hermetic_util install "boot/flexdll_initer_${FLEXLINK_CHAIN}${FLEXLINK_EXT}"   "$OCAMLHOST_UNIX"/bin/
+    hermetic_util install "boot/flexdll_${FLEXLINK_CHAIN}${FLEXLINK_EXT}"          "$OCAMLHOST_UNIX"/bin/
 fi
 
 # Test executables that they were properly linked
