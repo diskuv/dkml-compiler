@@ -529,6 +529,8 @@ if [ -d "$GIT_COMMITID_TAG_OR_DIR" ]; then
         GIT_COMMITID_TAG_OR_DIR=$(/usr/bin/cygpath -am "$GIT_COMMITID_TAG_OR_DIR")
     elif [ -n "${COMSPEC:-}" ]; then
         # ex. BusyBox-w32's sh.exe
+        # %~fI is absolute path of argument I
+        GIT_COMMITID_TAG_OR_DIR=$("$COMSPEC" /c "for %I in (\"$GIT_COMMITID_TAG_OR_DIR\") do @echo %~fI")
         GIT_COMMITID_TAG_OR_DIR="${GIT_COMMITID_TAG_OR_DIR//\\//}" # replace backslashes with forward slashes
     else
         # absolute directory
@@ -734,6 +736,11 @@ apply_patch() {
     if [ -x /usr/bin/cygpath ]; then
         apply_patch_SRCDIR_MIXED=$(/usr/bin/cygpath -aw "$apply_patch_SRCDIR_MIXED")
         apply_patch_PATCHFILE_MIXED=$(/usr/bin/cygpath -aw "$apply_patch_PATCHFILE_MIXED")
+    elif [ -n "${COMSPEC:-}" ]; then
+        # ex. BusyBox-w32's sh.exe
+        # %~fI is absolute path for argument I
+        apply_patch_SRCDIR_MIXED=$("$COMSPEC" /c "for %I in (\"$apply_patch_SRCDIR_MIXED\") do @echo %~fI")
+        apply_patch_PATCHFILE_MIXED=$("$COMSPEC" /c "for %I in (\"$apply_patch_PATCHFILE_MIXED\") do @echo %~fI")
     fi
     # Before packaging any of these artifacts the CI will likely do a `git clean -d -f -x` to reduce the
     # size and increase the safety of the artifacts. So we do a `git commit` after we have patched so
@@ -774,6 +781,10 @@ verify_applied_patches() {
     verify_applied_patches_SRCDIR_MIXED="$verify_applied_patches_SRCDIR"
     if [ -x /usr/bin/cygpath ]; then
         verify_applied_patches_SRCDIR_MIXED=$(/usr/bin/cygpath -aw "$verify_applied_patches_SRCDIR_MIXED")
+    elif [ -n "${COMSPEC:-}" ]; then
+        # ex. BusyBox-w32's sh.exe
+        # %~fI is absolute path for argument I
+        verify_applied_patches_SRCDIR_MIXED=$("$COMSPEC" /c "for %I in (\"$verify_applied_patches_SRCDIR_MIXED\") do @echo %~fI")
     fi
     : > "$verify_applied_patches_EXPECTED"
     : > "$verify_applied_patches_ACTUAL"

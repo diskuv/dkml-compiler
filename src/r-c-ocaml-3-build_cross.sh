@@ -663,9 +663,10 @@ add_findlib_conf() {
         _findsep=";"
     elif [ -n "${COMSPEC:-}" ]; then
         # ex. BusyBox-w32's sh.exe
-        bin_buildhost="${bin_buildhost//\//\\}" # replace forward slashes with backslashes
-        lib_buildhost="${lib_buildhost//\//\\}" # replace forward slashes with backslashes
-        sysroot_lib_buildhost="${sysroot_lib_buildhost//\//\\}" # replace forward slashes with backslashes
+        # %~fI in batch script is absolute path of argument I
+        bin_buildhost=$("$COMSPEC" //c "for %I in (\"$bin_buildhost\") do @echo %~fI")
+        lib_buildhost=$("$COMSPEC" //c "for %I in (\"$lib_buildhost\") do @echo %~fI")
+        sysroot_lib_buildhost=$("$COMSPEC" //c "for %I in (\"$sysroot_lib_buildhost\") do @echo %~fI")
         _dirsep="\\\\"
         _exe=".exe"
         _findsep=";"
