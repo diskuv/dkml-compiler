@@ -453,6 +453,22 @@ write_args_file "$TRIM_ARGS_PRE" "$TRIM_ARGS_FILE"
 
 disambiguate_filesystem_paths
 
+# Helper Windows Batch script to make absolute paths when
+# /usr/bin/cygpath isn't available (ex. BusyBox-w32's sh.exe).
+# Should be robust to spaces.
+mkdir -p "$DKMLDIR/aux"
+MKABS_CMD="$DKMLDIR/aux/mkabs.cmd"
+#   %~fI is absolute path of argument I.
+printf '%s' '@ECHO OFF
+setlocal enabledelayedexpansion
+call :SetAbsPath "%*"
+echo %ABSPATH%
+exit /b 0
+:SetAbsPath
+set "ABSPATH=%~f1"
+exit /b 0
+' > "$MKABS_CMD"
+
 # Bootstrapping vars
 TARGETDIR_UNIX=$(hermetic_util mkdir -p "$TARGETDIR" && cd "$TARGETDIR" && pwd) # better than cygpath: handles TARGETDIR=. without trailing slash, and works on Unix/Windows
 if [ -x /usr/bin/cygpath ]; then
@@ -504,7 +520,7 @@ case $HOST_SUBDIR in
     fi
 esac
 case $CROSS_SUBDIR in
-/* | ?:*) # /a/b/c or C:\Windows
+/* | ?:*) # (/a/b/c or C:\Windows)
     if [ -x /usr/bin/cygpath ]; then
         CROSS_SUBDIR_MIXED=$(/usr/bin/cygpath -m "$CROSS_SUBDIR")
     elif [ -n "${COMSPEC:-}" ]; then
@@ -530,7 +546,7 @@ if [ -d "$GIT_COMMITID_TAG_OR_DIR" ]; then
     elif [ -n "${COMSPEC:-}" ]; then
         # ex. BusyBox-w32's sh.exe
         # %~fI is absolute path of argument I
-        GIT_COMMITID_TAG_OR_DIR=$("$COMSPEC" /c "for %I in (\"$GIT_COMMITID_TAG_OR_DIR\") do @echo %~fI")
+        GIT_COMMITID_TAG_OR_DIR=$("$COMSPEC" /c "$MKABS_CMD" "$GIT_COMMITID_TAG_OR_DIR")
         GIT_COMMITID_TAG_OR_DIR="${GIT_COMMITID_TAG_OR_DIR//\\//}" # replace backslashes with forward slashes
     else
         # absolute directory
@@ -556,8 +572,9 @@ if [ -x /usr/bin/cygpath ]; then
     OCAMLSRC_MIXED=$(/usr/bin/cygpath -am "$TARGETDIR_UNIX/$HOSTSRC_SUBDIR")
 elif [ -n "${COMSPEC:-}" ]; then
     # ex. BusyBox-w32's sh.exe
-    OCAMLSRC_UNIX="$TARGETDIR_UNIX/$HOSTSRC_SUBDIR"
-    OCAMLSRC_MIXED="${OCAMLSRC_UNIX//\\//}" # replace backslashes with forward slashes
+    OCAMLSRC_WIN32=$("$COMSPEC" /c "$MKABS_CMD" "$TARGETDIR_UNIX/$HOSTSRC_SUBDIR")
+    OCAMLSRC_MIXED="${OCAMLSRC_WIN32//\\//}" # replace backslashes with forward slashes
+    OCAMLSRC_UNIX="$OCAMLSRC_MIXED"
 else
     OCAMLSRC_UNIX="$TARGETDIR_UNIX/$HOSTSRC_SUBDIR"
     OCAMLSRC_MIXED="$OCAMLSRC_UNIX"
@@ -739,8 +756,8 @@ apply_patch() {
     elif [ -n "${COMSPEC:-}" ]; then
         # ex. BusyBox-w32's sh.exe
         # %~fI is absolute path for argument I
-        apply_patch_SRCDIR_MIXED=$("$COMSPEC" /c "for %I in (\"$apply_patch_SRCDIR_MIXED\") do @echo %~fI")
-        apply_patch_PATCHFILE_MIXED=$("$COMSPEC" /c "for %I in (\"$apply_patch_PATCHFILE_MIXED\") do @echo %~fI")
+        apply_patch_SRCDIR_MIXED=$("$COMSPEC" /c "$MKABS_CMD" "$apply_patch_SRCDIR_MIXED")
+        apply_patch_PATCHFILE_MIXED=$("$COMSPEC" /c "$MKABS_CMD" "$apply_patch_PATCHFILE_MIXED")
     fi
     # Before packaging any of these artifacts the CI will likely do a `git clean -d -f -x` to reduce the
     # size and increase the safety of the artifacts. So we do a `git commit` after we have patched so
@@ -783,8 +800,7 @@ verify_applied_patches() {
         verify_applied_patches_SRCDIR_MIXED=$(/usr/bin/cygpath -aw "$verify_applied_patches_SRCDIR_MIXED")
     elif [ -n "${COMSPEC:-}" ]; then
         # ex. BusyBox-w32's sh.exe
-        # %~fI is absolute path for argument I
-        verify_applied_patches_SRCDIR_MIXED=$("$COMSPEC" /c "for %I in (\"$verify_applied_patches_SRCDIR_MIXED\") do @echo %~fI")
+        verify_applied_patches_SRCDIR_MIXED=$("$COMSPEC" /c "$MKABS_CMD" "$verify_applied_patches_SRCDIR_MIXED")
     fi
     : > "$verify_applied_patches_EXPECTED"
     : > "$verify_applied_patches_ACTUAL"
@@ -1080,6 +1096,7 @@ install_reproducible_readme           vendor/dkml-compiler/src/r-c-ocaml-README.
 install_reproducible_file             vendor/dkml-compiler/src/r-c-ocaml-check_linker.sh
 install_reproducible_file             vendor/dkml-compiler/src/r-c-ocaml-functions.sh
 install_reproducible_file             vendor/dkml-compiler/src/r-c-ocaml-get_sak.make
+install_reproducible_file             aux/mkabs.cmd
 if [ -n "$HOSTABISCRIPT" ]; then
     install_reproducible_file         "$HOSTABISCRIPT"
 fi

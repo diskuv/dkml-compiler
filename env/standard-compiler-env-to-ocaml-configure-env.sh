@@ -109,20 +109,21 @@ if [ -x /usr/bin/cygpath ]; then
 elif [ -n "${COMSPEC:-}" ]; then
   # ex. BusyBox-w32's sh.exe
   # %~sfI is absolute path ("f") and short 8.3 path ("s") for the given file argument "I"
+  # mkabs.cmd is robust to spaces but since unavailable we call COMSPEC directly.
   if [ -n "${autodetect_compiler_AS:-}" ] && [ -x "$autodetect_compiler_AS" ]; then
-    autodetect_compiler_AS=$("$COMSPEC" //c "for %I in (\"$autodetect_compiler_AS\") do @echo %~sfI")
+    autodetect_compiler_AS=$("$COMSPEC" //c "for %I in ($autodetect_compiler_AS) do @echo %~sfI")
     autodetect_compiler_AS="${autodetect_compiler_AS//\\//}" # replace backslashes with forward slashes
   fi
   if [ -n "${autodetect_compiler_CC:-}" ] && [ -x "$autodetect_compiler_CC" ]; then
-    autodetect_compiler_CC=$("$COMSPEC" //c "for %I in (\"$autodetect_compiler_CC\") do @echo %~sfI")
+    autodetect_compiler_CC=$("$COMSPEC" //c "for %I in ($autodetect_compiler_CC) do @echo %~sfI")
     autodetect_compiler_CC="${autodetect_compiler_CC//\\//}" # replace backslashes with forward slashes
   fi
   if [ -n "${autodetect_compiler_CXX:-}" ] && [ -x "$autodetect_compiler_CXX" ]; then
-    autodetect_compiler_CXX=$("$COMSPEC" //c "for %I in (\"$autodetect_compiler_CXX\") do @echo %~sfI")
+    autodetect_compiler_CXX=$("$COMSPEC" //c "for %I in ($autodetect_compiler_CXX) do @echo %~sfI")
     autodetect_compiler_CXX="${autodetect_compiler_CXX//\\//}" # replace backslashes with forward slashes
   fi
   if [ -n "${autodetect_compiler_LD:-}" ] && [ -x "$autodetect_compiler_LD" ]; then
-    autodetect_compiler_LD=$("$COMSPEC" //c "for %I in (\"$autodetect_compiler_LD\") do @echo %~sfI")
+    autodetect_compiler_LD=$("$COMSPEC" //c "for %I in ($autodetect_compiler_LD) do @echo %~sfI")
     autodetect_compiler_LD="${autodetect_compiler_LD//\\//}" # replace backslashes with forward slashes
   fi
 fi
@@ -377,7 +378,8 @@ elif [ -n "${autodetect_compiler_AS:-}" ]; then
         if [ -x /usr/bin/cygpath ]; then
           _gnu_as_compiler=$(/usr/bin/cygpath -am "$_gnu_as_compiler")
         elif [ -n "${COMSPEC:-}" ]; then
-          _gnu_as_compiler=$("$COMSPEC" //c "for %I in (\"$_gnu_as_compiler\") do @echo %~fI")
+          # mkabs.cmd is robust to spaces but since unavailable we call COMSPEC directly.
+          _gnu_as_compiler=$("$COMSPEC" //c "for %I in ($_gnu_as_compiler) do @echo %~fI")
           _gnu_as_compiler="${_gnu_as_compiler//\\//}" # replace backslashes with forward slashes
         fi
         autodetect_compiler_AS="$_gnu_as_compiler"
