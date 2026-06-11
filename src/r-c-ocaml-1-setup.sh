@@ -457,6 +457,9 @@ disambiguate_filesystem_paths
 TARGETDIR_UNIX=$(hermetic_util mkdir -p "$TARGETDIR" && cd "$TARGETDIR" && pwd) # better than cygpath: handles TARGETDIR=. without trailing slash, and works on Unix/Windows
 if [ -x /usr/bin/cygpath ]; then
     TARGETDIR_MIXED=$(/usr/bin/cygpath -am "$TARGETDIR_UNIX")
+elif [ -n "${COMSPEC:-}" ]; then
+    # ex. BusyBox-w32's sh.exe
+    TARGETDIR_MIXED="${TARGETDIR_UNIX//\\//}" # replace backslashes with forward slashes
 else
     TARGETDIR_MIXED="$TARGETDIR_UNIX"
 fi
@@ -466,6 +469,9 @@ case $HOSTSRC_SUBDIR in
 /* | ?:*) # /a/b/c or C:\Windows
     if [ -x /usr/bin/cygpath ]; then
         HOSTSRC_SUBDIR_MIXED=$(/usr/bin/cygpath -m "$HOSTSRC_SUBDIR")
+    elif [ -n "${COMSPEC:-}" ]; then
+        # ex. BusyBox-w32's sh.exe
+        HOSTSRC_SUBDIR_MIXED="${HOSTSRC_SUBDIR//\\//}" # replace backslashes with forward slashes
     else
         HOSTSRC_SUBDIR_MIXED="$HOSTSRC_SUBDIR"
     fi
@@ -482,6 +488,9 @@ case $HOST_SUBDIR in
 /* | ?:*) # /a/b/c or C:\Windows
     if [ -x /usr/bin/cygpath ]; then
         HOST_SUBDIR_MIXED=$(/usr/bin/cygpath -m "$HOST_SUBDIR")
+    elif [ -n "${COMSPEC:-}" ]; then
+        # ex. BusyBox-w32's sh.exe
+        HOST_SUBDIR_MIXED="${HOST_SUBDIR//\\//}" # replace backslashes with forward slashes
     else
         HOST_SUBDIR_MIXED="$HOST_SUBDIR"
     fi
@@ -498,6 +507,9 @@ case $CROSS_SUBDIR in
 /* | ?:*) # /a/b/c or C:\Windows
     if [ -x /usr/bin/cygpath ]; then
         CROSS_SUBDIR_MIXED=$(/usr/bin/cygpath -m "$CROSS_SUBDIR")
+    elif [ -n "${COMSPEC:-}" ]; then
+        # ex. BusyBox-w32's sh.exe
+        CROSS_SUBDIR_MIXED="${CROSS_SUBDIR//\\//}" # replace backslashes with forward slashes
     else
         CROSS_SUBDIR_MIXED="$CROSS_SUBDIR"
     fi
@@ -515,6 +527,9 @@ esac
 if [ -d "$GIT_COMMITID_TAG_OR_DIR" ]; then
     if [ -x /usr/bin/cygpath ]; then
         GIT_COMMITID_TAG_OR_DIR=$(/usr/bin/cygpath -am "$GIT_COMMITID_TAG_OR_DIR")
+    elif [ -n "${COMSPEC:-}" ]; then
+        # ex. BusyBox-w32's sh.exe
+        GIT_COMMITID_TAG_OR_DIR="${GIT_COMMITID_TAG_OR_DIR//\\//}" # replace backslashes with forward slashes
     else
         # absolute directory
         buildhost_pathize "$GIT_COMMITID_TAG_OR_DIR"
@@ -537,6 +552,10 @@ cd "$DKMLDIR"
 if [ -x /usr/bin/cygpath ]; then
     OCAMLSRC_UNIX=$(/usr/bin/cygpath -au "$TARGETDIR_UNIX/$HOSTSRC_SUBDIR")
     OCAMLSRC_MIXED=$(/usr/bin/cygpath -am "$TARGETDIR_UNIX/$HOSTSRC_SUBDIR")
+elif [ -n "${COMSPEC:-}" ]; then
+    # ex. BusyBox-w32's sh.exe
+    OCAMLSRC_UNIX="$TARGETDIR_UNIX/$HOSTSRC_SUBDIR"
+    OCAMLSRC_MIXED="${OCAMLSRC_UNIX//\\//}" # replace backslashes with forward slashes
 else
     OCAMLSRC_UNIX="$TARGETDIR_UNIX/$HOSTSRC_SUBDIR"
     OCAMLSRC_MIXED="$OCAMLSRC_UNIX"

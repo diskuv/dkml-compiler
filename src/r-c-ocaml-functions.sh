@@ -211,7 +211,13 @@ ocaml_configure_windows() {
       ;;
   esac
 
-  ocaml_configure_windows_WINPREFIX=$(printf "%s\n" "${ocaml_configure_windows_PREFIX}" | /usr/bin/cygpath -f - -m)
+  # convert ocaml_configure_windows_WINPREFIX to mixed path
+  if [ -x /usr/bin/cygpath ]; then
+    ocaml_configure_windows_WINPREFIX=$(printf "%s\n" "${ocaml_configure_windows_PREFIX}" | /usr/bin/cygpath -f - -m)
+  else
+    # ex. BusyBox-w32. replace backslashes with forward slashes to get mixed mode.
+    ocaml_configure_windows_WINPREFIX="${ocaml_configure_windows_PREFIX//\\//}"
+  fi
 
   # With MSYS2
   # * it is quite possible to have INCLUDE and Include in the same environment. Opam seems to use camel case, which
@@ -439,6 +445,10 @@ init_hostvars() {
     # not understand Unix paths (but give you _no_ warning that something is wrong)
     HOST_DIRSEP=\\
     init_hostvars_ENV_MIXED=$(/usr/bin/cygpath -am "$init_hostvars_ENV_MIXED")
+  elif [ -n "${COMSPEC:-}" ]; then
+    # ex. BusyBox-w32. replace backslashes with forward slashes to get mixed mode
+    HOST_DIRSEP=\\
+    init_hostvars_ENV_MIXED="${init_hostvars_ENV_MIXED//\\//}"     
   else
     HOST_DIRSEP=/
   fi
@@ -498,7 +508,17 @@ init_hostvars() {
     #   change to a directory without spaces.
     init_hostvars_ENV=$(/usr/bin/cygpath -am "$OCAMLSRC_MIXED/support/env.exe")
     hermetic_util mkdir -p "$OCAMLSRC_MIXED/support"
-    hermetic_util install "$DKMLSYS_ENV" "$init_hostvars_ENV"
+    hermetic_util cp -p "$DKMLSYS_ENV" "$init_hostvars_ENV"
+    export HOST_SPACELESS_ENV_MIXED_EXE="$init_hostvars_ENV"
+    if printf "%s" "$HOST_SPACELESS_ENV_MIXED_EXE" | hermetic_util grep -q '[[:space:]]'; then
+      printf "FATAL: %s lives in a location with whitespace. Change the build directory!\n" "$HOST_SPACELESS_ENV_MIXED_EXE" >&2
+      exit 107
+    fi
+  elif [ -n "${COMSPEC:-}" ] && [ -n "${DK_UNIX_COREUTILS:-}" ]; then
+    # ex. BusyBox-w32. Copy coreutils.exe as env.exe so it behaves lit it.
+    init_hostvars_ENV="$OCAMLSRC_MIXED/support/env.exe"
+    hermetic_util mkdir -p "$OCAMLSRC_MIXED/support"
+    hermetic_util cp -p "$DK_UNIX_COREUTILS" "$init_hostvars_ENV"
     export HOST_SPACELESS_ENV_MIXED_EXE="$init_hostvars_ENV"
     if printf "%s" "$HOST_SPACELESS_ENV_MIXED_EXE" | hermetic_util grep -q '[[:space:]]'; then
       printf "FATAL: %s lives in a location with whitespace. Change the build directory!\n" "$HOST_SPACELESS_ENV_MIXED_EXE" >&2

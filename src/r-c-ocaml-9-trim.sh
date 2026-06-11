@@ -104,6 +104,12 @@ if [ -x /usr/bin/cygpath ]; then
     # Makefiles have very poor support for Windows paths, so use mixed (ex. C:/Windows) paths
     OCAMLSRC_MIXED=$(/usr/bin/cygpath -am "$TARGETDIR_UNIX/$HOSTSRC_SUBDIR")
     CROSSSRC_MIXED=$(/usr/bin/cygpath -am "$TARGETDIR_UNIX/$CROSS_SUBDIR")
+elif [ -n "${COMSPEC:-}" ]; then
+    # ex. BusyBox-w32's sh.exe
+    OCAMLSRC_MIXED="$TARGETDIR_UNIX/$HOSTSRC_SUBDIR"
+    CROSSSRC_MIXED="$TARGETDIR_UNIX/$CROSS_SUBDIR"
+    OCAMLSRC_MIXED="${OCAMLSRC_MIXED//\\//}" # replace backslashes with forward slashes
+    CROSSSRC_MIXED="${CROSSSRC_MIXED//\\//}" # replace backslashes with forward slashes
 else
     OCAMLSRC_MIXED="$TARGETDIR_UNIX/$HOSTSRC_SUBDIR"
     CROSSSRC_MIXED="$TARGETDIR_UNIX/$CROSS_SUBDIR"

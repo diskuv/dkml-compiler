@@ -163,6 +163,12 @@ if [ -x /usr/bin/cygpath ]; then
     OCAMLSRC_HOST=$(/usr/bin/cygpath -aw "$TARGETDIR_UNIX/$HOSTSRC_SUBDIR")
     # Makefiles have very poor support for Windows paths, so use mixed (ex. C:/Windows) paths
     OCAMLSRC_MIXED=$(/usr/bin/cygpath -am "$TARGETDIR_UNIX/$HOSTSRC_SUBDIR")
+elif [ -n "${COMSPEC:-}" ]; then
+    # ex. BusyBox-w32's sh.exe
+    OCAMLSRC_UNIX="$TARGETDIR_UNIX/$HOSTSRC_SUBDIR"
+    OCAMLSRC_HOST="${OCAMLSRC_UNIX//\//\\}" # replace forward slashes with backslashes
+    OCAMLSRC_MIXED="${OCAMLSRC_UNIX//\\//}" # replace backslashes with forward slashes
+    OCAMLSRC_UNIX="$OCAMLSRC_MIXED"
 else
     OCAMLSRC_UNIX="$TARGETDIR_UNIX/$HOSTSRC_SUBDIR"
     OCAMLSRC_HOST="$TARGETDIR_UNIX/$HOSTSRC_SUBDIR"

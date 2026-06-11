@@ -226,6 +226,10 @@ compiler_clear_environment
 if [ -x /usr/bin/cygpath ]; then
   # Makefiles have very poor support for Windows paths, so use mixed (ex. C:/Windows) paths
   OCAMLSRC_MIXED=$(/usr/bin/cygpath -am "$TARGETDIR_UNIX/$HOSTSRC_SUBDIR")
+elif [ -n "${COMSPEC:-}" ]; then
+  # ex. BusyBox-w32's sh.exe
+  OCAMLSRC_MIXED="${TARGETDIR_UNIX}/${HOSTSRC_SUBDIR}"
+  OCAMLSRC_MIXED="${OCAMLSRC_MIXED//\\//}" # replace backslashes with forward slashes
 else
   OCAMLSRC_MIXED="$TARGETDIR_UNIX/$HOSTSRC_SUBDIR"
 fi
@@ -321,6 +325,10 @@ build_world() {
   if [ -x /usr/bin/cygpath ]; then
     build_world_PREFIX=$(/usr/bin/cygpath -am "$build_world_PREFIX")
     build_world_BUILD_ROOT=$(/usr/bin/cygpath -am "$build_world_BUILD_ROOT")
+  elif [ -n "${COMSPEC:-}" ]; then
+    # ex. BusyBox-w32's sh.exe
+    build_world_PREFIX="${build_world_PREFIX//\\//}" # replace backslashes with forward slashes
+    build_world_BUILD_ROOT="${build_world_BUILD_ROOT//\\//}" # replace backslashes with forward slashes
   fi
 
   case "$build_world_TARGET_ABI" in
@@ -650,6 +658,14 @@ add_findlib_conf() {
         bin_buildhost=$(/usr/bin/cygpath -aw "$bin_buildhost")
         lib_buildhost=$(/usr/bin/cygpath -aw "$lib_buildhost")
         sysroot_lib_buildhost=$(/usr/bin/cygpath -aw "$sysroot_lib_buildhost")
+        _dirsep="\\\\"
+        _exe=".exe"
+        _findsep=";"
+    elif [ -n "${COMSPEC:-}" ]; then
+        # ex. BusyBox-w32's sh.exe
+        bin_buildhost="${bin_buildhost//\//\\}" # replace forward slashes with backslashes
+        lib_buildhost="${lib_buildhost//\//\\}" # replace forward slashes with backslashes
+        sysroot_lib_buildhost="${sysroot_lib_buildhost//\//\\}" # replace forward slashes with backslashes
         _dirsep="\\\\"
         _exe=".exe"
         _findsep=";"
