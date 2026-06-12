@@ -128,18 +128,21 @@ ocaml_make_real() {
       # Set MSVS_*
       detect_msvs "$ocaml_make_ABI"
 
-      # With MSYS2
-      # * it is quite possible to have INCLUDE and Include in the same environment. Opam seems to use camel case, which
+      # With MSYS2 ...
+      # - it is quite possible to have INCLUDE and Include in the same environment. Opam seems to use camel case, which
       #   is probably fine in Cygwin.
-      # * Windows needs IFLEXDIR=-I../flexdll makefile variable or else a prior system OCaml (or a prior OCaml in the PATH) can
+      # - Windows needs IFLEXDIR=-I../flexdll makefile variable or else a prior system OCaml (or a prior OCaml in the PATH) can
       #   cause IFLEXDIR=..../ocaml/bin which will can hard-to-reproduce failures (missing flexdll.h, etc.).
+      #
+      # With native Windows make ...
+      # - The SHELL, if unset, defaults to cmd.exe. We need the POSIX shell.
       if ! log_trace --return-error-code env --unset=LIB --unset=INCLUDE --unset=PATH --unset=Lib --unset=Include --unset=Path \
         PATH="$MSVS_PATH$DKML_SYSTEM_PATH" \
         LIB="$MSVS_LIB;${LIB:-}" \
         INCLUDE="$MSVS_INC;${INCLUDE:-}" \
         MSYS2_ARG_CONV_EXCL='*' \
         OCAMLPARAM="$ocaml_make_OCAMLPARAM" \
-        "${MAKE:-make}" "$@" IFLEXDIR=-I../flexdll;
+        "${MAKE:-make}" "$@" "SHELL=$DKML_POSIX_SHELL" IFLEXDIR=-I../flexdll;
       then
         printf 'FATAL: %s %s failed\n' "${MAKE:-make}" "$*" >&2
         dump_logs_on_error
