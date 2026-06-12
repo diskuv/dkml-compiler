@@ -137,7 +137,7 @@ ocaml_make_real() {
       # With native Windows make ...
       # - The SHELL, if unset, defaults to cmd.exe. We need the POSIX shell.
       if ! log_trace --return-error-code env --unset=LIB --unset=INCLUDE --unset=PATH --unset=Lib --unset=Include --unset=Path \
-        PATH="$MSVS_PATH$DKML_SYSTEM_PATH" \
+        PATH="$MSVS_PATH$DKML_SYSTEM_PATH_WIN32" \
         LIB="$MSVS_LIB;${LIB:-}" \
         INCLUDE="$MSVS_INC;${INCLUDE:-}" \
         MSYS2_ARG_CONV_EXCL='*' \
@@ -150,7 +150,7 @@ ocaml_make_real() {
       fi
   else
     if ! log_trace --return-error-code env \
-      PATH="$DKML_SYSTEM_PATH" \
+      PATH="$DKML_SYSTEM_PATH_UNIX" \
       OCAMLPARAM="$ocaml_make_OCAMLPARAM" \
       "${MAKE:-make}" "$@";
     then
@@ -233,7 +233,7 @@ ocaml_configure_windows() {
   # shellcheck disable=SC2086
   configure_environment_for_ocaml "$ocaml_configure_windows_WITH_COMPILER" \
     --unset=LIB --unset=INCLUDE --unset=PATH --unset=Lib --unset=Include --unset=Path \
-    PATH="${MSVS_PATH}$DKML_SYSTEM_PATH" \
+    PATH="${MSVS_PATH}$DKML_SYSTEM_PATH_WIN32" \
     LIB="${MSVS_LIB}${LIB:-}" \
     INCLUDE="${MSVS_INC}${INCLUDE:-}" \
     MSYS2_ARG_CONV_EXCL='*' \
