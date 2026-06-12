@@ -222,7 +222,19 @@ ocaml_configure_windows() {
     ocaml_configure_windows_WINPREFIX="${ocaml_configure_windows_PREFIX//\\//}"
   fi
 
-  # With MSYS2
+  # Make a variant of MSVS_PATH that ends with the correct path separator.
+  # The implicit spec for MSVS_PATH from msvs-tools requires that it always ends with colon.
+  MSVS_PATH_INLINE="${MSVS_PATH}"
+  MSVS_PATH_INLINE="${MSVS_PATH_INLINE%:}"
+  MSVS_PATH_INLINE="${MSVS_PATH_INLINE%;}"
+  if [ -x /usr/bin/cygpath ]; then
+    MSVS_PATH_INLINE="${MSVS_PATH_INLINE}:"
+  else
+    # Strip the trailing colon and replace with semicolon
+    MSVS_PATH_INLINE="${MSVS_PATH_INLINE};"
+  fi
+
+  # With MSYS2 ...
   # * it is quite possible to have INCLUDE and Include in the same environment. Opam seems to use camel case, which
   #   is probably fine in Cygwin.
   # * ordinarily you don't need to set DEP_CC, LD, etc. which are auto-discovered by ./configure. However, if gcc
@@ -233,7 +245,7 @@ ocaml_configure_windows() {
   # shellcheck disable=SC2086
   configure_environment_for_ocaml "$ocaml_configure_windows_WITH_COMPILER" \
     --unset=LIB --unset=INCLUDE --unset=PATH --unset=Lib --unset=Include --unset=Path \
-    PATH="${MSVS_PATH}$DKML_SYSTEM_PATH_WIN32" \
+    PATH="${MSVS_PATH_INLINE}$DKML_SYSTEM_PATH_WIN32" \
     LIB="${MSVS_LIB}${LIB:-}" \
     INCLUDE="${MSVS_INC}${INCLUDE:-}" \
     MSYS2_ARG_CONV_EXCL='*' \
