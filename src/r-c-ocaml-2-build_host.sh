@@ -271,7 +271,7 @@ print_makefile_config_extensions "$SANITIZE_ADDRESS" "$SANITIZE_LEAK" >> Makefil
 
 # Skip bootstrapping if ocamlc.opt is present
 if [ -n "$OCAMLC_OPT_EXE" ]; then
-    hermetic_util install "$OCAMLC_OPT_EXE" "boot/ocamlc.opt$host_ext"
+    hermetic_util cp -p -T "$OCAMLC_OPT_EXE" "boot/ocamlc.opt$host_ext"
 fi
 
 # Capture SAK_ variables for use in cross-compiler.
@@ -577,8 +577,8 @@ esac
 #    It is in the build directory boot/.
 #    Confer: https://github.com/ocaml/flexdll/blob/f5ccd9730d0766d0eb002cbe35a183f627044291/reloc.ml#L1407-L1428
 if [ "$BYTECODEONLY" = OFF ] && [ -n "$FLEXLINK_CHAIN" ]; then
-    hermetic_util install "boot/flexdll_initer_${FLEXLINK_CHAIN}${FLEXLINK_EXT}"   "$OCAMLHOST_UNIX"/bin/
-    hermetic_util install "boot/flexdll_${FLEXLINK_CHAIN}${FLEXLINK_EXT}"          "$OCAMLHOST_UNIX"/bin/
+    hermetic_util cp -p -t "$OCAMLHOST_UNIX"/bin/ "boot/flexdll_initer_${FLEXLINK_CHAIN}${FLEXLINK_EXT}"
+    hermetic_util cp -p -t "$OCAMLHOST_UNIX"/bin/ "boot/flexdll_${FLEXLINK_CHAIN}${FLEXLINK_EXT}"
 fi
 
 # Test executables that they were properly linked

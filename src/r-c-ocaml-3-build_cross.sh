@@ -369,7 +369,7 @@ build_world() {
     "$build_world_BUILD_ROOT"/support/with-target-c-compiler.sh
   #   To save a lot of troubleshooting time, we'll dump details
   hermetic_util mkdir -p "$build_world_PREFIX/share/dkml/detect"
-  hermetic_util install "$build_world_POSTTRANSFORM" "$build_world_PREFIX/share/dkml/detect/post-transform.sh"
+  hermetic_util cp -p -T "$build_world_POSTTRANSFORM" "$build_world_PREFIX/share/dkml/detect/post-transform.sh"
 
   # Target wrappers
   if [ "$BYTECODEONLY" = OFF ]; then
@@ -586,19 +586,19 @@ build_world() {
   ## Install
   hermetic_util chmod -R ug+w    stdlib/ # Restore file permissions
   hermetic_util mkdir -p "$build_world_PREFIX/bin" "$build_world_PREFIX/lib/ocaml"
-  hermetic_util install -v "runtime/ocamlrun$build_world_TARGET_EXE_EXT" "$build_world_PREFIX/bin/"
+  hermetic_util cp -p -t "$build_world_PREFIX/bin/" "runtime/ocamlrun$build_world_TARGET_EXE_EXT"
   log_trace make_host -final            install
   log_trace make_host -final            -C debugger install
 
   # Some binaries may not be compiled (depends on the version), and should just be
   # the host standard binaries.
   if [ -x "$OCAMLSRC_MIXED/runtime/ocamlrund$build_world_TARGET_EXE_EXT" ]; then
-    hermetic_util install -v "$OCAMLSRC_MIXED/runtime/ocamlrund$build_world_TARGET_EXE_EXT" "$build_world_PREFIX/bin/"
+    hermetic_util cp -p -t "$build_world_PREFIX/bin/" "$OCAMLSRC_MIXED/runtime/ocamlrund$build_world_TARGET_EXE_EXT"
   fi
   if [ -x "$OCAMLSRC_MIXED/runtime/ocamlruni$build_world_TARGET_EXE_EXT" ]; then
-    hermetic_util install -v "$OCAMLSRC_MIXED/runtime/ocamlruni$build_world_TARGET_EXE_EXT" "$build_world_PREFIX/bin/"
+    hermetic_util cp -p -t "$build_world_PREFIX/bin/" "$OCAMLSRC_MIXED/runtime/ocamlruni$build_world_TARGET_EXE_EXT"
   fi
-  hermetic_util install -v "$OCAMLSRC_MIXED/yacc/ocamlyacc$build_world_TARGET_EXE_EXT" "$build_world_PREFIX/bin/"
+  hermetic_util cp -p -t "$build_world_PREFIX/bin/" "$OCAMLSRC_MIXED/yacc/ocamlyacc$build_world_TARGET_EXE_EXT"
 
   # Cross-compilation of [dkml-component-staging-opam64] broke when opam upgraded to [dose3.7.0.0]:
   #   File "src_ext/dose3/src/common/dune", line 16, characters 0-255:
@@ -619,7 +619,7 @@ build_world() {
   # location of the host compiler. Compiling it with the host compiler is not enough ...
   # the ocaml executable will still be hardcoded to use the stdlib of `mlcross/darwin_arm64`.
   # Just re-use the host standard ocaml.
-  hermetic_util install -v "$OCAMLSRC_MIXED/ocaml$build_world_TARGET_EXE_EXT" "$build_world_PREFIX/bin/"
+  hermetic_util cp -p -t "$build_world_PREFIX/bin/" "$OCAMLSRC_MIXED/ocaml$build_world_TARGET_EXE_EXT"
 }
 
 add_text() {
