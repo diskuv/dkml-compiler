@@ -193,6 +193,35 @@ export_safe_tmpdir
 
 compiler_clear_environment
 
+# Set FLEXDIR to the build-tree flexdll directory so immune to
+# search directory ordering or the current directory.
+if [ -n "${COMSPEC:-}" ] && [ -n "$OCAMLSRC_MIXED" ]; then
+    FLEXDIR="$OCAMLSRC_MIXED/flexdll"
+    export FLEXDIR
+fi
+
+# On Windows the relocatable host compiler is configured so that the generated
+# Makefile.config has an empty `prefix=` (confer config.status `S["prefix"]=""`),
+# which makes BINDIR=/bin and LIBDIR=/lib/ocaml. But `make install` must still
+# physically place the artifacts under the host output directory
+# ($OCAMLHOST_UNIX). Stage the install there with DESTDIR; otherwise
+# `make install` writes to a literal /bin and /lib/ocaml and $OCAMLHOST_UNIX/bin
+# is left empty. The Unix host builds use a non-empty prefix and would double prefix
+# if DESTDIR were set.
+if [ -n "${COMSPEC:-}" ] && [ -n "$OCAMLHOST_UNIX" ]; then
+    DESTDIR="$OCAMLHOST_UNIX"
+    export DESTDIR
+fi
+
+# Bake a *relative* standard_library_default so the runtime relocates the stdlib
+# relative to the executable. HOST_LIBDIR set only the
+# -set-runtime-default standard_library_default value (Makefile.common), not the
+# install paths.
+if [ -n "${COMSPEC:-}" ]; then
+    HOST_LIBDIR="../lib/ocaml"
+    export HOST_LIBDIR
+fi
+
 if [ -n "$HOSTABISCRIPT" ]; then
     case "$HOSTABISCRIPT" in
     /* | ?:*) # /a/b/c or C:\Windows
