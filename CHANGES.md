@@ -28,6 +28,11 @@
 * Remove `-O0` from `/usr/bin/as` when `dkml-option-debuginfo` is present since `GNU as 2.30` does not support it.
 * Add -B option to only build bytecode to r-c-ocaml-1-setup.sh
 * Add -X option to build the `bx32` ABI which compiles 32-bit OCaml on 64-bit C words
+* Fix a `make coreall -j4` parallel race where `bytecomp/byterntm.cmi` could be
+  compiled before `utils/misc.cmi` (`Error: Unbound module Misc`) because the
+  relocatable-backport `byterntm` module is absent from the committed `.depend`,
+  so `ocamldep` never recorded its dependency on `Misc.RuntimeID`. The
+  `b11-byterntmdeps` patch now declares the missing `Makefile` dependencies.
 
 ## 2.1.3
 

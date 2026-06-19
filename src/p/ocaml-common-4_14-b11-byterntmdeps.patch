@@ -2,11 +2,13 @@ diff --git a/Makefile b/Makefile
 index 0549dc3..2099619 100644
 --- a/Makefile
 +++ b/Makefile
-@@ -693,6 +693,8 @@ partialclean::
+@@ -693,6 +693,10 @@ partialclean::
  
  beforedepend:: bytecomp/byterntm.ml parsing/lexer.ml
  
-+bytecomp/byterntm.cmo bytecomp/byterntm.cmx: bytecomp/byterntm.cmi
++bytecomp/byterntm.cmi: utils/misc.cmi
++bytecomp/byterntm.cmo: bytecomp/byterntm.cmi bytecomp/bytesections.cmi utils/misc.cmi
++bytecomp/byterntm.cmx: bytecomp/byterntm.cmi bytecomp/bytesections.cmx utils/misc.cmx
 +
  # The bytecode compiler compiled with the native-code compiler
  
