@@ -269,6 +269,7 @@ $DKMLSYS_INSTALL "$HOSTABISCRIPT" "$OCAMLHOST_UNIX/share/dkml/detect/post-transf
 
 # ./configure
 # Output: OCAML_CONFIGURE_NEEDS_MAKE_FLEXDLL
+CONFIGUREARGS="$CONFIGUREARGS --disable-ocamltest"
 if [ "$RUNTIMEONLY" = ON ]; then
     CONFIGUREARGS="$CONFIGUREARGS --disable-native-compiler --disable-stdlib-manpages --disable-ocamldoc"
 elif [ "$BYTECODEONLY" = ON ]; then

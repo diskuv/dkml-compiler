@@ -33,6 +33,9 @@
   relocatable-backport `byterntm` module is absent from the committed `.depend`,
   so `ocamldep` never recorded its dependency on `Misc.RuntimeID`. The
   `b11-byterntmdeps` patch now declares the missing `Makefile` dependencies.
+* Pass `--disable-ocamltest` to the OCaml `./configure` in
+  `r-c-ocaml-2-build_host.sh` and `r-c-ocaml-3-build_cross.sh` so `make all` no
+  longer builds the `ocamltest` harness.
 
 ## 2.1.3
 

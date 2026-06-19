@@ -420,7 +420,7 @@ build_world() {
   # ./configure
   log_trace ocaml_configure "$build_world_PREFIX" "$build_world_TARGET_ABI" \
     "$build_world_BUILD_ROOT"/support/with-target-c-compiler.sh "$OCAML_HOST_TRIPLET" "$DKML_TARGET_SYSROOT" \
-    "--host=$build_world_HOST_TRIPLET $CONFIGUREARGS --disable-ocamldoc"
+    "--host=$build_world_HOST_TRIPLET $CONFIGUREARGS --disable-ocamldoc --disable-ocamltest"
 
   # Extend m.h
   if [ "$BYTECODEONLY" = ON ] && [ "$BX32" = ON ]; then
