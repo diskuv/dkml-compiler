@@ -140,7 +140,7 @@ while getopts ":s:d:t:a:BXn:e:f:g:l:wALh" opt; do
       usage
       exit 1
     fi
-    DKMLDIR=$(cd "$DKMLDIR" && hermetic_util pwd) # absolute path
+    DKMLDIR=$(cd "$DKMLDIR" && pwd) # absolute path
     ;;
   t)
     TARGETDIR="$OPTARG"

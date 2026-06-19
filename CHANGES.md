@@ -36,6 +36,10 @@
 * Pass `--disable-ocamltest` to the OCaml `./configure` in
   `r-c-ocaml-2-build_host.sh` and `r-c-ocaml-3-build_cross.sh` so `make all` no
   longer builds the `ocamltest` harness.
+* Fix `r-c-ocaml-3-build_cross.sh` argument parsing computing `DKMLDIR` with
+  `hermetic_util pwd` before `r-c-ocaml-functions.sh` is sourced, which aborted
+  the cross build with `hermetic_util: command not found`; use plain `pwd` as in
+  the host and trim scripts.
 
 ## 2.1.3
 
