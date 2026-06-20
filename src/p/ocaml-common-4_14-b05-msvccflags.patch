@@ -13,9 +13,9 @@ index bfa4b50..4017464 100644
    msvc-*) :
 -    common_cflags="-nologo -O2 -Gy- -MD $cc_warnings"
 +    if [ -n "${CFLAGS_MSVC}" ]; then
-+      common_cflags="-nologo -Gy- ${CFLAGS_MSVC} $cc_warnings"
++      common_cflags="-nologo -Gy- ${CFLAGS_MSVC} $cc_warnings -wd5287"
 +    else
-+      common_cflags="-nologo -O2 -Gy- -MD $cc_warnings"
++      common_cflags="-nologo -O2 -Gy- -MD $cc_warnings -wd5287"
 +    fi
        common_cppflags="-D_CRT_SECURE_NO_DEPRECATE"
        internal_cppflags='-DUNICODE -D_UNICODE'

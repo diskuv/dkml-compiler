@@ -40,6 +40,11 @@
   `hermetic_util pwd` before `r-c-ocaml-functions.sh` is sourced, which aborted
   the cross build with `hermetic_util: command not found`; use plain `pwd` as in
   the host and trim scripts.
+* Append `-wd5287` to the MSVC `common_cflags` in the `b05-msvccflags` patch so
+  newer MSVC (ex. `cl` 14.44) does not abort `make coldstart` when warning C5287
+  ("operands are different enum types") in frozen OCaml 4.14.3 source such as
+  `bigarray.c` is promoted to an error by `-WX`. Only C5287 is demoted; `-WX`
+  still applies to every other warning.
 
 ## 2.1.3
 
