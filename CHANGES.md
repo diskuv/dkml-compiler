@@ -45,12 +45,14 @@
   ("operands are different enum types") in frozen OCaml 4.14.3 source such as
   `bigarray.c` is promoted to an error by `-WX`. Only C5287 is demoted; `-WX`
   still applies to every other warning.
-* Fix the Windows relocatable host build on Cygwin/MSYS2 configuring `./configure`
-  with a non-empty `--prefix` (ex. `C:/o/dkml/`) while
-  `r-c-ocaml-2-build_host.sh` staged `make install` with a POSIX
-  `DESTDIR=$OCAMLHOST_UNIX`. Now `$(DESTDIR)$(BINDIR)` is not mangled into
-  `/c/o/dkml/.C:/o/dkml/bin` and `flexlink.exe` (etc.) are not installed to a
-  bogus directory.
+* Fix the Windows relocatable host `make install` on Cygwin/MSYS2 by removing the
+  `DESTDIR=$OCAMLHOST_UNIX` staging in `r-c-ocaml-2-build_host.sh` and installing
+  directly to the non-empty `--prefix` ($OCAMLHOST_UNIX, ex. `C:/o/dkml`). The
+  relocatable `./configure` always normalises `--prefix` to a Windows-absolute
+  path (so `BINDIR=C:/.../bin`, never `/bin`), and the POSIX `DESTDIR` made
+  `$(DESTDIR)$(BINDIR)` mangle into `/c/o/dkml/.C:/o/dkml/bin`, so `flexlink.exe`
+  (etc.) installed to a bogus directory. Relocation is unaffected: it comes from
+  the relative `HOST_LIBDIR` (`standard_library_default`), not `DESTDIR`.
 
 ## 2.1.3
 

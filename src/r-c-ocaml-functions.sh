@@ -216,14 +216,9 @@ ocaml_configure_windows() {
 
   # convert ocaml_configure_windows_WINPREFIX to mixed path
   if [ -x /usr/bin/cygpath ]; then
-    # Cygwin/MSYS2: use an empty prefix so the relocatable host build's
-    # Makefile.config has BINDIR=/bin, LIBDIR=/lib/ocaml, etc.
-    # An empty prefix is the conventional (Cygwin) way to get relocatable
-    # OCaml on Windows.
-    ocaml_configure_windows_WINPREFIX=""
+    ocaml_configure_windows_WINPREFIX=$(printf "%s\n" "${ocaml_configure_windows_PREFIX}" | /usr/bin/cygpath -f - -m)
   else
-    # ex. BusyBox-w32. replace backslashes with forward slashes to get mixed
-    # mode. BusyBox-w32 keeps the non-empty prefix (existing, tested behavior).
+    # ex. BusyBox-w32. replace backslashes with forward slashes to get mixed mode.
     ocaml_configure_windows_WINPREFIX="${ocaml_configure_windows_PREFIX//\\//}"
   fi
 
