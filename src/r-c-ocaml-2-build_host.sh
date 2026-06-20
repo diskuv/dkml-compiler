@@ -286,6 +286,18 @@ fi
 # Extend Makefile.config
 print_makefile_config_extensions "$SANITIZE_ADDRESS" "$SANITIZE_LEAK" >> Makefile.config
 
+# Install into DESTDIR for Windows, but only if the relocatable host build
+# emptied the prefix.
+if [ -n "${COMSPEC:-}" ] && [ -n "$OCAMLHOST_UNIX" ]; then
+    ocaml_host_configured_prefix=$($DKMLSYS_AWK 'BEGIN{FS="="} $1=="prefix"{print $2}' Makefile.config)
+    case "$ocaml_host_configured_prefix" in
+        '' | '/')
+            DESTDIR="$OCAMLHOST_UNIX"
+            export DESTDIR
+            ;;
+    esac
+fi
+
 # Skip bootstrapping if ocamlc.opt is present
 if [ -n "$OCAMLC_OPT_EXE" ]; then
     hermetic_util cp -p "$OCAMLC_OPT_EXE" "boot/ocamlc.opt$host_ext"
