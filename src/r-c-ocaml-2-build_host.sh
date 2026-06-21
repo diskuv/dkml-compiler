@@ -298,6 +298,14 @@ if [ -n "${COMSPEC:-}" ] && [ -n "$OCAMLHOST_UNIX" ]; then
     esac
 fi
 
+# Keep -WX (warnings-as-errors) for OCaml's own build (OC_CFLAGS) but strip it
+# from the exported OCAMLC_CFLAGS/OCAMLOPT_CFLAGS.
+if [ -n "${COMSPEC:-}" ]; then
+    $DKMLSYS_SED -e '/^OCAMLC_CFLAGS=/ s/ *-WX//g' -e '/^OCAMLOPT_CFLAGS=/ s/ *-WX//g' \
+        Makefile.config > Makefile.config.dkml_nowx
+    hermetic_util mv Makefile.config.dkml_nowx Makefile.config
+fi
+
 # Skip bootstrapping if ocamlc.opt is present
 if [ -n "$OCAMLC_OPT_EXE" ]; then
     hermetic_util cp -p "$OCAMLC_OPT_EXE" "boot/ocamlc.opt$host_ext"

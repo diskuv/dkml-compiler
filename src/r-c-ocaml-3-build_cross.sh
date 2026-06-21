@@ -432,6 +432,14 @@ build_world() {
   # Extend Makefile.config
   print_makefile_config_extensions "$SANITIZE_ADDRESS" "$SANITIZE_LEAK" >> Makefile.config
 
+  # Keep -WX (warnings-as-errors) for OCaml's own build (OC_CFLAGS) but strip it
+  # from the exported OCAMLC_CFLAGS/OCAMLOPT_CFLAGS.
+  if [ -n "${COMSPEC:-}" ]; then
+    $DKMLSYS_SED -e '/^OCAMLC_CFLAGS=/ s/ *-WX//g' -e '/^OCAMLOPT_CFLAGS=/ s/ *-WX//g' \
+        Makefile.config > Makefile.config.dkml_nowx
+    hermetic_util mv Makefile.config.dkml_nowx Makefile.config
+  fi
+
   # Build
   # -----
 

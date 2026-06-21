@@ -47,6 +47,8 @@
   still applies to every other warning.
 * Fix the Windows host `make install` in `r-c-ocaml-2-build_host.sh` by setting
   `DESTDIR=$OCAMLHOST_UNIX` only when the configured `prefix` is empty.
+* Strip `-WX` (warnings-as-errors) from the exported `OCAMLC_CFLAGS`/
+  `OCAMLOPT_CFLAGS`. MSVC only.
 
 ## 2.1.3
 
