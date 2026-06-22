@@ -49,6 +49,8 @@
   `DESTDIR=$OCAMLHOST_UNIX` only when the configured `prefix` is empty.
 * Strip `-WX` (warnings-as-errors) from the exported `OCAMLC_CFLAGS`/
   `OCAMLOPT_CFLAGS`. MSVC only.
+* Add `-arch` to the OCaml assembler flags (`ASFLAGS`) for non-CMake Darwin
+  builds in `standard-compiler-env-to-ocaml-configure-env.sh`.
 
 ## 2.1.3
 

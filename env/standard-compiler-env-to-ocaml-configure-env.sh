@@ -286,6 +286,13 @@ elif [ -n "${autodetect_compiler_AS:-}" ]; then
       darwin_arm64,AppleClang|darwin_arm64,Clang)   autodetect_compiler_ASFLAGS="-arch arm64${autodetect_compiler_ASFLAGS:+ $autodetect_compiler_ASFLAGS}" ;;
       darwin_x86_64,AppleClang|darwin_x86_64,Clang) autodetect_compiler_ASFLAGS="-arch x86_64${autodetect_compiler_ASFLAGS:+ $autodetect_compiler_ASFLAGS}" ;;
     esac
+  else
+    # Mirror the non-CM CC `-arch` handling above: the assembler (AS, used for
+    # OCaml-generated .s) also needs `-arch` on Darwin.
+    case "$DKML_TARGET_ABI" in # Assume Clang compiler
+      darwin_arm64)  autodetect_compiler_ASFLAGS="-arch arm64${autodetect_compiler_ASFLAGS:+ $autodetect_compiler_ASFLAGS}" ;;
+      darwin_x86_64) autodetect_compiler_ASFLAGS="-arch x86_64${autodetect_compiler_ASFLAGS:+ $autodetect_compiler_ASFLAGS}" ;;
+    esac
   fi
 
   # By default ASPP is the same as AS. But since ASPP involves preprocessing and many assemblers do not include
