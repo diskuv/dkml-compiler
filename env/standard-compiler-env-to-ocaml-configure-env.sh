@@ -88,6 +88,17 @@ DEFAULT_AS=
 if [ -z "${autodetect_compiler_AS:-}" ]; then
   autodetect_compiler_AS="$DEFAULT_AS"
 fi
+# OCaml writes the assembler verbatim into config.ml and its runtime Makefile
+# runs it through make's direct CreateProcess (no shell), which cannot tolerate
+# spaces in a Visual Studio path such as "C:/Program Files/Microsoft Visual
+# Studio/...". Unlike the C compiler (invoked through the shell), the MASM
+# assembler must be a bare command resolved through the compiler PATH, so reduce
+# an absolute ml/ml64 to its basename. msvs-detect and CMake both report the
+# path with forward slashes.
+autodetect_compiler_AS_basename=${autodetect_compiler_AS##*/}
+case "$autodetect_compiler_AS_basename" in
+  ml.exe|ml64.exe|ml|ml64) autodetect_compiler_AS=$autodetect_compiler_AS_basename ;;
+esac
 INJECT_ASFLAGS=
 autodetect_compiler_ASFLAGS="$INJECT_ASFLAGS${autodetect_compiler_ASFLAGS:+ $autodetect_compiler_ASFLAGS}"
 
@@ -269,19 +280,13 @@ if cmake_flag_on "${DKML_COMPILE_CM_MSVC:-}"; then
     else
       _MLARG_EXTRA=
     fi
-    autodetect_compiler_AS=${DKML_COMPILE_CM_CMAKE_ASM_MASM_COMPILER}
-    # CMAKE_ASM_MASM_COMPILER is assigned after the general DOS 8.3 shortening
-    # near the top of this script, so shorten it here as well. OCaml writes AS
-    # verbatim into config.ml and its runtime Makefile runs the assembler
-    # through make's direct CreateProcess, which cannot parse a Visual Studio
-    # path that contains spaces such as "C:/Program Files/Microsoft Visual
-    # Studio/...".
-    if [ -x /usr/bin/cygpath ] && [ -x "$autodetect_compiler_AS" ]; then
-      autodetect_compiler_AS=$(/usr/bin/cygpath -ad "$autodetect_compiler_AS" | sed 's#\\#/#g')
-    elif [ -n "${COMSPEC:-}" ] && [ -x "$autodetect_compiler_AS" ]; then
-      autodetect_compiler_AS=$("$COMSPEC" /c "for %I in (\"$autodetect_compiler_AS\") do @echo %~sfI")
-      autodetect_compiler_AS="${autodetect_compiler_AS//\\//}" # replace backslashes with forward slashes
-    fi
+    # Use the basename of the MASM assembler (ml/ml64) rather than its full
+    # path. OCaml writes the assembler verbatim into config.ml and its runtime
+    # Makefile runs it through make's direct CreateProcess (no shell), which
+    # cannot tolerate spaces in a Visual Studio path such as
+    # "C:/Program Files/Microsoft Visual Studio/...". The MSVC bin directory is
+    # on the compiler PATH, so the basename resolves to the same assembler.
+    autodetect_compiler_AS=${DKML_COMPILE_CM_CMAKE_ASM_MASM_COMPILER##*/}
     autodetect_compiler_ASFLAGS="-nologo${_MLARG_EXTRA:+ $_MLARG_EXTRA}${autodetect_compiler_ASFLAGS:+ $autodetect_compiler_ASFLAGS}"
 elif [ -n "${autodetect_compiler_AS:-}" ]; then
   if [ -n "${DKML_COMPILE_CM_CMAKE_ASM_COMPILE_OPTIONS_TARGET:-}" ] && [ -n "${DKML_COMPILE_CM_CMAKE_ASM_COMPILER_TARGET:-}" ]; then
