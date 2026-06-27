@@ -653,4 +653,13 @@ print_makefile_config_extensions() {
       echo "OCAMLOPT_CFLAGS+=-fsanitize=leak -fno-omit-frame-pointer -O1 -g"
       ;;
   esac
+  # On Windows, force `make install` to copy files instead of creating native
+  # NTFS symlinks (the behaviour OCaml #13494 / patches a16+a17 introduced).
+  # The relocatable distribution is copied and zipped to other locations, where
+  # those symlinks dangle and the packaging step then fails to open files such
+  # as bin/flexlink.exe. This restores the pre-#13494 `cp -pf` install. The line
+  # is appended to Makefile.config and so overrides the configure-detected LN.
+  if [ -n "${COMSPEC:-}" ]; then
+    echo "LN = cp -pf"
+  fi
 }
