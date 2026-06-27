@@ -51,6 +51,13 @@
   `OCAMLOPT_CFLAGS`. MSVC only.
 * Add `-arch` to the OCaml assembler flags (`ASFLAGS`) for non-CMake Darwin
   builds in `standard-compiler-env-to-ocaml-configure-env.sh`.
+* Disable git auto-gc/maintenance (`gc.auto 0`, `maintenance.auto false`) on the
+  throwaway OCaml source repository in `r-c-ocaml-1-setup.sh`. Committing the full
+  source tree and applying the ~90 patches as a `git am` series crossed git's
+  default `gc.auto` loose-object threshold, so git spawned an autodetached
+  background `git gc` that raced the running `git am` and corrupted the object
+  database (`refs/heads/main does not point to a valid object!` / `failed to read
+  boot/ocamlc`), failing the build around patch `a10`.
 
 ## 2.1.3
 

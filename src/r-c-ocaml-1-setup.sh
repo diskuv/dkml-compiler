@@ -897,6 +897,16 @@ gitize() {
     log_trace git -C "$gitize_DIR" config user.name  "Auto Committer"
     log_trace git -C "$gitize_DIR" config core.safecrlf false
     log_trace git -C "$gitize_DIR" config core.fsmonitor false # unneeded, and avoid "error: daemon terminated"
+    # Disable automatic gc/maintenance. Committing the whole OCaml source tree and
+    # then applying the ~90 patches as a `git am` commit series accumulates enough
+    # loose objects to cross git's default gc.auto threshold (6700). git would then
+    # spawn an autodetached background `git gc` that repacks/prunes concurrently with
+    # the still-running `git am`, racing it and corrupting the object database (seen
+    # as "refs/heads/main does not point to a valid object!" and "failed to read
+    # boot/ocamlc" around patch a10). This is a throwaway source repo, so housekeeping
+    # gc is pointless here anyway.
+    log_trace git -C "$gitize_DIR" config gc.auto 0
+    log_trace git -C "$gitize_DIR" config maintenance.auto false
     log_trace git -C "$gitize_DIR" add -A
     log_trace git -C "$gitize_DIR" commit --quiet -m "Commit from source tree"
     log_trace git -C "$gitize_DIR" tag r-c-ocaml-1-setup-srctree
@@ -948,6 +958,10 @@ get_ocaml_source() {
             #   Instead of git clone we use git fetch --depth 1 so we do a shallow clone of the commit
             log_trace git -C "$get_ocaml_source_SRCMIXED" -c init.defaultBranch=master init
             log_trace git -C "$get_ocaml_source_SRCMIXED" config core.fsmonitor false # unneeded, and avoid "error: daemon terminated"
+            # Disable auto gc/maintenance so a background `git gc` cannot race the
+            # `git am` patch series and corrupt the object database (see gitize()).
+            log_trace git -C "$get_ocaml_source_SRCMIXED" config gc.auto 0
+            log_trace git -C "$get_ocaml_source_SRCMIXED" config maintenance.auto false
             log_trace git -C "$get_ocaml_source_SRCMIXED" remote add origin https://github.com/ocaml/ocaml
             log_trace git -C "$get_ocaml_source_SRCMIXED" fetch --depth 1 origin "$get_ocaml_source_COMMIT"
             log_trace git -C "$get_ocaml_source_SRCMIXED" reset --hard FETCH_HEAD
