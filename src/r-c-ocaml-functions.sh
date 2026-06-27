@@ -328,8 +328,15 @@ ocaml_configure_options_for_abi() {
   case "$ocaml_configure_options_for_abi_ABI" in
     darwin_x86_64)
       case "$ocaml_configure_options_for_abi_GUESS" in
-        *-apple-*) # example: aarch64-apple-darwin21.1.0 -> x86_64-apple-darwin21.1.0
-          printf "%s=%s %s=%s" "--host" "$ocaml_configure_options_for_abi_GUESS" "--target" "$ocaml_configure_options_for_abi_GUESS" | sed 's/=[A-Za-z0-9_]*-/=x86_64-/g'
+        *-apple-*) # example: aarch64-apple-darwin25.4.0 -> build aarch64-apple-darwin, host/target x86_64-apple-darwin
+          # Strip the macOS version (e.g. darwin25.4.0 -> darwin) so the relocatable
+          # runtime-search-target filename (<triplet>-ocamlrun-vNNN) is stable across
+          # macos-latest runners with different macOS patch levels. Pass a matching
+          # version-less --build so the host build stays native (and the cross stays
+          # cross) rather than being misdetected from the versioned config.guess.
+          ocaml_configure_options_for_abi_BUILD=$(printf "%s" "$ocaml_configure_options_for_abi_GUESS" | sed 's/\(-apple-darwin\)[0-9][0-9.]*/\1/')
+          ocaml_configure_options_for_abi_TGT=$(printf "%s" "$ocaml_configure_options_for_abi_BUILD" | sed 's/^[A-Za-z0-9_]*-/x86_64-/')
+          printf "%s=%s %s=%s %s=%s" "--build" "$ocaml_configure_options_for_abi_BUILD" "--host" "$ocaml_configure_options_for_abi_TGT" "--target" "$ocaml_configure_options_for_abi_TGT"
           ;;
         *)
           printf "%s" "--target=x86_64-apple-darwin";;
@@ -337,8 +344,12 @@ ocaml_configure_options_for_abi() {
       ;;
     darwin_arm64)
       case "$ocaml_configure_options_for_abi_GUESS" in
-        *-apple-*) # example: x86_64-apple-darwin21.1.0 -> aarch64-apple-darwin21.1.0
-          printf "%s=%s %s=%s" "--host" "$ocaml_configure_options_for_abi_GUESS" "--target" "$ocaml_configure_options_for_abi_GUESS" | sed 's/=[A-Za-z0-9_]*-/=aarch64-/g'
+        *-apple-*) # example: aarch64-apple-darwin25.4.0 -> build/host/target aarch64-apple-darwin
+          # See the darwin_x86_64 note above: strip the macOS version for a stable
+          # runtime-search-target filename and pass a matching version-less --build.
+          ocaml_configure_options_for_abi_BUILD=$(printf "%s" "$ocaml_configure_options_for_abi_GUESS" | sed 's/\(-apple-darwin\)[0-9][0-9.]*/\1/')
+          ocaml_configure_options_for_abi_TGT=$(printf "%s" "$ocaml_configure_options_for_abi_BUILD" | sed 's/^[A-Za-z0-9_]*-/aarch64-/')
+          printf "%s=%s %s=%s %s=%s" "--build" "$ocaml_configure_options_for_abi_BUILD" "--host" "$ocaml_configure_options_for_abi_TGT" "--target" "$ocaml_configure_options_for_abi_TGT"
           ;;
         *)
           printf "%s" "--target=aarch64-apple-darwin"
